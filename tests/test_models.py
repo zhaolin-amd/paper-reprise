@@ -2,8 +2,8 @@ import pytest
 from pydantic import ValidationError
 
 from paper_repro.models import (
-    EvalProtocol, Artifact, Claim, Spec, IngestInfo, RepoInfo,
-    PlanReport, ClaimPlan, ClaimGrade, RunResult, Verdict, Runner, CalibStatus,
+    EvalProtocol, Artifact, Claim, Spec, RepoInfo,
+    ClaimGrade, Verdict,
 )
 
 

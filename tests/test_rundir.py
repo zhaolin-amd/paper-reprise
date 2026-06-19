@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from paper_repro.models import IngestInfo, Spec, Artifact, Claim, EvalProtocol
 from paper_repro.rundir import RunDir
