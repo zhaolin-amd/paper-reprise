@@ -39,6 +39,11 @@ def _faithfulness(claim: Claim, artifact: Artifact, actual_config: dict) -> tupl
         if k in expected_cfg and k in actual_config:
             if expected_cfg[k] != actual_config[k]:
                 diffs.append(f"{k} 不一致 (spec={expected_cfg[k]} actual={actual_config[k]})")
+    # PLAN-2 TODO: a key in expected_cfg but missing from actual_config is currently
+    # treated as faithful (vacuous pass). Once the real executor reports actual_config,
+    # flip "missing key" to an "unverified" gap — otherwise a run that never recorded
+    # its wbits/seqlen is silently judged MATCH, the exact false-positive this system
+    # exists to prevent. Requires persisting actual_config to disk (see runstage/cli).
     return (len(diffs) == 0, diffs)
 
 

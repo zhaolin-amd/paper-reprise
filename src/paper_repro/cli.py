@@ -77,6 +77,10 @@ def report(run_dir: str) -> None:
                        status="ran" if log.exists() else "blocked",
                        block_reason=None if log.exists() else "no stdout.log")
         runs.append(rr)
+        # PLAN-2 TODO: actual_config={} forces the faithfulness check to pass vacuously
+        # on re-render, so `report` can never detect a config divergence. Persist each
+        # run's actual_config to the run dir (e.g. runs/<claim_id>/actual_config.json)
+        # and read it back here once the real executor records it.
         grades.append(grade_claim(c, artifacts[c.artifact], rr, actual_config={}))
 
     zh, en = render_reports(spec, ingest, grades, runs, env={}, patches=[])
