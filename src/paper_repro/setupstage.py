@@ -1,0 +1,32 @@
+"""Setup stage: the (future) agentic env-debug loop.
+
+Plan 1 provides a stub returning a placeholder env snapshot. Plan 2 will replace
+the body with a bounded headless claude loop that builds a conda/uv env and runs
+the repo's smoke test until it passes once. The signature stays stable.
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Callable, Optional
+
+from paper_repro.models import Spec
+from paper_repro.rundir import RunDir
+
+
+@dataclass
+class SetupResult:
+    ok: bool
+    env_snapshot: dict = field(default_factory=dict)
+    patches: list[str] = field(default_factory=list)
+    error: str = ""
+
+
+def run_setup(rd: RunDir, spec: Spec,
+              executor: Optional[Callable] = None) -> SetupResult:
+    if executor is not None:
+        return executor(rd, spec)
+    # Plan 1 stub: pretend the env was built. Real impl lands in Plan 2.
+    snapshot = {"torch": "stub", "transformers": "stub", "cuda": "stub"}
+    (rd.root / "env_snapshot.json").write_text(json.dumps(snapshot, indent=2))
+    return SetupResult(ok=True, env_snapshot=snapshot, patches=[])
