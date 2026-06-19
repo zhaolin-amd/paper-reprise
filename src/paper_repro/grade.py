@@ -13,7 +13,6 @@ Verdict matrix (design §5.1):
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from paper_repro.models import Artifact, Claim, ClaimGrade, RunResult
 from paper_repro.parsers import parse_metric
@@ -22,7 +21,7 @@ from paper_repro.parsers import parse_metric
 _FAITHFUL_KEYS = ("seqlen", "stride", "wbits", "group_size", "few_shot")
 
 
-def _faithfulness(claim: Claim, actual_config: dict) -> tuple[bool, list[str]]:
+def _faithfulness(claim: Claim, artifact: Artifact, actual_config: dict) -> tuple[bool, list[str]]:
     expected_cfg = {}
     ep = claim.eval_protocol
     if ep.seqlen is not None:
@@ -31,6 +30,9 @@ def _faithfulness(claim: Claim, actual_config: dict) -> tuple[bool, list[str]]:
         expected_cfg["stride"] = ep.stride
     if ep.few_shot is not None:
         expected_cfg["few_shot"] = ep.few_shot
+    for k in ("wbits", "group_size"):
+        if k in artifact.quant_config:
+            expected_cfg[k] = artifact.quant_config[k]
 
     diffs = []
     for k in _FAITHFUL_KEYS:
@@ -68,7 +70,7 @@ def grade_claim(claim: Claim, artifact: Artifact, run: RunResult,
 
     # --- two checks ---
     value_ok = abs(measured - claim.expected) <= claim.tolerance
-    faithful_ok, diffs = _faithfulness(claim, actual_config)
+    faithful_ok, diffs = _faithfulness(claim, artifact, actual_config)
 
     if value_ok and faithful_ok:
         verdict, reason = "MATCH", "—"
