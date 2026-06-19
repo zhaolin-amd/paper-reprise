@@ -1,0 +1,82 @@
+"""Deterministic orchestration of the 7 stages with two gates.
+
+Gates and side-effecting stages are injected as callables so tests run offline
+and the CLI can supply interactive prompts / real executors.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Optional
+
+from paper_repro.grade import grade_claim
+from paper_repro.ingest import normalize_input
+from paper_repro.models import IngestInfo
+from paper_repro.planstage import build_plan
+from paper_repro.report import render_reports
+from paper_repro.rundir import RunDir
+from paper_repro.runstage import run_claims
+from paper_repro.setupstage import run_setup
+from paper_repro.specextract import extract_spec
+
+
+@dataclass
+class PipelineResult:
+    root: Path
+    aborted_at: Optional[str] = None
+
+
+def run_pipeline(
+    input_arg: str,
+    base_dir: Path,
+    timestamp: str,
+    available_hardware: list[str],
+    approve_spec: Callable,
+    approve_plan: Callable,
+    fetch_sources: Callable,
+    setup_executor: Optional[Callable],
+    run_executor: Callable,
+) -> PipelineResult:
+    # --- ingest ---
+    arxiv_id, url = normalize_input(input_arg)
+    rd = RunDir.create(base_dir, arxiv_id=arxiv_id, timestamp=timestamp)
+    fetch_sources(rd, arxiv_id, url)            # fills paper/ and repo/ (network)
+    rd.write_ingest(IngestInfo(arxiv_id=arxiv_id, source_url=url))
+
+    # --- specextract + gate 1 ---
+    spec = extract_spec(rd)
+    if spec is None:
+        return PipelineResult(root=rd.root, aborted_at="specextract")
+    if not approve_spec(spec):
+        return PipelineResult(root=rd.root, aborted_at="spec-approval")
+    rd.write_spec(spec)
+
+    # --- plan + sentinel ---
+    plan = build_plan(spec, available_hardware)
+    rd.write_plan(plan)
+    if plan.needs_user_decision and not approve_plan(plan):
+        return PipelineResult(root=rd.root, aborted_at="plan")
+
+    # --- setup ---
+    setup = run_setup(rd, spec, executor=setup_executor)
+    if not setup.ok:
+        return PipelineResult(root=rd.root, aborted_at="setup")
+
+    # --- run ---
+    runs, actual_configs = run_claims(rd, spec, executor=run_executor)
+
+    # --- grade (pure code, isolated) ---
+    artifacts = {a.id: a for a in spec.artifacts}
+    grades = [grade_claim(c, artifacts[c.artifact],
+                          next(r for r in runs if r.claim_id == c.id),
+                          actual_configs.get(c.id, {}))
+              for c in spec.claims]
+
+    # --- report ---
+    ingest = rd.read_ingest()
+    ingest.repo = spec.repo
+    zh, en = render_reports(spec, ingest, grades, runs, setup.env_snapshot,
+                            patches=setup.patches)
+    (rd.root / "report.zh.md").write_text(zh)
+    (rd.root / "report.en.md").write_text(en)
+    return PipelineResult(root=rd.root, aborted_at=None)
