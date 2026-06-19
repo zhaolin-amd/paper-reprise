@@ -1,0 +1,15 @@
+# run artifacts
+runs/
+*.log
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# env
+.env
