@@ -1,0 +1,7 @@
+#+title:      Ternary Mamba: Grouped QAT of W1.58A16 SSMs
+#+date:       [2026-06-17 Wed 00:17]
+#+source:     https://arxiv.org/abs/2606.18114
+#+authors:    Alice Smith, Bob Jones
+
+* The Problem River
+Some narrative text. Code at https://github.com/example/ternary-mamba here.
