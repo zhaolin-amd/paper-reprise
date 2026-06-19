@@ -41,7 +41,8 @@ def run_pipeline(
     arxiv_id, url = normalize_input(input_arg)
     rd = RunDir.create(base_dir, arxiv_id=arxiv_id, timestamp=timestamp)
     fetch_sources(rd, arxiv_id, url)            # fills paper/ and repo/ (network)
-    rd.write_ingest(IngestInfo(arxiv_id=arxiv_id, source_url=url))
+    ingest = IngestInfo(arxiv_id=arxiv_id, source_url=url)
+    rd.write_ingest(ingest)
 
     # --- specextract + gate 1 ---
     spec = extract_spec(rd)
@@ -67,13 +68,12 @@ def run_pipeline(
 
     # --- grade (pure code, isolated) ---
     artifacts = {a.id: a for a in spec.artifacts}
-    grades = [grade_claim(c, artifacts[c.artifact],
-                          next(r for r in runs if r.claim_id == c.id),
+    runs_by_claim = {r.claim_id: r for r in runs}
+    grades = [grade_claim(c, artifacts[c.artifact], runs_by_claim[c.id],
                           actual_configs.get(c.id, {}))
               for c in spec.claims]
 
     # --- report ---
-    ingest = rd.read_ingest()
     ingest.repo = spec.repo
     zh, en = render_reports(spec, ingest, grades, runs, setup.env_snapshot,
                             patches=setup.patches)
