@@ -1,0 +1,27 @@
+paper: "2401.00001"
+repo:
+  url: https://github.com/example/awq
+  commit: null
+artifacts:
+  - id: llama2-7b-w4g128
+    base_model: meta-llama/Llama-2-7b-hf
+    method: AWQ
+    quant_config:
+      wbits: 4
+      group_size: 128
+    calib_status: known
+claims:
+  - id: c1
+    artifact: llama2-7b-w4g128
+    eval_protocol:
+      runner: official
+      command: "python eval_ppl.py --model {model} --dataset wikitext2"
+      metric: perplexity
+      dataset: wikitext2
+      seqlen: 2048
+      stride: 2048
+      few_shot: 0
+    expected: 5.78
+    tolerance: 0.05
+    source: "Table 3, row 2"
+    hardware: null
