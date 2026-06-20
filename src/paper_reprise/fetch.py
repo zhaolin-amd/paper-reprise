@@ -122,6 +122,19 @@ def fetch_arxiv_title(arxiv_id: str,
         return None
 
 
+def short_name(title: str) -> str:
+    """Derive a short paper label from its title for the run-dir name.
+
+    Quantization papers are almost always titled `ACRONYM: descriptive subtitle`
+    (e.g. 'GSQ: Highly-Accurate ...'). Take the part before the first colon when it
+    is a short tag (<=2 words, <=30 chars) — that's the acronym; otherwise keep the
+    full title. The caller slugifies the result."""
+    head = title.split(":", 1)[0].strip()
+    if head and len(head.split()) <= 2 and len(head) <= 30:
+        return head
+    return title
+
+
 def _run_git_clone(url: str, dest: str) -> None:
     subprocess.run(["git", "clone", "--depth", "1", url, dest],
                    check=True, capture_output=True, text=True, timeout=300)

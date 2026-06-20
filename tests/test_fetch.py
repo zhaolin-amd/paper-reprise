@@ -12,6 +12,7 @@ from paper_reprise.fetch import (
     parse_arxiv_search,
     parse_arxiv_title,
     resolve_arxiv_id,
+    short_name,
     unpack_targz,
 )
 from paper_reprise.rundir import RunDir
@@ -215,3 +216,20 @@ def test_fetch_arxiv_title_happy(tmp_path):
     xml = (FIX / "arxiv_search_response.xml").read_text()
     assert fetch_arxiv_title("2401.00001", http_get=lambda u: xml) == \
         "AWQ: Activation-aware Weight Quantization for LLMs"
+
+
+def test_short_name_takes_acronym_before_colon():
+    assert short_name("GSQ: Highly-Accurate Low-Precision Scalar Quantization for LLMs") == "GSQ"
+
+
+def test_short_name_one_word_acronym_title():
+    assert short_name("SmoothQuant: Accurate and Efficient Post-Training Quantization") == "SmoothQuant"
+
+
+def test_short_name_keeps_full_title_when_prefix_is_long():
+    t = "The case for 4-bit precision: k-bit inference scaling laws"
+    assert short_name(t) == t
+
+
+def test_short_name_no_colon_returns_title():
+    assert short_name("Attention Is All You Need") == "Attention Is All You Need"
