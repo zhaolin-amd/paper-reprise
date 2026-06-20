@@ -30,3 +30,16 @@ def run_setup(rd: RunDir, spec: Spec,
     snapshot = {"torch": "stub", "transformers": "stub", "cuda": "stub"}
     (rd.root / "env_snapshot.json").write_text(json.dumps(snapshot, indent=2))
     return SetupResult(ok=True, env_snapshot=snapshot, patches=[])
+
+
+def make_setup_executor(*, manager: str = "uv", max_retries: int = 6,
+                        timeout_s: float = 3600.0) -> Callable[[RunDir, Spec], SetupResult]:
+    """Build the executor(rd, spec) the pipeline injects into run_setup. Imported
+    lazily to avoid a circular import (setuploop imports SetupResult from here)."""
+    from paper_reprise.setuploop import run_setup_loop
+
+    def executor(rd: RunDir, spec: Spec) -> SetupResult:
+        return run_setup_loop(rd, spec, manager=manager,
+                              max_retries=max_retries, timeout_s=timeout_s)
+
+    return executor

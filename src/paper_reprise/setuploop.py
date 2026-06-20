@@ -12,13 +12,19 @@ call) is behind an injectable seam so the whole loop is offline-testable.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import time
 from pathlib import Path
 from typing import Callable
 
+from paper_reprise.headless import run_headless
 from paper_reprise.models import Spec
 from paper_reprise.rundir import RunDir
 from paper_reprise.setupstage import SetupResult
+
+# Smoke runs must be cheap; guard against a hung command (design §4.1).
+_SMOKE_TIMEOUT_S = 1800
 
 # Tiny-scale flags so the smoke run is cheap (design §4.1: ~8 samples, 1 batch).
 _TINY_FLAGS = "--limit 8 --batch-size 1"
@@ -99,6 +105,62 @@ def _write_log(rd: RunDir, name: str, text: str) -> None:
     (rd.setup_log_dir / name).write_text(text)
 
 
+def _create_env(env_dir: Path, manager: str) -> tuple[int, str]:
+    """Create a conda/uv env at env_dir. Returns (exit_code, combined log)."""
+    if manager == "uv":
+        cmd = ["uv", "venv", str(env_dir)]
+    else:
+        cmd = ["conda", "create", "-y", "-p", str(env_dir), "python=3.11"]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return proc.returncode, (proc.stdout + proc.stderr)
+
+
+def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
+    """Run the smoke command inside the repo, USING the created env.
+
+    The created venv/conda env is activated by prepending its bin/ to PATH and
+    setting VIRTUAL_ENV, so `python`/`pip` in the command resolve to env_dir's
+    interpreter (not the ambient one — otherwise building the env is pointless).
+    Returns (exit_code, combined output).
+    """
+    env = dict(os.environ)
+    env["PATH"] = f"{env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
+    env["VIRTUAL_ENV"] = str(env_dir)
+    try:
+        proc = subprocess.run(command, shell=True, cwd=str(cwd), env=env,
+                              capture_output=True, text=True, timeout=_SMOKE_TIMEOUT_S)
+    except subprocess.TimeoutExpired as e:
+        return 124, f"smoke command timed out after {_SMOKE_TIMEOUT_S}s\n{e}"
+    return proc.returncode, (proc.stdout + proc.stderr)
+
+
+def _freeze_env(env_dir: Path) -> dict:
+    """Capture pip freeze + torch/transformers/CUDA versions from env_dir."""
+    proc = subprocess.run([str(env_dir / "bin" / "python"), "-m", "pip", "freeze"],
+                          capture_output=True, text=True)
+    freeze_text = proc.stdout
+    versions: dict = {"pip_freeze": freeze_text}
+    for line in freeze_text.splitlines():
+        for pkg in ("torch", "transformers"):
+            if line.lower().startswith(f"{pkg}=="):
+                versions[pkg] = line.split("==", 1)[1].strip()
+    cuda = subprocess.run(
+        [str(env_dir / "bin" / "python"), "-c",
+         "import torch; print(torch.version.cuda)"],
+        capture_output=True, text=True)
+    if cuda.returncode == 0 and cuda.stdout.strip() not in ("", "None"):
+        versions["cuda"] = cuda.stdout.strip()
+    return versions
+
+
+def _run_fixer(prompt: str, cwd: Path, patch_note: Path) -> None:
+    """One headless-claude fix turn. Success is judged by the loop re-running the
+    smoke command, so we ignore the HeadlessResult here (the patch note is the
+    only artifact we read back, via collect_new_patches)."""
+    run_headless(prompt=prompt, allowed_tools=["Read", "Write", "Edit", "Bash"],
+                 cwd=cwd, expect_file=patch_note)
+
+
 def run_setup_loop(
     rd: RunDir,
     spec: Spec,
@@ -107,13 +169,20 @@ def run_setup_loop(
     max_retries: int = 6,
     timeout_s: float = 3600.0,
     now: Callable[[], float] = time.monotonic,
-    create_env: Callable[[Path, str], tuple[int, str]],
-    run_smoke: Callable[[str, Path, Path], tuple[int, str]],
-    freeze_env: Callable[[Path], dict],
-    run_fixer: Callable[[str, Path, Path], None],
+    create_env: Callable[[Path, str], tuple[int, str]] | None = None,
+    run_smoke: Callable[[str, Path, Path], tuple[int, str]] | None = None,
+    freeze_env: Callable[[Path], dict] | None = None,
+    run_fixer: Callable[[str, Path, Path], None] | None = None,
 ) -> SetupResult:
     """Drive the env-debug loop until the smoke command passes once, or a guardrail
     (retry cap / timeout) is exceeded. On exhaustion: ok=False, full log handed off."""
+    # Resolve seams at call time so monkeypatching the module globals takes effect
+    # (Python default args are bound at def time, so we can't default to the names).
+    create_env = create_env or _create_env
+    run_smoke = run_smoke or _run_smoke
+    freeze_env = freeze_env or _freeze_env
+    run_fixer = run_fixer or _run_fixer
+
     env_dir = rd.root / "env"
     command = select_smoke_command(rd, spec)
     start = now()
