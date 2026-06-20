@@ -137,3 +137,16 @@ def test_resume_aborts_when_no_spec(tmp_path):
         setup_executor=_fake_setup, run_executor=_fake_executor,
     )
     assert result.aborted_at == "no-spec"
+
+
+def test_pipeline_uses_paper_name_in_run_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(pipeline, "extract_spec", _fake_specextract)
+    result = pipeline.run_pipeline(
+        input_arg="2401.00001", base_dir=tmp_path, timestamp="t",
+        paper_name="Awesome Quant Method",
+        available_hardware=["A100-80G"],
+        approve_spec=lambda spec: True, approve_plan=lambda plan: True,
+        fetch_sources=lambda rd, arxiv_id, url: None,
+        setup_executor=_fake_setup, run_executor=_fake_executor,
+    )
+    assert result.root.name == "awesome-quant-method-2401.00001-t"
