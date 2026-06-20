@@ -5,7 +5,7 @@ from paper_reprise.headless import run_headless
 def test_success_when_output_file_appears(tmp_path, monkeypatch):
     out = tmp_path / "spec.yaml"
 
-    def fake_call(prompt, allowed_tools, cwd):
+    def fake_call(prompt, allowed_tools, cwd, timeout=None):
         out.write_text("ok")
         return 0
 

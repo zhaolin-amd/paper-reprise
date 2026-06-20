@@ -105,3 +105,24 @@ def test_cli_run_unresolvable_title_errors(tmp_path, monkeypatch):
     )
     assert res.exit_code != 0
     assert "could not resolve" in res.output.lower()
+
+
+def test_cli_run_passes_real_setup_executor(tmp_path, monkeypatch):
+    import paper_reprise.cli as cli_mod
+
+    captured = {}
+
+    def fake_pipeline(**kwargs):
+        captured["setup_executor"] = kwargs["setup_executor"]
+        from paper_reprise.pipeline import PipelineResult
+        return PipelineResult(root=tmp_path, aborted_at="specextract")
+
+    sentinel = object()
+    monkeypatch.setattr(cli_mod, "make_setup_executor", lambda **k: sentinel)
+    monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
+    assert res.exit_code == 0
+    assert captured["setup_executor"] is sentinel
