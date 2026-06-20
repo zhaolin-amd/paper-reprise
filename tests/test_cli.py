@@ -108,6 +108,8 @@ def test_cli_run_unresolvable_title_errors(tmp_path, monkeypatch):
 
 
 def test_cli_run_passes_real_setup_executor(tmp_path, monkeypatch):
+    # the CLI injects a dispatcher wrapping the official setup executor; with a
+    # repo PRESENT it must route to that (sentinel) official executor.
     import paper_reprise.cli as cli_mod
 
     captured = {}
@@ -117,18 +119,26 @@ def test_cli_run_passes_real_setup_executor(tmp_path, monkeypatch):
         from paper_reprise.pipeline import PipelineResult
         return PipelineResult(root=tmp_path, aborted_at="specextract")
 
-    sentinel = object()
-    monkeypatch.setattr(cli_mod, "make_setup_executor", lambda **k: sentinel)
+    monkeypatch.setattr(cli_mod, "make_setup_executor",
+                        lambda **k: (lambda rd, spec: "official-setup"))
+    monkeypatch.setattr(cli_mod, "make_fromscratch_setup_executor",
+                        lambda **k: (lambda rd, spec: "fromscratch-setup"))
     monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
 
     from click.testing import CliRunner
     res = CliRunner().invoke(
         cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
     assert res.exit_code == 0
-    assert captured["setup_executor"] is sentinel
+
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path / "r", arxiv_id="p", timestamp="t")
+    (rd.repo_dir / "setup.py").write_text("x")          # repo present
+    assert captured["setup_executor"](rd, None) == "official-setup"
 
 
 def test_cli_run_passes_real_run_executor(tmp_path, monkeypatch):
+    # the CLI injects a dispatcher wrapping the official run executor; with a repo
+    # PRESENT it must route to that (sentinel) official executor.
     import paper_reprise.cli as cli_mod
 
     captured = {}
@@ -138,15 +148,22 @@ def test_cli_run_passes_real_run_executor(tmp_path, monkeypatch):
         from paper_reprise.pipeline import PipelineResult
         return PipelineResult(root=tmp_path, aborted_at="specextract")
 
-    sentinel = object()
-    monkeypatch.setattr(cli_mod, "make_run_executor", lambda **k: sentinel)
+    monkeypatch.setattr(cli_mod, "make_run_executor",
+                        lambda **k: (lambda c, a, cd: "official-run"))
+    monkeypatch.setattr(cli_mod, "make_fromscratch_run_executor",
+                        lambda **k: (lambda c, a, cd: "fromscratch-run"))
     monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
 
     from click.testing import CliRunner
     res = CliRunner().invoke(
         cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
     assert res.exit_code == 0
-    assert captured["run_executor"] is sentinel
+
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path / "r2", arxiv_id="p", timestamp="t")
+    (rd.repo_dir / "main.py").write_text("x")           # repo present
+    cd = rd.claim_dir("c1")
+    assert captured["run_executor"](None, None, cd) == "official-run"
 
 
 def test_cli_report_reads_actual_config_for_faithfulness(tmp_path):
@@ -248,3 +265,51 @@ def test_cli_run_with_yes_approves_spec(tmp_path, monkeypatch):
         cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
     assert res.exit_code == 0
     assert captured["approve_spec_result"] is True           # --yes auto-approves
+
+
+def test_cli_run_injects_dispatching_executors(tmp_path, monkeypatch):
+    # the CLI must inject executors that route by repo presence: with an empty
+    # repo dir they pick the from-scratch executor. We assert the injected setup
+    # executor, run against a repo-less run dir, calls the from-scratch path.
+    import paper_reprise.cli as cli_mod
+
+    captured = {}
+
+    def fake_pipeline(**kwargs):
+        captured["setup_executor"] = kwargs["setup_executor"]
+        captured["run_executor"] = kwargs["run_executor"]
+        from paper_reprise.pipeline import PipelineResult
+        return PipelineResult(root=tmp_path, aborted_at="specextract")
+
+    # stub the four real factories so no real Claude/subprocess is touched; each
+    # returns a labeled sentinel executor.
+    monkeypatch.setattr(cli_mod, "make_setup_executor",
+                        lambda **k: (lambda rd, spec: "official-setup"))
+    monkeypatch.setattr(cli_mod, "make_fromscratch_setup_executor",
+                        lambda **k: (lambda rd, spec: "fromscratch-setup"))
+    monkeypatch.setattr(cli_mod, "make_run_executor",
+                        lambda **k: (lambda c, a, cd: "official-run"))
+    monkeypatch.setattr(cli_mod, "make_fromscratch_run_executor",
+                        lambda **k: (lambda c, a, cd: "fromscratch-run"))
+    monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
+    assert res.exit_code == 0
+
+    # exercise the injected dispatchers against a repo-less run dir
+    from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path / "r", arxiv_id="p", timestamp="t")  # empty repo_dir
+    spec = Spec(paper="p", repo=None,
+                artifacts=[Artifact(id="a1", base_model="m", method="AWQ",
+                                    quant_config={"wbits": 4})],
+                claims=[Claim(id="c1", artifact="a1",
+                              eval_protocol=EvalProtocol(runner="custom", command="x",
+                                                         metric="perplexity",
+                                                         dataset="wikitext2"),
+                              expected=5.78, tolerance=0.05, source="T")])
+    assert captured["setup_executor"](rd, spec) == "fromscratch-setup"
+    cd = rd.claim_dir("c1")
+    assert captured["run_executor"](spec.claims[0], spec.artifacts[0], cd) == "fromscratch-run"
