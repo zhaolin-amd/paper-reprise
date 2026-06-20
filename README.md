@@ -1,21 +1,35 @@
 # paper-reprise
 
-复现量化(quantization)论文结果的 agent。输入一篇 arxiv 论文(或 llm-paper-radar 推送的 `.org`),
-优先调用其官方 repo 的自带脚本复现论文报告的数字,诚实地报告差距。
+An agent that reproduces quantization paper results. Given an arxiv paper (or a `.org`
+pushed by llm-paper-radar), it prefers to reproduce the paper's reported numbers by
+invoking the official repo's own scripts, and honestly reports the gap.
 
-设计文档:[docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md](docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md)
+Design doc: [docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md](docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md)
 
-## 状态
+## Status
 
-设计已确认,待写实现计划。
+Deterministic skeleton implemented (Plan 1). The real GPU quantization/eval executor,
+latex fetch + git clone, and the agentic conda/uv setup-debug loop are deferred to Plan 2
+(wired as injectable executor seams).
 
-## 形态(规划中)
+## Usage
 
 ```
-paper-reprise run <arxiv_id | .org文件路径 | arxiv_url>
+paper-reprise run <arxiv_id | path-to-.org | arxiv_url>
 paper-reprise resume <run_dir>
 paper-reprise report <run_dir>
 ```
 
-确定性流水线 `ingest → specextract → plan → setup → run → grade → report`,
-agent 只进 setup 阶段(驯服腐烂的官方 repo 环境),判分用纯代码、与执行隔离。
+A short alias `reprise` is also installed (e.g. `reprise run 2401.00001`).
+
+Deterministic pipeline `ingest → specextract → plan → setup → run → grade → report`; the
+agent only enters the setup stage (taming the rotting official-repo environment); grading
+is pure code, isolated from execution.
+
+## Develop
+
+```
+uv sync
+uv run pytest -q
+uv run ruff check src/ tests/
+```
