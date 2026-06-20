@@ -126,3 +126,57 @@ def test_cli_run_passes_real_setup_executor(tmp_path, monkeypatch):
         cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
     assert res.exit_code == 0
     assert captured["setup_executor"] is sentinel
+
+
+def test_cli_run_passes_real_run_executor(tmp_path, monkeypatch):
+    import paper_reprise.cli as cli_mod
+
+    captured = {}
+
+    def fake_pipeline(**kwargs):
+        captured["run_executor"] = kwargs["run_executor"]
+        from paper_reprise.pipeline import PipelineResult
+        return PipelineResult(root=tmp_path, aborted_at="specextract")
+
+    sentinel = object()
+    monkeypatch.setattr(cli_mod, "make_run_executor", lambda **k: sentinel)
+    monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
+    assert res.exit_code == 0
+    assert captured["run_executor"] is sentinel
+
+
+def test_cli_report_reads_actual_config_for_faithfulness(tmp_path):
+    # a run dir where the recorded actual_config DIVERGES from the spec → report
+    # must grade it PARTIAL (faithfulness fails), not a vacuous MATCH.
+    import json as _json
+
+    from paper_reprise.models import (Artifact, Claim, EvalProtocol, IngestInfo,
+                                      RepoInfo, Spec)
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    spec = Spec(paper="2401.00001", repo=RepoInfo(url="u", commit="c"),
+                artifacts=[Artifact(id="a1", base_model="m", method="AWQ",
+                                    quant_config={"wbits": 4})],
+                claims=[Claim(id="c1", artifact="a1",
+                              eval_protocol=EvalProtocol(runner="official", command="c",
+                                                         metric="perplexity",
+                                                         dataset="wikitext2", seqlen=2048),
+                              expected=5.78, tolerance=0.05, source="T")])
+    rd.write_spec(spec)
+    rd.write_ingest(IngestInfo(arxiv_id="2401.00001", source_url="u",
+                               repo=RepoInfo(url="u", commit="c")))
+    cdir = rd.claim_dir("c1")
+    (cdir / "stdout.log").write_text("perplexity: 5.80")          # value in tolerance
+    (cdir / "actual_config.json").write_text(_json.dumps({"seqlen": 4096}))  # diverged!
+
+    from click.testing import CliRunner
+    from paper_reprise.cli import cli
+    res = CliRunner().invoke(cli, ["report", str(rd.root)])
+    assert res.exit_code == 0
+    report = (rd.root / "report.zh.md").read_text()
+    assert "PARTIAL" in report          # faithfulness caught the seqlen divergence
+    assert "seqlen" in report
