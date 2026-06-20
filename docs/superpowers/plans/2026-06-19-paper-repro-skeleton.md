@@ -1,14 +1,14 @@
-# paper-repro 确定性骨架 Implementation Plan
+# paper-repro Deterministic Skeleton Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 搭起 paper-repro 的确定性流水线骨架——能端到端跑通 `ingest → specextract → plan → setup → run → grade → report`,其中判分(grade)、报告(report)、数据契约(models)全部 TDD 实现并锁死;specextract/setup/run 用 mock claude 和 fixture 跑通接口,真实 GPU 量化/评测留给后续 Plan 2。
+**Goal:** Stand up the deterministic pipeline skeleton for paper-repro — able to run `ingest → specextract → plan → setup → run → grade → report` end to end, with grade, report, and the data contracts (models) fully TDD-implemented and locked; specextract/setup/run wired through their interfaces with mock claude and fixtures, leaving real GPU quantization/eval to a later Plan 2.
 
-**Architecture:** 确定性 Python 编排,每阶段读写带类型的 artifact 到 run 目录(方案 B)。agent 的不确定性只在 setup 阶段(本期为接口+stub)。grade 是纯代码、与执行隔离,只读落盘的原始输出 + spec,实现"过程忠实 AND 数值达标"双检与 MATCH/PARTIAL/FAIL/BLOCKED 四态。
+**Architecture:** Deterministic Python orchestration; each stage reads/writes typed artifacts in the run directory (Approach B). The agent's nondeterminism is confined to the setup stage (interface + stub this phase). grade is pure code, isolated from execution — reads only the persisted raw output + spec — implementing the "process-faithful AND value-in-tolerance" double check and the MATCH/PARTIAL/FAIL/BLOCKED four verdicts.
 
-**Tech Stack:** Python 3.12,pydantic v2(数据模型),click(CLI),pyyaml(spec),pytest(测试),uv(依赖/虚拟环境),`claude -p` headless(specextract/setup,复用 llm-paper-radar 的调用模式)。
+**Tech Stack:** Python 3.12, pydantic v2 (data models), click (CLI), pyyaml (spec), pytest (tests), uv (deps/venv), `claude -p` headless (specextract/setup, reusing llm-paper-radar's invocation pattern).
 
-设计文档:`docs/superpowers/specs/2026-06-19-paper-repro-agent-design.md`
+Design doc: `docs/superpowers/specs/2026-06-19-paper-repro-agent-design.md`
 
 ---
 
@@ -16,25 +16,25 @@
 
 ```
 paper-repro/
-  pyproject.toml                  # 项目元数据 + 依赖 + pytest/ruff 配置
+  pyproject.toml                  # project metadata + deps + pytest/ruff config
   src/paper_repro/
     __init__.py
-    models.py                     # pydantic 模型:EvalProtocol/Artifact/Claim/Spec/IngestInfo/PlanReport/ClaimGrade/RunResult
-    rundir.py                     # RunDir:目录布局 + artifact 读写
-    parsers.py                    # 指标输出解析器:PPL / accuracy / speedup
-    grade.py                      # 纯代码判分:数值 + 忠实双检 → 四态
-    report.py                     # 渲染 report.zh.md / report.en.md
-    ingest.py                     # 入参归一(.org/url/id)+ latex 抓取 + repo 定位
-    planstage.py                  # 可行性/异常哨兵
-    headless.py                   # claude -p 封装,输出文件校验(不信 exit code)
-    specextract.py                # specextract 阶段:调 headless → spec.yaml → 门控
-    setupstage.py                 # setup 阶段:agentic 调试循环(接口 + stub)
-    runstage.py                   # run 阶段:量化+评测(接口 + stub)
-    pipeline.py                   # 编排 7 阶段 + 门控
-    cli.py                        # click CLI:run / resume / report
+    models.py                     # pydantic models: EvalProtocol/Artifact/Claim/Spec/IngestInfo/PlanReport/ClaimGrade/RunResult
+    rundir.py                     # RunDir: directory layout + artifact I/O
+    parsers.py                    # metric output parsers: PPL / accuracy / speedup
+    grade.py                      # pure-code judge: value + faithfulness double check → 4 verdicts
+    report.py                     # render report.zh.md / report.en.md
+    ingest.py                     # input normalization (.org/url/id) + latex fetch + repo discovery
+    planstage.py                  # feasibility/anomaly sentinel
+    headless.py                   # claude -p wrapper, output-file verification (don't trust exit code)
+    specextract.py                # specextract stage: call headless → spec.yaml → gate
+    setupstage.py                 # setup stage: agentic debug loop (interface + stub)
+    runstage.py                   # run stage: quant + eval (interface + stub)
+    pipeline.py                   # orchestrate 7 stages + gates
+    cli.py                        # click CLI: run / resume / report
   tests/
-    conftest.py                   # 共享 fixture
-    fixtures/                     # 样例 .org / spec.yaml / 评测输出
+    conftest.py                   # shared fixtures
+    fixtures/                     # sample .org / spec.yaml / eval output
     test_models.py
     test_rundir.py
     test_parsers.py
@@ -48,18 +48,18 @@ paper-repro/
     test_cli.py
 ```
 
-**职责边界:** 每个文件一个清晰职责。`grade.py` 绝不 import `runstage.py`(判分与执行隔离,只通过 RunDir 落盘文件通信)。`models.py` 不依赖任何其他本包模块(纯契约)。
+**Responsibility boundaries:** each file has one clear responsibility. `grade.py` never imports `runstage.py` (judge/execution isolation; they communicate only through files persisted by RunDir). `models.py` depends on no other module in this package (pure contract).
 
 ---
 
-## Task 1: 项目脚手架
+## Task 1: Project Scaffold
 
 **Files:**
 - Create: `pyproject.toml`
 - Create: `src/paper_repro/__init__.py`
 - Create: `tests/__init__.py`
 
-- [ ] **Step 1: 写 pyproject.toml**
+- [ ] **Step 1: Write pyproject.toml**
 
 ```toml
 [project]
@@ -95,7 +95,7 @@ line-length = 100
 target-version = "py311"
 ```
 
-- [ ] **Step 2: 建包入口**
+- [ ] **Step 2: Create package entry**
 
 `src/paper_repro/__init__.py`:
 ```python
@@ -108,15 +108,15 @@ __version__ = "0.1.0"
 ```python
 ```
 
-- [ ] **Step 3: 同步依赖、建虚拟环境**
+- [ ] **Step 3: Sync deps, create venv**
 
 Run: `cd /proj/xcohdstaff7/zhaolin/code/paper-repro && uv sync`
-Expected: 创建 `.venv/`,装好 click/pydantic/pyyaml/httpx/pytest/ruff,无报错。
+Expected: creates `.venv/`, installs click/pydantic/pyyaml/httpx/pytest/ruff, no errors.
 
-- [ ] **Step 4: 验证 import**
+- [ ] **Step 4: Verify import**
 
 Run: `uv run python -c "import paper_repro; print(paper_repro.__version__)"`
-Expected: 打印 `0.1.0`
+Expected: prints `0.1.0`
 
 - [ ] **Step 5: Commit**
 
@@ -127,15 +127,15 @@ git commit -m "chore: project scaffold with uv + pytest"
 
 ---
 
-## Task 2: 数据模型(契约)
+## Task 2: Data Models (contracts)
 
 **Files:**
 - Create: `src/paper_repro/models.py`
 - Test: `tests/test_models.py`
 
-这些 pydantic 模型是所有阶段之间的契约,字段名一旦定下,后续 task 必须严格沿用。
+These pydantic models are the contract shared across all stages. Once the field names are set, later tasks must follow them strictly.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_models.py`:
 ```python
@@ -215,12 +215,12 @@ def test_verdict_enum_values():
     assert cg.verdict == "MATCH"
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_models.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.models'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.models'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/models.py`:
 ```python
@@ -321,7 +321,7 @@ class RunResult(BaseModel):
     seed: Optional[int] = None
     gpu: Optional[str] = None
     minutes: Optional[float] = None
-    stdout_path: str                 # path to raw落盘 output
+    stdout_path: str                 # path to raw persisted output
     status: Literal["ran", "blocked"] = "ran"
     block_reason: Optional[str] = None
 
@@ -335,10 +335,10 @@ class ClaimGrade(BaseModel):
     checks: dict                     # {"value": bool, "faithful": bool}
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_models.py -v`
-Expected: PASS,9 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -349,13 +349,13 @@ git commit -m "feat: typed contracts (Spec/Claim/Grade/...) with cross-ref valid
 
 ---
 
-## Task 3: RunDir 目录布局与读写
+## Task 3: RunDir Layout and I/O
 
 **Files:**
 - Create: `src/paper_repro/rundir.py`
 - Test: `tests/test_rundir.py`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_rundir.py`:
 ```python
@@ -411,12 +411,12 @@ def test_read_missing_spec_returns_none(tmp_path):
     assert rd.read_spec() is None
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_rundir.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.rundir'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.rundir'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/rundir.py`:
 ```python
@@ -512,10 +512,10 @@ class RunDir:
         return PlanReport.model_validate_json(p.read_text())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_rundir.py -v`
-Expected: PASS,6 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -526,15 +526,15 @@ git commit -m "feat: RunDir layout + typed artifact I/O"
 
 ---
 
-## Task 4: 指标解析器
+## Task 4: Metric Parsers
 
 **Files:**
 - Create: `src/paper_repro/parsers.py`
 - Test: `tests/test_parsers.py`
 
-run 阶段把评测脚本的原始 stdout 落盘,grade 阶段用这里的解析器把数字抠出来。解析不出来要明确返回 None(让 grade 判 BLOCKED/UNPARSEABLE),绝不猜。
+The run stage persists the eval script's raw stdout; the grade stage uses these parsers to extract the numbers. If it can't parse, return None explicitly (so grade marks it BLOCKED/UNPARSEABLE) — never guess.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_parsers.py`:
 ```python
@@ -574,12 +574,12 @@ def test_unknown_metric_returns_none():
     assert parse_metric("bleu", "bleu: 30") is None
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_parsers.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.parsers'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.parsers'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/parsers.py`:
 ```python
@@ -629,10 +629,10 @@ def parse_metric(metric: str, text: str) -> Optional[float]:
     return None
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_parsers.py -v`
-Expected: PASS,7 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -643,21 +643,21 @@ git commit -m "feat: metric parsers (ppl/accuracy/speedup) returning None on mis
 
 ---
 
-## Task 5: Grade —— 纯代码判分(核心)
+## Task 5: Grade — Pure-Code Judge (core)
 
 **Files:**
 - Create: `src/paper_repro/grade.py`
 - Test: `tests/test_grade.py`
 
-这是整个系统的皇冠。两道独立检查(数值达标 + 过程忠实),四态判定。grade 只读 spec + run 落盘输出,**不 import runstage,不重跑,不知道目标值之外的执行上下文**。
+This is the crown of the whole system. Two independent checks (value-in-tolerance + process-faithfulness), four verdicts. grade reads only spec + the run's persisted output; **it does not import runstage, does not re-run, and knows no execution context beyond the target value**.
 
-判定规则(与设计 §5.1 一致):
-- **MATCH** = 数值达标 AND 过程忠实
-- **PARTIAL** = 数值达标但过程有偏差;或过程忠实但数值超容差(必带原因)
-- **FAIL** = 数值显著偏离且无法归因(数值超容差且过程也有偏差)
-- **BLOCKED** = run 没跑成 / 输出无法解析 / calib UNKNOWN 导致不可比
+Verdict rules (consistent with design §5.1):
+- **MATCH** = value in tolerance AND process faithful
+- **PARTIAL** = value in tolerance but process diverged; or process faithful but value out of tolerance (reason required)
+- **FAIL** = value significantly off and unattributable (out of tolerance AND process also diverged)
+- **BLOCKED** = run didn't run / output unparseable / calib UNKNOWN → incomparable
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_grade.py`:
 ```python
@@ -738,16 +738,16 @@ def test_blocked_when_calib_unknown(tmp_path):
     assert "calib" in g.reason.lower()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_grade.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.grade'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.grade'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/grade.py`:
 ```python
-"""Pure-code judge. Isolated from execution: reads only spec + run's落盘 output.
+"""Pure-code judge. Isolated from execution: reads only spec + run's persisted output.
 
 Two independent checks:
   1. value:    |measured - expected| <= tolerance
@@ -834,10 +834,14 @@ def grade_claim(claim: Claim, artifact: Artifact, run: RunResult,
                       checks={"value": value_ok, "faithful": faithful_ok})
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+> Note: during code review the faithfulness check was strengthened to also pull
+> `wbits`/`group_size` from `artifact.quant_config` (the plan version above omitted
+> them), closing a false-MATCH hole. See the shipped `grade.py` for the final form.
+
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_grade.py -v`
-Expected: PASS,7 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -848,15 +852,15 @@ git commit -m "feat: pure-code judge with value+faithfulness double check, 4 ver
 
 ---
 
-## Task 6: Report —— 中英双语渲染
+## Task 6: Report — Bilingual Rendering
 
 **Files:**
 - Create: `src/paper_repro/report.py`
 - Test: `tests/test_report.py`
 
-渲染 `report.zh.md` 和 `report.en.md`。永远用实测原始数字,绝不用 paper 数字填空;每条 claim 附复算信息。
+Render `report.zh.md` and `report.en.md`. Always use the measured raw numbers, never fill in paper numbers; each claim carries its replay info.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_report.py`:
 ```python
@@ -915,12 +919,12 @@ def test_env_snapshot_in_report():
     assert "abc123" in zh      # repo commit
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_report.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.report'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.report'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/report.py`:
 ```python
@@ -964,7 +968,7 @@ def _table(spec, grades, header):
     lines = [header, "|---|---|---|---|---|---|---|"]
     for c in spec.claims:
         g = runs_by.get(c.id)
-        measured = "—" if not g or g.measured is None else f"{g.measured:g}"
+        measured = "—" if not g or g.measured is None else f"{g.measured:.2f}"
         verdict = g.verdict if g else "BLOCKED"
         reason = g.reason if g else "no grade"
         label = _artifact_label(spec, c.artifact)
@@ -1019,10 +1023,13 @@ Verdict summary: {summ}
     return zh, en
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+> Note: the measured column uses `{:.2f}` (not `{:g}`) so that `5.80` renders as
+> `5.80`, matching the test's `"5.80" in zh` assertion.
+
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_report.py -v`
-Expected: PASS,4 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -1033,16 +1040,16 @@ git commit -m "feat: bilingual report rendering (measured-only, with replay info
 
 ---
 
-## Task 7: Ingest —— .org 解析与入参归一
+## Task 7: Ingest — .org Parsing and Input Normalization
 
 **Files:**
 - Create: `src/paper_repro/ingest.py`
 - Create: `tests/fixtures/sample.org`
 - Test: `tests/test_ingest.py`
 
-本期重点实现可纯逻辑测试的部分:入参归一(`.org` / url / id → arxiv_id + source_url)和 repo 链接发现(从 latex/readme 文本里扒 GitHub 链接)。网络抓取(latex/clone)封装成可注入的函数,测试用 monkeypatch 打桩。
+This phase focuses on the purely logic-testable parts: input normalization (`.org` / url / id → arxiv_id + source_url) and repo link discovery (scrape GitHub links out of latex/readme text). Network fetches (latex/clone) are wrapped as injectable functions, stubbed via monkeypatch in tests.
 
-- [ ] **Step 1: 写 fixture**
+- [ ] **Step 1: Write the fixture**
 
 `tests/fixtures/sample.org`:
 ```
@@ -1055,7 +1062,7 @@ git commit -m "feat: bilingual report rendering (measured-only, with replay info
 Some narrative text. Code at https://github.com/example/ternary-mamba here.
 ```
 
-- [ ] **Step 2: 写失败测试**
+- [ ] **Step 2: Write the failing test**
 
 `tests/test_ingest.py`:
 ```python
@@ -1111,12 +1118,12 @@ def test_find_repo_url_none_when_absent():
     assert find_repo_url("no links here") is None
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [ ] **Step 3: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_ingest.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.ingest'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.ingest'`
 
-- [ ] **Step 4: 写实现**
+- [ ] **Step 4: Write the implementation**
 
 `src/paper_repro/ingest.py`:
 ```python
@@ -1181,10 +1188,10 @@ def normalize_input(arg: str) -> tuple[str, str]:
     raise ValueError(f"unrecognized input: {arg}")
 ```
 
-- [ ] **Step 5: 跑测试确认通过**
+- [ ] **Step 5: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_ingest.py -v`
-Expected: PASS,8 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 6: Commit**
 
@@ -1195,15 +1202,15 @@ git commit -m "feat: ingest input normalization + org parsing + repo discovery"
 
 ---
 
-## Task 8: Plan —— 可行性/异常哨兵
+## Task 8: Plan — Feasibility/Anomaly Sentinel
 
 **Files:**
 - Create: `src/paper_repro/planstage.py`
 - Test: `tests/test_planstage.py`
 
-plan 默认静默放行(成本非约束)。只在两种情况标 `needs_user_decision=True`:硬件不可行,或估算与 paper 自报严重背离(质量信号,通常意味着 specextract 抽错)。
+plan passes silently by default (cost not a constraint). It sets `needs_user_decision=True` only in two cases: infeasible hardware, or estimate wildly diverging from the paper's self-report (a quality signal, usually meaning specextract got something wrong).
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_planstage.py`:
 ```python
@@ -1240,12 +1247,12 @@ def test_no_hardware_requirement_is_feasible():
     assert plan.claims[0].feasible is True
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_planstage.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.planstage'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.planstage'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/planstage.py`:
 ```python
@@ -1284,10 +1291,10 @@ def build_plan(spec: Spec, available_hardware: list[str]) -> PlanReport:
                       decision_reason="; ".join(reasons) if needs else None)
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_planstage.py -v`
-Expected: PASS,3 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -1298,15 +1305,15 @@ git commit -m "feat: plan stage feasibility/anomaly sentinel (silent pass by def
 
 ---
 
-## Task 9: Headless —— claude -p 封装
+## Task 9: Headless — claude -p Wrapper
 
 **Files:**
 - Create: `src/paper_repro/headless.py`
 - Test: `tests/test_headless.py`
 
-复用 llm-paper-radar 的模式:`claude -p --permission-mode acceptEdits --allowedTools "..."`,prompt 经 stdin,**不信 exit code,靠输出文件是否出现来判定成功**。subprocess 调用封装成可注入,测试用 monkeypatch。
+Reuse llm-paper-radar's pattern: `claude -p --permission-mode acceptEdits --allowedTools "..."`, prompt via stdin, **don't trust the exit code — judge success by whether the output file appeared**. The subprocess call is wrapped as injectable, monkeypatched in tests.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_headless.py`:
 ```python
@@ -1345,12 +1352,12 @@ def test_failure_when_nonzero_and_missing(tmp_path, monkeypatch):
     assert res.ok is False
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_headless.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.headless'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.headless'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/headless.py`:
 ```python
@@ -1395,10 +1402,10 @@ def run_headless(prompt: str, allowed_tools: list[str], cwd: Path,
                                 f"(exit={code})")
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_headless.py -v`
-Expected: PASS,3 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -1409,16 +1416,16 @@ git commit -m "feat: headless claude -p wrapper with output-file verification"
 
 ---
 
-## Task 10: SpecExtract 阶段(headless,可 mock)
+## Task 10: SpecExtract Stage (headless, mockable)
 
 **Files:**
 - Create: `src/paper_repro/specextract.py`
 - Create: `tests/fixtures/extracted_spec.yaml`
 - Test: `tests/test_specextract.py`
 
-specextract 构造 prompt、调 headless 生成 `spec.yaml`、校验能 parse 成 `Spec`。本期用 mock headless 写出 fixture spec 来验证装配。门控(等用户审 spec)在 pipeline 层做,这里只负责生成+校验。
+specextract builds the prompt, calls headless to produce `spec.yaml`, and validates it parses into a `Spec`. This phase uses a mock headless that writes the fixture spec to verify the assembly. The gate (waiting for the user to review the spec) lives in the pipeline layer; this module only generates + validates.
 
-- [ ] **Step 1: 写 fixture**
+- [ ] **Step 1: Write the fixture**
 
 `tests/fixtures/extracted_spec.yaml`:
 ```yaml
@@ -1451,7 +1458,7 @@ claims:
     hardware: null
 ```
 
-- [ ] **Step 2: 写失败测试**
+- [ ] **Step 2: Write the failing test**
 
 `tests/test_specextract.py`:
 ```python
@@ -1498,12 +1505,12 @@ def test_specextract_returns_none_on_invalid_yaml(tmp_path, monkeypatch):
     assert specextract.extract_spec(rd) is None
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [ ] **Step 3: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_specextract.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.specextract'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.specextract'`
 
-- [ ] **Step 4: 写实现**
+- [ ] **Step 4: Write the implementation**
 
 `src/paper_repro/specextract.py`:
 ```python
@@ -1562,10 +1569,10 @@ def extract_spec(rd: RunDir) -> Optional[Spec]:
     return spec
 ```
 
-- [ ] **Step 5: 跑测试确认通过**
+- [ ] **Step 5: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_specextract.py -v`
-Expected: PASS,3 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 6: Commit**
 
@@ -1576,16 +1583,16 @@ git commit -m "feat: specextract stage (headless → validated Spec)"
 
 ---
 
-## Task 11: Setup / Run 阶段接口与 stub
+## Task 11: Setup / Run Stage Interfaces and Stubs
 
 **Files:**
 - Create: `src/paper_repro/setupstage.py`
 - Create: `src/paper_repro/runstage.py`
 - Test: `tests/test_stages_stub.py`
 
-本期不接真 GPU。setup 返回 env 快照(stub),run 按 spec 把"评测命令应有的输出"落盘的能力留给 Plan 2;现在 run 提供一个能消费 RunResult 契约的 stub,并支持注入一个"executor"以便 pipeline 测试。这样两路径(官方 repo / 从头实现)将来都填同一个 executor 接口。
+No real GPU this phase. setup returns an env snapshot (stub); the ability for run to persist "what the eval command should output" is left to Plan 2. For now run provides a stub that consumes the RunResult contract and supports injecting an "executor" for pipeline testing. This way both paths (official-repo / from-scratch) will later fill the same executor interface.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_stages_stub.py`:
 ```python
@@ -1646,12 +1653,12 @@ def test_run_claims_marks_blocked_on_executor_error(tmp_path):
     assert "kernel compile failed" in results[0].block_reason
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_stages_stub.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.setupstage'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.setupstage'`
 
-- [ ] **Step 3: 写实现 setupstage.py**
+- [ ] **Step 3: Write setupstage.py**
 
 `src/paper_repro/setupstage.py`:
 ```python
@@ -1663,6 +1670,7 @@ the repo's smoke test until it passes once. The signature stays stable.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -1684,12 +1692,11 @@ def run_setup(rd: RunDir, spec: Spec,
         return executor(rd, spec)
     # Plan 1 stub: pretend the env was built. Real impl lands in Plan 2.
     snapshot = {"torch": "stub", "transformers": "stub", "cuda": "stub"}
-    (rd.root / "env_snapshot.json").write_text(
-        __import__("json").dumps(snapshot, indent=2))
+    (rd.root / "env_snapshot.json").write_text(json.dumps(snapshot, indent=2))
     return SetupResult(ok=True, env_snapshot=snapshot, patches=[])
 ```
 
-- [ ] **Step 4: 写实现 runstage.py**
+- [ ] **Step 4: Write runstage.py**
 
 `src/paper_repro/runstage.py`:
 ```python
@@ -1697,7 +1704,7 @@ def run_setup(rd: RunDir, spec: Spec,
 
 The actual quantization/eval is delegated to an `executor` callable (one impl per
 provider: official-repo now, from-scratch later). Plan 1 wires the contract and
-the落盘/blocked-handling; Plan 2 supplies the real GPU executor.
+the persist/blocked-handling; Plan 2 supplies the real GPU executor.
 
 executor(claim, artifact, claim_dir) -> dict with keys:
   stdout_path, actual_config, gpu, seed, minutes
@@ -1734,10 +1741,10 @@ def run_claims(rd: RunDir, spec: Spec,
     return results, actual_configs
 ```
 
-- [ ] **Step 5: 跑测试确认通过**
+- [ ] **Step 5: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_stages_stub.py -v`
-Expected: PASS,3 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 6: Commit**
 
@@ -1748,15 +1755,15 @@ git commit -m "feat: setup/run stage interfaces with injectable executor (stubs)
 
 ---
 
-## Task 12: Pipeline 编排 + 门控
+## Task 12: Pipeline Orchestration + Gates
 
 **Files:**
 - Create: `src/paper_repro/pipeline.py`
 - Test: `tests/test_pipeline.py`
 
-把各阶段串起来。门控 1(spec 审批)和 plan 哨兵通过注入的回调实现,这样测试里可以自动批准,真实 CLI 里弹 AskUserQuestion / 等用户。grade 用 Task 5 的 `grade_claim` 逐条判,report 用 Task 6 渲染。
+Wire the stages together. Gate 1 (spec approval) and the plan sentinel are implemented via injected callbacks, so tests can auto-approve while the real CLI pops an AskUserQuestion / waits for the user. grade uses Task 5's `grade_claim` per claim; report uses Task 6 to render.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_pipeline.py`:
 ```python
@@ -1764,8 +1771,6 @@ import shutil
 from pathlib import Path
 
 import paper_repro.pipeline as pipeline
-import paper_repro.specextract as specextract
-from paper_repro.headless import HeadlessResult
 from paper_repro.setupstage import SetupResult
 
 FIX = Path(__file__).parent / "fixtures"
@@ -1773,8 +1778,8 @@ FIX = Path(__file__).parent / "fixtures"
 
 def _fake_specextract(rd):
     shutil.copy(FIX / "extracted_spec.yaml", rd.root / "spec.yaml")
-    from paper_repro.models import Spec
     import yaml
+    from paper_repro.models import Spec
     return Spec.model_validate(yaml.safe_load((rd.root / "spec.yaml").read_text()))
 
 
@@ -1820,12 +1825,12 @@ def test_pipeline_aborts_when_spec_rejected(tmp_path, monkeypatch):
     assert result.aborted_at == "spec-approval"
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_pipeline.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.pipeline'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.pipeline'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/pipeline.py`:
 ```python
@@ -1842,7 +1847,7 @@ from typing import Callable, Optional
 
 from paper_repro.grade import grade_claim
 from paper_repro.ingest import normalize_input
-from paper_repro.models import IngestInfo, RepoInfo
+from paper_repro.models import IngestInfo
 from paper_repro.planstage import build_plan
 from paper_repro.report import render_reports
 from paper_repro.rundir import RunDir
@@ -1872,7 +1877,8 @@ def run_pipeline(
     arxiv_id, url = normalize_input(input_arg)
     rd = RunDir.create(base_dir, arxiv_id=arxiv_id, timestamp=timestamp)
     fetch_sources(rd, arxiv_id, url)            # fills paper/ and repo/ (network)
-    rd.write_ingest(IngestInfo(arxiv_id=arxiv_id, source_url=url))
+    ingest = IngestInfo(arxiv_id=arxiv_id, source_url=url)
+    rd.write_ingest(ingest)
 
     # --- specextract + gate 1 ---
     spec = extract_spec(rd)
@@ -1898,13 +1904,12 @@ def run_pipeline(
 
     # --- grade (pure code, isolated) ---
     artifacts = {a.id: a for a in spec.artifacts}
-    grades = [grade_claim(c, artifacts[c.artifact],
-                          next(r for r in runs if r.claim_id == c.id),
+    runs_by_claim = {r.claim_id: r for r in runs}
+    grades = [grade_claim(c, artifacts[c.artifact], runs_by_claim[c.id],
                           actual_configs.get(c.id, {}))
               for c in spec.claims]
 
     # --- report ---
-    ingest = rd.read_ingest()
     ingest.repo = spec.repo
     zh, en = render_reports(spec, ingest, grades, runs, setup.env_snapshot,
                             patches=setup.patches)
@@ -1913,10 +1918,14 @@ def run_pipeline(
     return PipelineResult(root=rd.root, aborted_at=None)
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+> Note: the shipped version reuses the `ingest` object built during ingest (rather
+> than re-reading it from disk) and looks up runs via a `runs_by_claim` dict. The
+> abort branches (specextract / spec-approval / plan / setup) each have a test.
+
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_pipeline.py -v`
-Expected: PASS,2 个测试全绿
+Expected: PASS, all tests green
 
 - [ ] **Step 5: Commit**
 
@@ -1931,17 +1940,15 @@ git commit -m "feat: pipeline orchestration with spec-approval + plan gates"
 
 **Files:**
 - Create: `src/paper_repro/cli.py`
-- Modify: `pyproject.toml`(加 `[project.scripts]`)
+- Modify: `pyproject.toml` (add `[project.scripts]`)
 - Test: `tests/test_cli.py`
 
-`run` 命令把真实依赖(网络抓取、交互门控、真实 executor)接进 pipeline。本期网络/GPU executor 仍是占位(Plan 2 替换),但 CLI 装配与 `--yes` 自动批准、`report` 重渲染可测。
+The `run` command wires the real dependencies (network fetch, interactive gates, real executor) into the pipeline. This phase still uses placeholders for the network/GPU executor (replaced in Plan 2), but the CLI assembly, the `--yes` auto-approve, and the `report` re-render are testable.
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_cli.py`:
 ```python
-from pathlib import Path
-
 from click.testing import CliRunner
 
 from paper_repro.cli import cli
@@ -1984,12 +1991,12 @@ def test_cli_report_rerenders(tmp_path, monkeypatch):
     assert (rd.root / "report.zh.md").exists()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_cli.py -v`
-Expected: FAIL,`ModuleNotFoundError: No module named 'paper_repro.cli'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.cli'`
 
-- [ ] **Step 3: 写实现**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_repro/cli.py`:
 ```python
@@ -2002,7 +2009,6 @@ from pathlib import Path
 import click
 
 from paper_repro.grade import grade_claim
-from paper_repro.parsers import parse_metric
 from paper_repro.report import render_reports
 from paper_repro.rundir import RunDir
 
@@ -2086,23 +2092,23 @@ if __name__ == "__main__":
     cli()
 ```
 
-- [ ] **Step 4: 加 console script 入口**
+- [ ] **Step 4: Add the console-script entry**
 
-在 `pyproject.toml` 的 `[project]` 段之后插入:
+Insert into `pyproject.toml` after the `[project]` table (after the `dependencies` array, before `[dependency-groups]`):
 ```toml
 [project.scripts]
 paper-repro = "paper_repro.cli:cli"
 ```
 
-- [ ] **Step 5: 跑测试确认通过**
+- [ ] **Step 5: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_cli.py -v`
-Expected: PASS,3 个测试全绿
+Expected: PASS, all tests green
 
-- [ ] **Step 6: 全量测试 + 装 CLI 冒烟**
+- [ ] **Step 6: Full suite + CLI smoke**
 
 Run: `uv run pytest -q && uv sync && uv run paper-repro --help`
-Expected: 全部测试通过;`paper-repro --help` 打印 run/report 子命令
+Expected: all tests pass; `paper-repro --help` prints the run/report subcommands
 
 - [ ] **Step 7: Commit**
 
@@ -2113,13 +2119,13 @@ git commit -m "feat: click CLI (run/report) with console script entrypoint"
 
 ---
 
-## Task 14: 端到端冒烟 + conftest 清理
+## Task 14: End-to-End Smoke + conftest Cleanup
 
 **Files:**
 - Create: `tests/conftest.py`
-- Test: 复用现有
+- Test: reuse existing
 
-- [ ] **Step 1: 写共享 fixture(去重)**
+- [ ] **Step 1: Write shared fixtures (dedup)**
 
 `tests/conftest.py`:
 ```python
@@ -2135,15 +2141,15 @@ def fixtures_dir() -> Path:
     return FIXTURES
 ```
 
-- [ ] **Step 2: 跑全量测试**
+- [ ] **Step 2: Run the full suite**
 
 Run: `uv run pytest -q`
-Expected: PASS,所有 task 的测试全绿(约 50+ 用例)
+Expected: PASS, all tasks' tests green (~50+ cases)
 
-- [ ] **Step 3: ruff 检查**
+- [ ] **Step 3: ruff check**
 
 Run: `uv run ruff check src/ tests/`
-Expected: 无 error(有自动可修的 warning 用 `uv run ruff check --fix` 修)
+Expected: no errors (auto-fixable warnings via `uv run ruff check --fix`)
 
 - [ ] **Step 4: Commit**
 
@@ -2156,24 +2162,24 @@ git commit -m "test: shared fixtures + full-suite green"
 
 ## Self-Review
 
-**1. Spec coverage** — 逐条对设计:
+**1. Spec coverage** — item by item against the design:
 
-- §2 七阶段:ingest(Task 7)/ specextract(Task 10)/ plan(Task 8)/ setup(Task 11)/ run(Task 11)/ grade(Task 5)/ report(Task 6)/ 编排(Task 12)。✓
-- §2.1 门控 1 + plan 哨兵:pipeline 的 `approve_spec` / `approve_plan` + `build_plan.needs_user_decision`(Task 8/12)。✓
-- §2.2 判分隔离:`grade.py` 不 import `runstage`,只读落盘文件(Task 5)。✓
-- §3.1 ingest 入参三形态 + repo 发现:`normalize_input` / `find_repo_url`(Task 7)。latex 抓取/clone 明确推迟到 Plan 2(`fetch_sources` 占位),不是遗漏。✓
-- §3.2 spec schema 两层:`models.py` 的 Artifact/Claim(Task 2)。✓
-- §3.3 runner / calib_status / source:都是模型字段并在 grade/specextract 用到。✓
-- §4.1 setup 单一退出条件 + 护栏:接口+stub(Task 11),真实循环推迟 Plan 2(已在文件 docstring 标注)。✓
-- §4.2 run 优先官方复现命令:executor 接口承载,Plan 2 实现。✓
-- §5.1 四态判分:Task 5 完整覆盖,含 BLOCKED 与 FAIL 分离、calib UNKNOWN、unparseable。✓
-- §5.2 双语两文件 + 实测数字 + 复算信息:Task 6。✓
-- §6 从头实现预留接口:`run_setup`/`run_claims` 的 `executor` 注入点即 provider 接口。✓
-- §7 run 目录布局:Task 3 RunDir。✓
-- §8 YAGNI:无队列/DB/cron/成本门控/LLM 判分。✓
+- §2 seven stages: ingest (Task 7) / specextract (Task 10) / plan (Task 8) / setup (Task 11) / run (Task 11) / grade (Task 5) / report (Task 6) / orchestration (Task 12). ✓
+- §2.1 gate 1 + plan sentinel: pipeline's `approve_spec` / `approve_plan` + `build_plan.needs_user_decision` (Task 8/12). ✓
+- §2.2 judge isolation: `grade.py` does not import `runstage`, reads only persisted files (Task 5). ✓
+- §3.1 ingest's three input forms + repo discovery: `normalize_input` / `find_repo_url` (Task 7). latex fetch/clone explicitly deferred to Plan 2 (`fetch_sources` placeholder), not an omission. ✓
+- §3.2 two-layer spec schema: `models.py`'s Artifact/Claim (Task 2). ✓
+- §3.3 runner / calib_status / source: all model fields, used in grade/specextract. ✓
+- §4.1 setup's single exit condition + guardrails: interface+stub (Task 11), real loop deferred to Plan 2 (noted in the file docstring). ✓
+- §4.2 run prefers official reproduction command: carried by the executor interface, implemented in Plan 2. ✓
+- §5.1 four verdicts: Task 5 covers them fully, including BLOCKED separated from FAIL, calib UNKNOWN, unparseable. ✓
+- §5.2 bilingual two files + measured numbers + replay info: Task 6. ✓
+- §6 from-scratch reserved interface: the `executor` injection point of `run_setup`/`run_claims` is the provider interface. ✓
+- §7 run directory layout: Task 3 RunDir. ✓
+- §8 YAGNI: no queue/DB/cron/cost-gate/LLM-grading. ✓
 
-**推迟到 Plan 2 的(非遗漏,显式划出范围):** 真实 latex 抓取与 git clone、真实 conda/uv setup 调试循环、真实 GPU 量化+评测 executor、setup_patches 实采集、env_snapshot 实采集。Plan 1 全部用接口/stub 占位并测试装配。
+**Deferred to Plan 2 (not omissions, explicitly scoped out):** real latex fetch and git clone, real conda/uv setup debug loop, real GPU quant+eval executor, real setup_patches collection, real env_snapshot capture. Plan 1 stubs/interfaces them all and tests the assembly.
 
-**2. Placeholder scan** — 计划内无 "TBD/TODO/实现细节后补";代码步骤均给出完整可运行代码。stub 是有意的范围切分,已在 docstring 和 self-review 标注,非占位符欠债。
+**2. Placeholder scan** — no "TBD/TODO/fill in later" in the plan; all code steps give complete runnable code. The stubs are an intentional scope split, noted in docstrings and self-review, not placeholder debt.
 
-**3. Type consistency** — 通查:`grade_claim(claim, artifact, run, actual_config)` 在 Task 5 定义、Task 12 调用一致;`run_claims(rd, spec, executor) -> (list[RunResult], dict)` Task 11 定义、Task 12 解包一致;`render_reports(spec, ingest, grades, runs, env, patches)` Task 6 定义、Task 12/13 调用一致;`run_headless(prompt, allowed_tools, cwd, expect_file)` Task 9 定义、Task 10 调用一致;`RunResult.stdout_path` 为 str,grade 用 `Path(run.stdout_path)` 包装一致。✓
+**3. Type consistency** — full pass: `grade_claim(claim, artifact, run, actual_config)` defined in Task 5, called consistently in Task 12; `run_claims(rd, spec, executor) -> (list[RunResult], dict)` defined in Task 11, unpacked consistently in Task 12; `render_reports(spec, ingest, grades, runs, env, patches)` defined in Task 6, called consistently in Task 12/13; `run_headless(prompt, allowed_tools, cwd, expect_file)` defined in Task 9, called consistently in Task 10; `RunResult.stdout_path` is str, grade wraps it with `Path(run.stdout_path)` consistently. ✓

@@ -1,93 +1,93 @@
-# 量化论文复现 Agent — 设计文档
+# Quantization Paper Reproduction Agent — Design Doc
 
-> 日期:2026-06-19
-> 状态:设计已确认,待写实现计划
-> 上游:[llm-paper-radar](https://github.com/zhaolin-amd/llm-paper-radar)(消费其推送的 paper)
+> Date: 2026-06-19
+> Status: design approved, implementation plan pending
+> Upstream: [llm-paper-radar](https://github.com/zhaolin-amd/llm-paper-radar) (consumes its pushed papers)
 
-## 1. 目标与范围
+## 1. Goal and Scope
 
-构建一个 agent,根据 arxiv 上的量化(quantization)论文或其官方 GitHub repo,**复现论文中报告的结果**。论文来源主要是 llm-paper-radar 的推送。
+Build an agent that, given a quantization paper on arxiv or its official GitHub repo, **reproduces the results reported in the paper**. Papers come mainly from llm-paper-radar's pushes.
 
-- 有官方 repo 的论文:调用其自带脚本复现(忠实度最高,优先)。
-- 无官方 repo 的论文:根据论文描述的算法自己实现(本期**只预留接口,不实现**)。
+- Papers with an official repo: reproduce by invoking the repo's own scripts (highest fidelity, preferred).
+- Papers without an official repo: implement the algorithm yourself from the paper's description (**this phase only reserves the interface, no implementation**).
 
-### 1.1 核心判断
+### 1.1 Core Insight
 
-难点不在"跑代码",而在两件事:
-1. 把一篇论文翻译成一个**可机器执行、可自动判分的复现规格(spec)**;
-2. **诚实地报告差距**——跑不动就说跑不动,绝不用论文数字填空。
+The hard part is not "running code" but two things:
+1. Translating a paper into a **machine-executable, auto-gradeable reproduction spec**;
+2. **Honestly reporting the gap** — if it can't run, say so; never fill in paper numbers as a substitute.
 
-跑代码本身在量化领域已高度标准化(PPL + lm-eval-harness + 论文自带脚本),可吃现成生态。
+Running the code itself is already highly standardized in the quantization field (PPL + lm-eval-harness + the paper's own scripts), so we can lean on the existing ecosystem.
 
-### 1.2 已锁定的设计决定
+### 1.2 Locked Design Decisions
 
-| 维度 | 决定 |
+| Dimension | Decision |
 |---|---|
-| 评测 | 优先跑论文自带脚本(official > cited-standard > custom rebuild) |
-| Spec | 逐 claim 抽取**完整评测协议** |
-| 路径 | 官方 repo 路径先行;从头实现是**预留接口** |
-| 判分 | **过程忠实 AND 数值在容差内**,两者都满足才算 MATCH |
-| 自主度 | 半自动,门控 1(spec 审批)+ plan 异常哨兵 |
-| 运行形态 | 手动 CLI,逐篇调用,状态落文件 |
-| 技术栈 | Claude Code headless(setup 调试)+ conda/uv 隔离 |
-| 算力 | 多卡可用,成本非约束 |
-| 默认 claim | 只抽主结果(论文主推/标黑的几条),其余按需 |
-| 默认容差 | PPL ±0.05,accuracy ±0.5%(论文明确给则用论文的) |
-| 报告 | 中英双语,md 分两文件 `report.zh.md` / `report.en.md` |
+| Eval | Run the paper's own scripts first (official > cited-standard > custom rebuild) |
+| Spec | Extract the **full eval protocol** per claim |
+| Path | Official-repo path first; from-scratch is a **reserved interface** |
+| Judge | **Process-faithful AND value-in-tolerance** — both required for MATCH |
+| Autonomy | Semi-auto: gate 1 (spec approval) + plan anomaly sentinel |
+| Deployment | Manual CLI, per-paper, file-based state |
+| Tech stack | Claude Code headless (setup debugging) + conda/uv isolation |
+| Compute | Multi-GPU available, cost not a constraint |
+| Default claims | Extract main results only (the paper's headline/bolded ones), rest on demand |
+| Default tolerance | PPL ±0.05, accuracy ±0.5% (use the paper's if it states one) |
+| Report | Bilingual zh/en, split into two files `report.zh.md` / `report.en.md` |
 
-### 1.3 架构选型
+### 1.3 Architecture Choice
 
-采用**确定性流水线,agent 只进 Setup 阶段**(方案 B)。理由:最难的四个约束——忠实+数值的判分、半自动门控、可复现、预留从头实现接口——都指向一个确定性骨架,把 agent 的不确定性关在唯一真正开放式的环节(驯服腐烂的官方 repo 环境)。判分用纯代码做确定性数值比较,不交给 LLM。
+Adopt a **deterministic pipeline where the agent only enters the Setup stage** (Approach B). Reasoning: the four hardest constraints — faithful+numeric judge, semi-auto gating, reproducibility, reserved from-scratch interface — all point to a deterministic skeleton that confines the agent's nondeterminism to the one genuinely open-ended step (taming the rotting official-repo environment). Grading is pure-code deterministic numeric comparison, not handed to an LLM.
 
-## 2. 整体架构
+## 2. Overall Architecture
 
-一次 CLI 调用 = 一篇 paper = 一个 run 目录。无队列、无 DB、无 cron。
+One CLI invocation = one paper = one run directory. No queue, no DB, no cron.
 
 ```
-quant-repro run <arxiv_id | .org文件路径 | arxiv_url>
-quant-repro resume <run_dir>      # 从上次中断/门控处继续
-quant-repro report <run_dir>      # 重新渲染报告
+paper-repro run <arxiv_id | path-to-.org | arxiv_url>
+paper-repro resume <run_dir>      # resume from last interruption / gate
+paper-repro report <run_dir>      # re-render the report
 ```
 
-七个确定性阶段,Python 编排,每阶段读上一阶段 artifact、写自己的 artifact 到 run 目录:
+Seven deterministic stages, orchestrated in Python; each stage reads the prior stage's artifact and writes its own artifact into the run directory:
 
 ```
 ingest → specextract → plan → setup → run → grade → report
-                ⤷[门控1:spec审批]   ⤷[plan:可行性/异常哨兵]
+                ⤷[gate 1: spec approval]   ⤷[plan: feasibility/anomaly sentinel]
 ```
 
-| 阶段 | 性质 | 职责 | 产出 |
+| Stage | Nature | Responsibility | Output |
 |---|---|---|---|
-| **ingest** | 确定性 | arxiv id → 拉 LaTeX 源码 + 定位官方 repo;入参是 `.org` 则读 `#+source:` | `paper/`、`repo/`、`ingest.json` |
-| **specextract** | 1 次 headless 调用 | LaTeX+README → 完整 spec → **停,等审批** | `spec.yaml` |
-| **plan** | 确定性 | 估每条 claim 的 GPU/显存/时长 → 可行性/异常检查 | `plan.json` |
-| **setup** | agentic 调试循环 | conda/uv 建环境,修依赖直到自带评测命令冒烟通过 | `env/`、`setup_log/`、`env_snapshot.json`、`setup_patches/` |
-| **run** | 确定性 | 逐 artifact 量化、逐 claim 调评测脚本,原始输出落盘 | `runs/<claim_id>/` |
-| **grade** | 纯代码 | 解析输出,数值+忠实双检,判 MATCH/PARTIAL/FAIL/BLOCKED | `grades.json` |
-| **report** | 确定性 | 渲染中英双语报告 | `report.zh.md`、`report.en.md` |
+| **ingest** | deterministic | arxiv id → fetch LaTeX source + locate official repo; if input is a `.org`, read `#+source:` | `paper/`, `repo/`, `ingest.json` |
+| **specextract** | 1 headless call | LaTeX+README → full spec → **stop, await approval** | `spec.yaml` |
+| **plan** | deterministic | estimate each claim's GPU/VRAM/runtime → feasibility/anomaly check | `plan.json` |
+| **setup** | agentic debug loop | build conda/uv env, fix deps until the repo's own eval command passes a smoke test | `env/`, `setup_log/`, `env_snapshot.json`, `setup_patches/` |
+| **run** | deterministic | quantize per artifact, invoke eval script per claim, persist raw output | `runs/<claim_id>/` |
+| **grade** | pure code | parse output, value+faithfulness double check, verdict MATCH/PARTIAL/FAIL/BLOCKED | `grades.json` |
+| **report** | deterministic | render bilingual reports | `report.zh.md`, `report.en.md` |
 
-### 2.1 门控
+### 2.1 Gates
 
-- **门控 1(spec 审批):** specextract 后停,用户过目 `spec.yaml` 再继续。防止抽错协议导致后面全白跑。
-- **plan 可行性/异常哨兵:** 默认静默放行(成本非约束)。仅在两种情况升级为一次 `AskUserQuestion`:
-  1. **硬件不可行** —— claim 需要环境中根本没有的卡型/显存;
-  2. **估算与论文严重背离** —— plan 估算远超论文自报(如论文 4 GPU·时、估出 200),通常意味着 specextract 抽错,是质量信号,值得烧资源前看一眼。
+- **Gate 1 (spec approval):** stop after specextract; the user reviews `spec.yaml` before continuing. Prevents a mis-extracted protocol from wasting the whole downstream run.
+- **plan feasibility/anomaly sentinel:** silent pass by default (cost is not a constraint). Escalates to a single `AskUserQuestion` only in two cases:
+  1. **Infeasible hardware** — a claim needs a GPU type/VRAM the environment simply doesn't have;
+  2. **Estimate wildly diverges from the paper** — the plan estimate far exceeds the paper's self-reported cost (e.g. paper says 4 GPU-hours, estimate says 200), which usually means specextract got something wrong; a quality signal worth a glance before burning resources.
 
-### 2.2 核心隔离原则
+### 2.2 Core Isolation Principle
 
-grade 是纯代码、与执行分离,只读 run 阶段落盘的原始输出,**永远看不到"该对上的值"之外的执行上下文**。这是"过程忠实+数值双达标"判分能成立、且 agent 无法作弊的前提。
+grade is pure code, separated from execution; it reads only the raw output persisted by the run stage and **never sees execution context beyond "the value to match"**. This is the precondition that makes "process-faithful + value-in-tolerance" grading sound and impossible for the agent to game.
 
-## 3. Ingest 与 Spec Schema
+## 3. Ingest and Spec Schema
 
 ### 3.1 Ingest
 
-入参三形态归一到 arxiv_id:
-- radar 的 `.org` 文件 → 读 `#+source:` 拿 arxiv url(radar 已筛过)
-- arxiv url / id → 直接用
+Normalize three input forms to an arxiv_id:
+- radar's `.org` file → read `#+source:` to get the arxiv url (radar has already filtered)
+- arxiv url / id → use directly
 
-然后:
-- **拉 LaTeX 源码**(`arxiv.org/e-print/<id>`),不 OCR PDF —— 表格数字从 LaTeX 抽准得多。
-- **定位官方 repo**,优先级:论文里的 GitHub 链接 > PapersWithCode > GH code search(按标题/方法名)。候选连同置信度写进 `ingest.json`;**找不到则 `repo: null`**(将来走从头实现 provider,本期直接 SKIP 并在报告说明)。
+Then:
+- **Fetch LaTeX source** (`arxiv.org/e-print/<id>`), do not OCR the PDF — table numbers are far more accurate from LaTeX.
+- **Locate the official repo**, priority: GitHub link in the paper > PapersWithCode > GH code search (by title/method name). Candidates plus confidence are written into `ingest.json`; **if none found, `repo: null`** (future from-scratch provider; this phase simply SKIPs and notes it in the report).
 
 ```
 ingest.json:
@@ -96,29 +96,29 @@ ingest.json:
   latex_path, repo_path
 ```
 
-### 3.2 Spec Schema(两层:artifact + claim)
+### 3.2 Spec Schema (two layers: artifact + claim)
 
-同一量化产物常在多个评测协议下报多条数字,故拆成 **artifacts**(量化产物,可复用)与 **claims**(一条数字 = artifact × 评测协议)。
+The same quantized product is often reported under multiple eval protocols, so split into **artifacts** (quantized products, reusable) and **claims** (one number = artifact × eval protocol).
 
 ```yaml
 paper: 2401.xxxxx
-repo: {url, commit}                    # ingest 带出,grade 记进报告
+repo: {url, commit}                    # carried from ingest, recorded in report by grade
 
-artifacts:                             # 量化产物
+artifacts:                             # quantized products
   - id: llama2-7b-w4g128
     base_model: meta-llama/Llama-2-7b-hf
     method: AWQ
-    quant_config:                      # 忠实判分要逐项比的就是这些
+    quant_config:                      # exactly what faithfulness grading compares item by item
       wbits: 4
       group_size: 128
       sym: false
       calib: {dataset: pile, n_samples: 128, seqlen: 512}
-    calib_status: known                # known | UNKNOWN(抽不到就显式标,grade 判"不可比")
+    calib_status: known                # known | UNKNOWN (mark explicitly if unextractable; grade treats as "incomparable")
 
-claims:                                # 一条 = 一个判分单元
+claims:                                # one = one grading unit
   - id: c1
     artifact: llama2-7b-w4g128
-    eval_protocol:                     # 完整抽取,judge 的依据
+    eval_protocol:                     # fully extracted, the judge's basis
       runner: official                 # official | cited-standard | custom
       command: "python eval_ppl.py --model {model} --dataset wikitext2"
       metric: perplexity
@@ -129,175 +129,175 @@ claims:                                # 一条 = 一个判分单元
       few_shot: 0
       extra_args: "--use_cache false"
     expected: 5.78
-    tolerance: 0.05                    # 默认 PPL ±0.05 / acc ±0.5%;论文给了用论文的
-    source: "Table 3, row 2, col W4"   # 可溯源到论文位置
-    hardware: null                     # 精度类 null;效率类钉死 "A100-80G,bs=1,seqlen=2048"
+    tolerance: 0.05                    # default PPL ±0.05 / acc ±0.5%; use paper's if given
+    source: "Table 3, row 2, col W4"   # traceable to its location in the paper
+    hardware: null                     # null for accuracy claims; pinned for efficiency, e.g. "A100-80G,bs=1,seqlen=2048"
 ```
 
-### 3.3 关键设计点
+### 3.3 Key Design Points
 
-1. **`runner` 字段是核心**:`official` = 调 repo 自带脚本(优先);`cited-standard` = 论文明确引用的标准实现(如指定版本 lm-eval);`custom` = 都没有,按协议重建,报告标注"非官方实现"。
-2. **`calib_status: UNKNOWN` 的显式诚实**:量化复现头号失败原因是 calib 不一致。抽不到就标 UNKNOWN,grade 判"不可比",**绝不默默用默认值蒙**。
-3. **`source` 可溯源**:每条 claim 钉到论文 Table/行/列,门控 1 审 spec 时可逐条核对。
+1. **The `runner` field is central**: `official` = call the repo's own script (preferred); `cited-standard` = a standard implementation the paper explicitly cites (e.g. a pinned lm-eval version); `custom` = none of the above, rebuild from the protocol, with the report flagging "unofficial implementation".
+2. **The explicit honesty of `calib_status: UNKNOWN`**: the #1 cause of quantization reproduction failure is calib inconsistency. If unextractable, mark UNKNOWN, grade treats it as "incomparable", and **never silently fudges with a default**.
+3. **`source` traceability**: each claim is pinned to a paper Table/row/column, so gate 1 review can verify them one by one.
 
-### 3.4 SpecExtract(门控 1)
+### 3.4 SpecExtract (gate 1)
 
-一次 headless 调用,喂 LaTeX 全文 + README,输出上面的 YAML。
-- 默认**只抽主结果**(论文主推/标黑的几条),其余按需。
-- 容差论文没明说则用默认(PPL ±0.05、acc ±0.5%)并标注"默认值,请确认"。
-- 抽完**停**,用户审 `spec.yaml`:核对数字/协议/容差,改完才放行。
+One headless call, fed the full LaTeX + README, producing the YAML above.
+- By default **extract main results only** (the paper's headline/bolded ones), rest on demand.
+- If the paper doesn't state a tolerance, use the default (PPL ±0.05, acc ±0.5%) and flag "default value, please confirm".
+- **Stop** after extraction; the user reviews `spec.yaml`: check numbers/protocol/tolerance, only proceed after edits.
 
-## 4. Setup / Run / 失败模式
+## 4. Setup / Run / Failure Modes
 
-### 4.1 Setup —— 唯一的 agentic 阶段
+### 4.1 Setup — the only agentic stage
 
-唯一交给 Claude Code headless 的环节,因为"驯服腐烂的官方 repo 环境"是唯一真正开放式的问题。
+The only step handed to Claude Code headless, because "taming the rotting official-repo environment" is the only genuinely open-ended problem.
 
-**目标(单一、可判定):** 把 conda/uv 环境修到 **repo 自带评测命令能成功跑通一次**(冒烟测试,非全量)。这是可机器判定的退出条件。
+**Goal (single, decidable):** fix the conda/uv environment until **the repo's own eval command runs successfully once** (a smoke test, not the full run). This is a machine-decidable exit condition.
 
-**冒烟测试输入:** (a) repo 自带 example/test 优先;没有则 (b) fallback 到 spec 某条 claim 命令缩到极小规模(如 8 样本、1 batch)。
+**Smoke-test input:** (a) the repo's own example/test if available; otherwise (b) fall back to one of the spec's claim commands shrunk to a tiny scale (e.g. 8 samples, 1 batch).
 
-**循环:**
+**Loop:**
 ```
-建环境(conda/uv) → 装依赖 → 冒烟跑评测命令
-   → 失败 → agent 读 traceback → 改(版本钉/补包/改API) → 重试
-   → 成功 → 冻结环境快照 → 退出
+build env (conda/uv) → install deps → smoke-run the eval command
+   → fail → agent reads traceback → fix (pin version / add package / patch API) → retry
+   → success → freeze env snapshot → exit
 ```
 
-**护栏:**
-- **重试上限 + 总超时**:超了不静默放弃,停下标 `setup: FAILED`,完整 setup_log 交用户介入。
-- **环境快照入库**:成功后 `pip freeze` + CUDA/torch/transformers 版本写进 `env_snapshot.json`。这是官方 repo 路径头号假阴性来源(依赖漂移),报告必记。
-- **agent 改动留痕**:每个 patch(改了哪行 API、钉了哪个版本)记进 `setup_patches/`,可能正是复现失败的原因,grade 与报告要能看到。
+**Guardrails:**
+- **Retry cap + total timeout**: on exceeding them, don't silently give up — stop, mark `setup: FAILED`, hand the full setup_log to the user.
+- **Env snapshot recorded**: on success, write `pip freeze` + CUDA/torch/transformers versions into `env_snapshot.json`. This is the #1 false-negative source on the official-repo path (dependency drift); the report must record it.
+- **Agent change trail**: each patch (which API line changed, which version pinned) is recorded into `setup_patches/`; it may be the very cause of a reproduction failure, so grade and the report must see it.
 
-**为什么 setup 与 run 分离:** setup 只负责"环境能跑起来",不碰真实验参数。agent 的不确定性被关在"让它能跑"这一步,不渗进"跑出什么数"。
+**Why setup and run are separate:** setup only ensures "the environment can run", never touching real experiment parameters. The agent's nondeterminism is confined to "make it runnable" and doesn't leak into "what numbers come out".
 
-### 4.2 Run —— 确定性执行
+### 4.2 Run — deterministic execution
 
-setup 通过后无 agent。按 spec 逐条执行:
+No agent after setup passes. Execute per spec, item by item:
 ```
 for artifact in spec.artifacts:
-    按 quant_config 量化(调 repo 量化入口或提供的 checkpoint)
+    quantize per quant_config (call repo's quant entry or provided checkpoint)
 for claim in spec.claims:
-    按 eval_protocol.command 跑评测,原始 stdout/产物落盘 runs/<claim_id>/
-    记录:实际命令、seed、起止时间、用的 GPU
+    run eval per eval_protocol.command, persist raw stdout/products to runs/<claim_id>/
+    record: actual command, seed, start/end time, GPU used
 ```
 
-**优先用官方复现命令**:很多 repo 直接提供量化后 checkpoint 或一条 `python main.py --reproduce`。run 优先用它,而非自己拼参数——忠实度最高、最不易踩坑。此时 quant_config 退化为判分依据(grade 用它核对忠实度),非执行指令。
+**Prefer the official reproduction command**: many repos directly provide a quantized checkpoint or a single `python main.py --reproduce`. run prefers that over assembling parameters itself — highest fidelity, least chance of a parameter misstep. In that case quant_config degrades to a grading basis (grade uses it to check faithfulness), not an execution instruction.
 
-**run 不解析结果、不判分**,只忠实落盘原始输出。
+**run does not parse results or grade**, it only faithfully persists raw output.
 
-### 4.3 量化领域特有失败模式(提前埋检查)
+### 4.3 Quantization-specific failure modes (plant checks early)
 
-| 失败模式 | 在哪埋检查 |
+| Failure mode | Where the check lives |
 |---|---|
-| calib 不一致(split/条数/seqlen) | specextract 抽 calib;抽不到标 UNKNOWN → grade 判"不可比" |
-| PPL 口径(stride、seqlen) | eval_protocol 必抽 seqlen/stride;grade 核对 |
-| 官方 repo 依赖腐烂 | setup 调试循环 + 环境快照 |
-| 复现了精度但卖点是 speedup | 报告分开讲"复现了哪一半";效率类 claim 单独标 hardware |
-| agent 改 repo 导致数字偏移 | setup_patches 留痕,报告暴露 |
+| calib inconsistency (split/count/seqlen) | specextract extracts calib; if unextractable mark UNKNOWN → grade "incomparable" |
+| PPL convention (stride, seqlen) | eval_protocol must extract seqlen/stride; grade verifies |
+| official repo deps rotted | setup debug loop + env snapshot |
+| accuracy reproduced but the selling point is speedup | report separately states "which half reproduced"; efficiency claims flagged with hardware |
+| agent edited repo, shifting the numbers | setup_patches trail, exposed in report |
 
-## 5. Grade 判分 + Report
+## 5. Grade + Report
 
-### 5.1 Grade —— 纯代码,与执行隔离
+### 5.1 Grade — pure code, isolated from execution
 
-只读 run 落盘的原始输出 + spec,**不重跑、看不到"该对上的值"之外的执行上下文**。
+Reads only the run's persisted raw output + spec; **no re-running, no visibility into execution context beyond "the value to match"**.
 
-每条 claim 两道独立检查,都过才 MATCH:
+Two independent checks per claim, both must pass for MATCH:
 
-**检查 1 · 数值达标**
+**Check 1 · Value in tolerance**
 ```
-解析 runs/<claim_id>/ → measured
+parse runs/<claim_id>/ → measured
 pass_value = |measured - expected| <= tolerance
-解析不出 → UNPARSEABLE(不猜)
+unparseable → UNPARSEABLE (don't guess)
 ```
-解析器按 metric 类型写(PPL、accuracy、speedup…),从已知评测脚本输出格式提取。
+Parsers are written per metric type (PPL, accuracy, speedup…), extracting from known eval-script output formats.
 
-**检查 2 · 过程忠实**
+**Check 2 · Process faithfulness**
 ```
-逐项比对 实际 config vs spec.eval_protocol / quant_config:
+compare actual config vs spec.eval_protocol / quant_config item by item:
   seqlen, stride, calib, wbits, group_size, few_shot...
-pass_faithful = 全部关键项一致
-calib_status==UNKNOWN → 判不可比
-setup_patches 含影响数值的改动 → 标记降级
+pass_faithful = all key items consistent
+calib_status==UNKNOWN → incomparable
+setup_patches contains numerics-affecting changes → flag downgrade
 ```
 
-**三态 + BLOCKED:**
+**Three verdicts + BLOCKED:**
 
-| 判定 | 条件 |
+| Verdict | Condition |
 |---|---|
-| **MATCH** | 数值达标 AND 过程忠实 |
-| **PARTIAL** | 数值达标但过程有偏差;或过程忠实但数值超容差(必带原因) |
-| **FAIL** | 数值显著偏离且无法归因 |
-| **BLOCKED** | setup 失败 / 输出无法解析 / 评测没跑成 —— "没跑成"不是"复现失败",单独成态 |
+| **MATCH** | value in tolerance AND process faithful |
+| **PARTIAL** | value in tolerance but process diverged; or process faithful but value out of tolerance (reason required) |
+| **FAIL** | value significantly off and unattributable |
+| **BLOCKED** | setup failed / output unparseable / eval didn't run — "didn't run" is not "failed to reproduce", a separate state |
 
-PARTIAL 一定带原因(哪项 config 不一致、偏多少)。绝不"接近就算过"。BLOCKED 与 FAIL 分开:"环境没搭起来"和"方法没复现"是两码事。
+PARTIAL always carries a reason (which config item differs, by how much). Never "close enough counts". BLOCKED is separate from FAIL: "the environment didn't come up" and "the method didn't reproduce" are two different things.
 
-### 5.2 Report —— 确定性渲染,中英双语两文件
+### 5.2 Report — deterministic rendering, two bilingual files
 
-每篇产出 `report.zh.md` 与 `report.en.md`,核心是一张可溯源、可复算的表:
+Each paper produces `report.zh.md` and `report.en.md`; the core is a traceable, replayable table:
 
 ```markdown
-# 复现报告:<title> (<arxiv_id>)
-repo: <url>@<commit> | 环境: torch X / transformers Y / CUDA Z
-判定汇总: MATCH 3 / PARTIAL 1 / FAIL 0 / BLOCKED 1
+# Reproduction Report: <title> (<arxiv_id>)
+repo: <url>@<commit> | env: torch X / transformers Y / CUDA Z
+Verdict summary: MATCH 3 / PARTIAL 1 / FAIL 0 / BLOCKED 1
 
-| claim | 模型 | 配置 | 指标 | paper | 实测 | 判定 | 原因 |
-|-------|------|------|------|-------|------|------|------|
+| claim | model | config | metric | paper | measured | verdict | reason |
+|-------|-------|--------|--------|-------|----------|---------|--------|
 | c1 | Llama2-7B | W4G128 | wiki2 PPL | 5.78 | 5.80 | MATCH | — |
-| c2 | Llama2-7B | W3G128 | wiki2 PPL | 6.92 | 7.41 | PARTIAL | 超容差 0.49;calib n_samples 抽不到用默认 128 |
-| c3 | ... | | speedup | 2.1x | — | BLOCKED | setup 失败:cuda kernel 编译不过 |
+| c2 | Llama2-7B | W3G128 | wiki2 PPL | 6.92 | 7.41 | PARTIAL | out of tolerance by 0.49; calib n_samples unextractable, used default 128 |
+| c3 | ... | | speedup | 2.1x | — | BLOCKED | setup failed: cuda kernel won't compile |
 
-## 复算信息(每条 claim)
-c1: 命令 `...` | seed 0 | GPU A100×1 | 用时 18min | 原始输出 runs/c1/stdout.log
-## Setup 改动留痕
-- 钉 transformers==4.36(repo 要求 4.31 但与 torch 2.x 冲突)
-## 复现了哪一半
-精度类 3/4 复现;效率类 1 条 BLOCKED —— paper 主卖点含 speedup,该部分未验证
+## Replay info (per claim)
+c1: command `...` | seed 0 | GPU A100×1 | 18min | raw output runs/c1/stdout.log
+## Setup patch trail
+- pinned transformers==4.36 (repo requires 4.31 but conflicts with torch 2.x)
+## Which half reproduced
+accuracy 3/4 reproduced; 1 efficiency claim BLOCKED — paper's main selling point includes speedup, that part unverified
 ```
 
-**报告铁律:**
-- 永远是实测原始数字,绝不用论文数字填空。
-- 每条 claim 附完整复算命令 + seed + commit + 环境,任何人可照着重跑。
-- "复现了哪一半"显式写 —— 精度复现 ≠ speedup 复现。
-- judge 逻辑与执行分离,判定可追溯到 grade 的两道检查。
+**Report iron rules:**
+- Always the measured raw number; never fill in paper numbers as a substitute.
+- Each claim carries the full replay command + seed + commit + env, so anyone can re-run it.
+- "Which half reproduced" stated explicitly — accuracy reproduced ≠ speedup reproduced.
+- judge logic separated from execution; verdicts traceable to grade's two checks.
 
-### 5.3 沉淀(轻量)
+### 5.3 Accumulation (lightweight)
 
-每篇复现产出可复用资产,落目录而非数据库:
-- `env_snapshot.json` + `setup_patches` → 下次同方法/同 repo 系直接复用。
-- method adapter(AWQ/GPTQ 系)→ 攒成 `adapters/`,遇变体复用基座。
+Each reproduction produces reusable assets, landing in a directory rather than a database:
+- `env_snapshot.json` + `setup_patches` → reuse directly next time for the same method/repo family.
+- method adapters (AWQ/GPTQ families) → accumulate into `adapters/`, reuse the base when a variant shows up.
 
-CLI 形态下这是"约定的目录布局",不是额外基础设施。
+In the CLI form this is just "a directory layout by convention", not extra infrastructure.
 
-## 6. 从头实现路径(本期预留接口)
+## 6. From-Scratch Path (interface reserved this phase)
 
-无官方 repo 的论文走"从头实现"。本期不实现,但架构预留:
-- **Provider 接口**:官方 repo 路径是一个 `OfficialRepoProvider`,从头实现是另一个 `FromScratchProvider`,二者实现同一接口(产出量化产物 + 可执行评测命令),汇流到同一 grade/report。
-- ingest 标 `repo: null` 的论文,本期直接 SKIP 并在报告说明"无官方 repo,待从头实现"。
+Papers without an official repo take the "from-scratch" path. Not implemented this phase, but the architecture reserves for it:
+- **Provider interface**: the official-repo path is an `OfficialRepoProvider`, from-scratch is a `FromScratchProvider`; both implement the same interface (produce quantized products + executable eval commands), converging on the same grade/report.
+- Papers ingest-marked `repo: null` are simply SKIPped this phase, with the report noting "no official repo, pending from-scratch implementation".
 
-## 7. Run 目录布局
+## 7. Run Directory Layout
 
 ```
 runs/<arxiv_id>-<timestamp>/
   ingest.json
-  paper/                 # LaTeX 源码
-  repo/                  # clone 的官方 repo
+  paper/                 # LaTeX source
+  repo/                  # cloned official repo
   spec.yaml
   plan.json
-  env/                   # conda/uv 环境(或引用)
+  env/                   # conda/uv env (or reference)
   env_snapshot.json
   setup_log/
   setup_patches/
-  runs/<claim_id>/       # 每条 claim 的原始输出、命令、seed
+  runs/<claim_id>/       # per-claim raw output, command, seed
   grades.json
   report.zh.md
   report.en.md
 ```
 
-## 8. 不做什么(YAGNI)
+## 8. What We Don't Do (YAGNI)
 
-- 不做 job 队列 / DB / cron(手动 CLI,文件状态即可)。
-- 不做跨论文调度器(多卡只服务单篇 run 内的 claim)。
-- 不做成本预算审批门控(资源非约束)。
-- 不做 LLM 判分(数值比较用代码)。
-- 本期不实现从头实现 provider(只留接口)。
+- No job queue / DB / cron (manual CLI, file state is enough).
+- No cross-paper scheduler (multi-GPU only serves claims within a single run).
+- No cost-budget approval gate (resources not a constraint).
+- No LLM grading (numeric comparison done in code).
+- No from-scratch provider this phase (interface only).
