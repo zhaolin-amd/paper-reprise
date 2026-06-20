@@ -133,16 +133,35 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
     setting VIRTUAL_ENV, so `python`/`pip` in the command resolve to env_dir's
     interpreter (not the ambient one — otherwise building the env is pointless).
     Returns (exit_code, combined output).
+
+    NOTE: uses a temp file for output rather than capture_output=True (pipes).
+    Some repos (e.g. those that `disown` a background vLLM server) spawn
+    background processes that inherit the pipe fds and hold them open after the
+    shell exits, causing subprocess.run to block forever waiting for pipe EOF.
+    Writing to a temp file avoids this: the shell's stdout/stderr go to the file;
+    disowned children may keep writing there but the shell exits independently.
     """
+    import tempfile
     env = dict(os.environ)
     env["PATH"] = f"{env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
     env["VIRTUAL_ENV"] = str(env_dir)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as out_f:
+        out_path = Path(out_f.name)
     try:
-        proc = subprocess.run(command, shell=True, cwd=str(cwd), env=env,
-                              capture_output=True, text=True, timeout=_SMOKE_TIMEOUT_S)
-    except subprocess.TimeoutExpired as e:
-        return 124, f"smoke command timed out after {_SMOKE_TIMEOUT_S}s\n{e}"
-    return proc.returncode, (proc.stdout + proc.stderr)
+        with open(out_path, "w") as out_f:
+            proc = subprocess.run(command, shell=True, cwd=str(cwd), env=env,
+                                  stdout=out_f, stderr=subprocess.STDOUT,
+                                  timeout=_SMOKE_TIMEOUT_S)
+        output = out_path.read_text(errors="replace")
+        return proc.returncode, output
+    except subprocess.TimeoutExpired:
+        output = out_path.read_text(errors="replace") if out_path.exists() else ""
+        return 124, f"smoke command timed out after {_SMOKE_TIMEOUT_S}s\n{output[-2000:]}"
+    finally:
+        try:
+            out_path.unlink()
+        except OSError:
+            pass
 
 
 def _freeze_env(env_dir: Path) -> dict:
