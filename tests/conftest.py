@@ -11,14 +11,24 @@ def fixtures_dir() -> Path:
 
 
 @pytest.fixture(autouse=True)
-def _block_real_claude(monkeypatch):
-    """Safety net: any test that reaches the real `claude` subprocess fails loudly.
-
-    Tests that legitimately exercise the headless path monkeypatch run_headless or
-    extract_spec themselves; this only catches the ones that forgot to.
+def _block_real_network(monkeypatch):
+    """Safety net: any test that reaches a real `claude` subprocess or a real HTTP
+    fetch fails loudly. Tests that legitimately exercise those paths inject fakes
+    (http_get=..., run_eval=...) or monkeypatch run_headless/extract_spec/
+    fetch_arxiv_title themselves; this only catches the ones that forgot to.
+    Best-effort callers (e.g. fetch_arxiv_title) swallow the raised error and
+    degrade, so the suite stays offline and fast either way.
     """
-    def _boom(*args, **kwargs):
+    def _boom_claude(*args, **kwargs):
         raise RuntimeError(
             "real claude subprocess invoked in a test — stub run_headless/extract_spec"
         )
-    monkeypatch.setattr("paper_reprise.headless._call_claude", _boom, raising=True)
+
+    def _boom_http(*args, **kwargs):
+        raise RuntimeError(
+            "real HTTP request invoked in a test — inject http_get= or monkeypatch it"
+        )
+
+    monkeypatch.setattr("paper_reprise.headless._call_claude", _boom_claude, raising=True)
+    monkeypatch.setattr("paper_reprise.fetch._http_get_text", _boom_http, raising=True)
+    monkeypatch.setattr("paper_reprise.fetch._http_get_bytes", _boom_http, raising=True)

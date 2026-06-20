@@ -279,7 +279,7 @@ Papers without an official repo take the "from-scratch" path. Not implemented th
 ## 7. Run Directory Layout
 
 ```
-runs/<arxiv_id>-<timestamp>/
+runs/<paper_name>-<arxiv_id>-<timestamp>/
   ingest.json
   paper/                 # LaTeX source
   repo/                  # cloned official repo
@@ -294,6 +294,8 @@ runs/<arxiv_id>-<timestamp>/
   report.zh.md
   report.en.md
 ```
+
+`<paper_name>` is a best-effort slug of the paper title; it is omitted (just `<arxiv_id>-<timestamp>`) when the title can't be fetched.
 
 ## 8. What We Don't Do (YAGNI)
 

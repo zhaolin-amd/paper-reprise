@@ -46,3 +46,21 @@ def test_open_existing(tmp_path):
 def test_read_missing_spec_returns_none(tmp_path):
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
     assert rd.read_spec() is None
+
+
+def test_create_with_name_prepends_slug(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t",
+                       name="GSQ: Gumbel-Softmax Quantization!")
+    assert rd.root.name == "gsq-gumbel-softmax-quantization-2401.00001-t"
+
+
+def test_create_with_empty_name_falls_back(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t", name="   ")
+    assert rd.root.name == "2401.00001-t"
+
+
+def test_create_name_is_truncated(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t",
+                       name="a" * 100)
+    # slug truncated to 40 chars before the id
+    assert rd.root.name == ("a" * 40) + "-2401.00001-t"

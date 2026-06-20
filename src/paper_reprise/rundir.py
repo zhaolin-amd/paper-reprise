@@ -4,6 +4,7 @@ One RunDir == one paper reproduction run. All stage artifacts live under root.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -12,14 +13,22 @@ import yaml
 from paper_reprise.models import IngestInfo, PlanReport, Spec
 
 
+def _slug(text: str, max_len: int = 40) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return s[:max_len].strip("-")
+
+
 class RunDir:
     def __init__(self, root: Path):
         self.root = Path(root)
 
     # ---- lifecycle -------------------------------------------------------
     @classmethod
-    def create(cls, base: Path, arxiv_id: str, timestamp: str) -> "RunDir":
-        root = Path(base) / f"{arxiv_id}-{timestamp}"
+    def create(cls, base: Path, arxiv_id: str, timestamp: str,
+               name: Optional[str] = None) -> "RunDir":
+        slug = _slug(name) if name else ""
+        stem = f"{slug}-{arxiv_id}-{timestamp}" if slug else f"{arxiv_id}-{timestamp}"
+        root = Path(base) / stem
         rd = cls(root)
         for d in (rd.root, rd.paper_dir, rd.repo_dir, rd.runs_dir,
                   rd.setup_log_dir, rd.setup_patches_dir):

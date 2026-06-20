@@ -36,10 +36,11 @@ def run_pipeline(
     fetch_sources: Callable,
     setup_executor: Optional[Callable],
     run_executor: Callable,
+    paper_name: Optional[str] = None,
 ) -> PipelineResult:
     # --- ingest ---
     arxiv_id, url = normalize_input(input_arg)
-    rd = RunDir.create(base_dir, arxiv_id=arxiv_id, timestamp=timestamp)
+    rd = RunDir.create(base_dir, arxiv_id=arxiv_id, timestamp=timestamp, name=paper_name)
     fetch_sources(rd, arxiv_id, url)            # fills paper/ and repo/ (network)
     ingest = IngestInfo(arxiv_id=arxiv_id, source_url=url)
     rd.write_ingest(ingest)
