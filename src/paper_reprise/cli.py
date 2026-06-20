@@ -33,9 +33,15 @@ def cli() -> None:
 @cli.command()
 @click.argument("input_arg")
 @click.option("--base-dir", default="runs", help="where run dirs are created")
-@click.option("--yes", is_flag=True, help="auto-approve all gates (non-interactive)")
+@click.option("--yes", is_flag=True,
+              help="skip the spec review and run straight through (non-interactive)")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
-    """Run the reproduction pipeline for a paper (arxiv id, url, or title)."""
+    """Run the reproduction pipeline for a paper (arxiv id, url, or title).
+
+    By default the run STOPS after extracting spec.yaml so you can review and edit
+    which models/claims to reproduce, then continue with `resume`. Pass --yes to
+    skip that review and run end to end.
+    """
     from paper_reprise.pipeline import run_pipeline
 
     # If the input isn't a recognizable arxiv id/url, treat it as a title and
@@ -49,11 +55,10 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         click.echo(f"[resolve] '{input_arg}' → {resolved}")
         input_arg = resolved
 
+    # Spec gate: by default require the user to review which models/claims to
+    # reproduce. The run halts at "spec-approval" unless --yes is given.
     def approve_spec(spec):
-        if yes:
-            return True
-        click.echo(f"\nExtracted {len(spec.claims)} claims. Review spec.yaml.")
-        return click.confirm("Approve spec and continue?", default=True)
+        return yes
 
     def approve_plan(plan):
         if yes:
@@ -71,7 +76,13 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         fetch_sources=make_fetch_sources(), setup_executor=make_setup_executor(),
         run_executor=make_run_executor(),
     )
-    if result.aborted_at:
+    if result.aborted_at == "spec-approval":
+        spec = RunDir.open(result.root).read_spec()
+        n = len(spec.claims) if spec else "?"
+        click.echo(f"\nExtracted {n} claims into {result.root}/spec.yaml")
+        click.echo("Review/edit which models & claims to reproduce, then continue with:")
+        click.echo(f"  paper-reprise resume {result.root}")
+    elif result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
         click.echo(f"Done. Report: {result.root}/report.zh.md")

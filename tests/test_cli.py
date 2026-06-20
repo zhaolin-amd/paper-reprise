@@ -207,3 +207,44 @@ def test_cli_run_fetches_title_for_run_dir_name(tmp_path, monkeypatch):
         cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
     assert res.exit_code == 0
     assert captured["paper_name"] == "Some Paper Title"
+
+
+def test_cli_run_without_yes_stops_for_spec_review(tmp_path, monkeypatch):
+    # default (no --yes): the spec gate returns False, run halts at spec-approval
+    # and prints how to review + resume — it does NOT proceed to setup/run.
+    import paper_reprise.cli as cli_mod
+    captured = {}
+
+    def fake_pipeline(**kwargs):
+        captured["approve_spec_result"] = kwargs["approve_spec"](None)
+        from paper_reprise.pipeline import PipelineResult
+        return PipelineResult(root=tmp_path, aborted_at="spec-approval")
+
+    monkeypatch.setattr(cli_mod, "fetch_arxiv_title", lambda aid: None)
+    monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path)])
+    assert res.exit_code == 0
+    assert captured["approve_spec_result"] is False          # default = stop for review
+    assert "resume" in res.output.lower()
+    assert "spec.yaml" in res.output
+
+
+def test_cli_run_with_yes_approves_spec(tmp_path, monkeypatch):
+    import paper_reprise.cli as cli_mod
+    captured = {}
+
+    def fake_pipeline(**kwargs):
+        captured["approve_spec_result"] = kwargs["approve_spec"](None)
+        from paper_reprise.pipeline import PipelineResult
+        return PipelineResult(root=tmp_path, aborted_at="specextract")
+
+    monkeypatch.setattr(cli_mod, "fetch_arxiv_title", lambda aid: None)
+    monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
+    assert res.exit_code == 0
+    assert captured["approve_spec_result"] is True           # --yes auto-approves

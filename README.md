@@ -89,7 +89,10 @@ paper-reprise report <run_dir>          # re-render the report from an existing 
 
 A short alias `reprise` is also installed (e.g. `reprise run 2401.00001`).
 
-Add `--yes` to auto-approve the gates non-interactively.
+**By default `run` stops after extracting `spec.yaml`** — so you can review and edit
+**which models/claims** to reproduce (the spec is LLM-extracted from the paper and may
+mis-pick or mis-read, e.g. the required hardware). Edit the file, then `resume <run_dir>`
+to continue. Pass `--yes` to skip the review and run end to end (non-interactive / CI).
 
 **Reproducing efficiency/accuracy at scale needs a GPU** — quantization papers run on real
 models. Without a GPU the pipeline still runs through setup and reports the run stage as
