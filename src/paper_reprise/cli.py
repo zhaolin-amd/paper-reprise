@@ -16,9 +16,29 @@ from paper_reprise.fetch import (
     resolve_arxiv_id,
     short_name,
 )
+from paper_reprise.fromscratch import (
+    make_fromscratch_run_executor,
+    make_fromscratch_setup_executor,
+)
 from paper_reprise.ingest import normalize_input
+from paper_reprise.provider import make_run_dispatcher, make_setup_dispatcher
 from paper_reprise.runexec import make_run_executor
 from paper_reprise.setupstage import make_setup_executor
+
+
+def _setup_executor():
+    """The setup executor the pipeline injects: a dispatcher that routes to the
+    official path when a repo was cloned, else the from-scratch path (design §6)."""
+    return make_setup_dispatcher(
+        official=make_setup_executor(),
+        fromscratch=make_fromscratch_setup_executor())
+
+
+def _run_executor():
+    """The run executor the pipeline injects: the same repo-presence dispatch."""
+    return make_run_dispatcher(
+        official=make_run_executor(),
+        fromscratch=make_fromscratch_run_executor())
 
 
 def _timestamp() -> str:
@@ -73,8 +93,8 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         paper_name=paper_name,
         available_hardware=[], approve_spec=approve_spec, approve_plan=approve_plan,
-        fetch_sources=make_fetch_sources(), setup_executor=make_setup_executor(),
-        run_executor=make_run_executor(),
+        fetch_sources=make_fetch_sources(), setup_executor=_setup_executor(),
+        run_executor=_run_executor(),
     )
     if result.aborted_at == "spec-approval":
         spec = RunDir.open(result.root).read_spec()
@@ -103,7 +123,7 @@ def resume(run_dir: str, yes: bool) -> None:
 
     result = resume_pipeline(
         Path(run_dir), available_hardware=[], approve_plan=approve_plan,
-        setup_executor=make_setup_executor(), run_executor=make_run_executor(),
+        setup_executor=_setup_executor(), run_executor=_run_executor(),
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
