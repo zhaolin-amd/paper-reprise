@@ -144,3 +144,46 @@ def test_loop_fails_twice_then_succeeds_and_records_patches(tmp_path):
     assert fix_calls["n"] == 2                       # two fix turns before success
     assert res.patches == ["patch step 0", "patch step 1"]
     assert res.env_snapshot["torch"] == "2.3.0"
+
+
+def test_loop_hits_retry_cap_returns_failure_with_log(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+
+    def fake_fixer(prompt, cwd, patch_note):
+        Path(patch_note).write_text("tried something")
+
+    f = _fakes()
+    f.update(run_smoke=lambda c, cwd, e: (1, "boom"),   # never passes
+             run_fixer=fake_fixer, now=iter([0.0] * 20).__next__)
+    res = run_setup_loop(rd, _spec(), manager="uv", max_retries=2, timeout_s=1e9, **f)
+
+    assert res.ok is False
+    assert "2 retries" in res.error
+    assert "setup_log/" in res.error
+    assert res.patches == ["tried something", "tried something"]   # trail preserved
+    assert not (rd.root / "env_snapshot.json").exists()            # no snapshot on failure
+    assert any(rd.setup_log_dir.iterdir())                         # log handed off
+
+
+def test_loop_times_out_returns_failure(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    # clock jumps past the timeout on the second check
+    f = _fakes()
+    f.update(run_smoke=lambda c, cwd, e: (1, "boom"),
+             run_fixer=lambda p, cwd, n: None,
+             now=iter([0.0, 5.0, 999.0]).__next__)
+    res = run_setup_loop(rd, _spec(), manager="uv", max_retries=99, timeout_s=100.0, **f)
+
+    assert res.ok is False
+    assert "timed out" in res.error
+
+
+def test_loop_env_creation_failure_is_surfaced(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    f = _fakes()
+    f.update(create_env=lambda env_dir, manager: (1, "conda not found"))
+    res = run_setup_loop(rd, _spec(), manager="conda", max_retries=3, timeout_s=100.0, **f)
+
+    assert res.ok is False
+    assert "env creation failed" in res.error
+    assert (rd.setup_log_dir / "create_env.log").read_text() == "conda not found"
