@@ -10,7 +10,7 @@ from paper_reprise.grade import grade_claim
 from paper_reprise.report import render_reports
 from paper_reprise.rundir import RunDir
 
-from paper_reprise.fetch import make_fetch_sources, resolve_arxiv_id
+from paper_reprise.fetch import fetch_arxiv_title, make_fetch_sources, resolve_arxiv_id
 from paper_reprise.ingest import normalize_input
 from paper_reprise.runexec import make_run_executor
 from paper_reprise.setupstage import make_setup_executor
@@ -56,8 +56,11 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         click.echo(f"\nPlan flagged: {plan.decision_reason}")
         return click.confirm("Proceed anyway?", default=False)
 
+    arxiv_id, _url = normalize_input(input_arg)
+    paper_name = fetch_arxiv_title(arxiv_id)
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
+        paper_name=paper_name,
         available_hardware=[], approve_spec=approve_spec, approve_plan=approve_plan,
         fetch_sources=make_fetch_sources(), setup_executor=make_setup_executor(),
         run_executor=make_run_executor(),

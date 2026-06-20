@@ -188,3 +188,22 @@ def test_cli_resume_help_lists_command():
     res = CliRunner().invoke(cli_mod.cli, ["--help"])
     assert res.exit_code == 0
     assert "resume" in res.output
+
+
+def test_cli_run_fetches_title_for_run_dir_name(tmp_path, monkeypatch):
+    import paper_reprise.cli as cli_mod
+    captured = {}
+
+    def fake_pipeline(**kwargs):
+        captured["paper_name"] = kwargs["paper_name"]
+        from paper_reprise.pipeline import PipelineResult
+        return PipelineResult(root=tmp_path, aborted_at="specextract")
+
+    monkeypatch.setattr(cli_mod, "fetch_arxiv_title", lambda aid: "Some Paper Title")
+    monkeypatch.setattr("paper_reprise.pipeline.run_pipeline", fake_pipeline)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path), "--yes"])
+    assert res.exit_code == 0
+    assert captured["paper_name"] == "Some Paper Title"
