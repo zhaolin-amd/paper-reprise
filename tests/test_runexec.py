@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
 
-from paper_reprise.models import Artifact, Claim, EvalProtocol
+from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
 from paper_reprise.rundir import RunDir
+from paper_reprise.runstage import run_claims
 from paper_reprise.runexec import (
     _detect_gpu,
     _run_eval,
@@ -114,3 +115,43 @@ def test_executor_runs_persists_and_returns_metadata(tmp_path):
     # actual_config persisted for the report re-render
     saved = json.loads((claim_dir / "actual_config.json").read_text())
     assert saved["seqlen"] == 2048
+
+
+def _spec_one(command="python eval.py"):
+    return Spec(paper="p", repo=None, artifacts=[_artifact()],
+                claims=[_claim(command)])
+
+
+def test_nonzero_eval_becomes_blocked_via_run_claims(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+
+    def fail_eval(command, cwd, env_dir, log_path):
+        Path(log_path).write_text("Traceback: CUDA out of memory")
+        return 1, "Traceback: CUDA out of memory"
+
+    executor = make_run_executor(run_eval=fail_eval, detect_gpu=lambda: "A100",
+                                 now=iter([0.0, 60.0]).__next__)
+    results, configs = run_claims(rd, _spec_one(), executor=executor)
+
+    assert results[0].status == "blocked"
+    assert "eval exited 1" in results[0].block_reason
+    # stdout was still persisted (grade/report can show the traceback)
+    assert (rd.claim_dir("c1") / "stdout.log").read_text().startswith("Traceback")
+    # actual_config.json was written before the raise (for the report re-render)
+    assert (rd.claim_dir("c1") / "actual_config.json").exists()
+
+
+def test_successful_eval_is_ran_via_run_claims(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+
+    def ok_eval(command, cwd, env_dir, log_path):
+        Path(log_path).write_text("perplexity: 5.80")
+        return 0, "perplexity: 5.80"
+
+    executor = make_run_executor(run_eval=ok_eval, detect_gpu=lambda: "A100",
+                                 now=iter([0.0, 30.0]).__next__)
+    results, configs = run_claims(rd, _spec_one(), executor=executor)
+
+    assert results[0].status == "ran"
+    assert results[0].gpu == "A100"
+    assert configs["c1"]["wbits"] == 4
