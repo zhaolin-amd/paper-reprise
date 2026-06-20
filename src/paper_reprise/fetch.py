@@ -10,11 +10,27 @@ import re
 import tarfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
+
+import httpx
 
 
 def latex_source_url(arxiv_id: str) -> str:
     return f"https://arxiv.org/e-print/{arxiv_id}"
+
+
+def _http_get_bytes(url: str) -> bytes:
+    resp = httpx.get(url, follow_redirects=True, timeout=60.0)
+    resp.raise_for_status()
+    return resp.content
+
+
+def fetch_latex(arxiv_id: str, dest: Path,
+                *, http_get: Callable[[str], bytes] = _http_get_bytes) -> Path:
+    """Download the arxiv e-print tarball and unpack it into dest. Returns dest."""
+    data = http_get(latex_source_url(arxiv_id))
+    unpack_targz(data, dest)
+    return dest
 
 
 def _is_within(base: Path, target: Path) -> bool:

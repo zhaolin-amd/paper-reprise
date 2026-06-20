@@ -2,7 +2,12 @@ import io
 import tarfile
 from pathlib import Path
 
-from paper_reprise.fetch import latex_source_url, parse_arxiv_search, unpack_targz
+from paper_reprise.fetch import (
+    fetch_latex,
+    latex_source_url,
+    parse_arxiv_search,
+    unpack_targz,
+)
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -50,3 +55,17 @@ def test_parse_arxiv_search_returns_first_id():
 def test_parse_arxiv_search_empty_feed_returns_none():
     xml = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>'
     assert parse_arxiv_search(xml) is None
+
+
+def test_fetch_latex_downloads_and_unpacks(tmp_path):
+    blob = _make_targz({"main.tex": "\\section{Intro}"})
+    calls = {}
+
+    def fake_get(url):
+        calls["url"] = url
+        return blob
+
+    dest = fetch_latex("2401.00001", tmp_path / "paper", http_get=fake_get)
+    assert calls["url"] == "https://arxiv.org/e-print/2401.00001"
+    assert (dest / "main.tex").read_text() == "\\section{Intro}"
+    assert dest == tmp_path / "paper"
