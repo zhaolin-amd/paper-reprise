@@ -213,6 +213,18 @@ def _fromscratch_setup_body(
         attempt += 1
 
 
+def make_fromscratch_setup_executor(*, manager: str = "uv", max_retries: int = 6,
+                                    timeout_s: float = 3600.0
+                                    ) -> Callable[[RunDir, Spec], SetupResult]:
+    """Build the executor(rd, spec) the pipeline injects into run_setup on the
+    from-scratch path."""
+    def executor(rd: RunDir, spec: Spec) -> SetupResult:
+        return run_fromscratch_setup(rd, spec, manager=manager,
+                                     max_retries=max_retries, timeout_s=timeout_s)
+
+    return executor
+
+
 def make_fromscratch_run_executor(
     *,
     run_eval: Callable[[str, Path, Path, Path], tuple[int, str]] | None = None,

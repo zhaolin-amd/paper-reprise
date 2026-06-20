@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
 
+import paper_reprise.fromscratch as fromscratch
 from paper_reprise.fromscratch import (
     build_scaffold_prompt,
     fromscratch_eval_command,
     fromscratch_smoke_command,
     make_fromscratch_run_executor,
+    make_fromscratch_setup_executor,
     run_fromscratch_setup,
 )
 from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
@@ -189,3 +191,33 @@ def test_run_executor_nonzero_exit_becomes_blocked_via_run_claims(tmp_path):
     assert "exited 1" in results[0].block_reason
     assert (rd.claim_dir("c1") / "stdout.log").read_text().startswith("Traceback")
     assert (rd.claim_dir("c1") / "actual_config.json").exists()
+
+
+def test_make_fromscratch_setup_executor_runs_with_injected_io(tmp_path, monkeypatch):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    monkeypatch.setattr(fromscratch, "_create_env", lambda env_dir, manager: (0, "ok"))
+    monkeypatch.setattr(fromscratch, "_run_scaffold", lambda p, cwd, ef, to: True)
+    monkeypatch.setattr(fromscratch, "_run_smoke", lambda c, cwd, e: (0, "perplexity: 5.8"))
+    monkeypatch.setattr(fromscratch, "_freeze_env",
+                        lambda e: {"torch": "2.3.0", "transformers": "4.40.0",
+                                   "cuda": "12.1", "pip_freeze": ""})
+    executor = make_fromscratch_setup_executor(max_retries=2, timeout_s=10.0)
+    res = executor(rd, _spec())
+    assert isinstance(res, SetupResult)
+    assert res.ok is True
+    assert res.env_snapshot["torch"] == "2.3.0"
+
+
+def test_run_scaffold_seam_success_keyed_on_entrypoint_file(tmp_path, monkeypatch):
+    # _run_scaffold returns True iff the expected entrypoint appears (run_headless
+    # contract). We stub run_headless to simulate the agent writing the file.
+    expect = tmp_path / "impl" / "run_eval.sh"
+
+    def fake_run_headless(prompt, allowed_tools, cwd, expect_file, timeout=None):
+        Path(expect_file).parent.mkdir(parents=True, exist_ok=True)
+        Path(expect_file).write_text("echo perplexity: 5.8")
+        from paper_reprise.headless import HeadlessResult
+        return HeadlessResult(ok=True, output_path=expect_file)
+
+    monkeypatch.setattr(fromscratch, "run_headless", fake_run_headless)
+    assert fromscratch._run_scaffold("prompt", tmp_path, expect, 5.0) is True
