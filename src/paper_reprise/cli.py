@@ -10,6 +10,9 @@ from paper_reprise.grade import grade_claim
 from paper_reprise.report import render_reports
 from paper_reprise.rundir import RunDir
 
+from paper_reprise.fetch import make_fetch_sources, resolve_arxiv_id
+from paper_reprise.ingest import normalize_input
+
 
 def _timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -25,8 +28,19 @@ def cli() -> None:
 @click.option("--base-dir", default="runs", help="where run dirs are created")
 @click.option("--yes", is_flag=True, help="auto-approve all gates (non-interactive)")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
-    """Run the reproduction pipeline for a paper (arxiv id or url)."""
+    """Run the reproduction pipeline for a paper (arxiv id, url, or title)."""
     from paper_reprise.pipeline import run_pipeline
+
+    # If the input isn't a recognizable arxiv id/url, treat it as a title and
+    # resolve it via the arxiv API before handing off to the pipeline.
+    try:
+        normalize_input(input_arg)
+    except ValueError:
+        resolved = resolve_arxiv_id(input_arg)
+        if resolved is None:
+            raise click.ClickException(f"could not resolve title to an arxiv id: {input_arg}")
+        click.echo(f"[resolve] '{input_arg}' → {resolved}")
+        input_arg = resolved
 
     def approve_spec(spec):
         if yes:
@@ -40,16 +54,13 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         click.echo(f"\nPlan flagged: {plan.decision_reason}")
         return click.confirm("Proceed anyway?", default=False)
 
-    def fetch_sources(rd, arxiv_id, url):
-        click.echo(f"[ingest] {arxiv_id} (source fetch deferred to Plan 2)")
-
     def run_executor(claim, artifact, claim_dir):
-        raise RuntimeError("real GPU executor not implemented (Plan 2)")
+        raise RuntimeError("real GPU executor not implemented (Plan 2c)")
 
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         available_hardware=[], approve_spec=approve_spec, approve_plan=approve_plan,
-        fetch_sources=fetch_sources, setup_executor=None, run_executor=run_executor,
+        fetch_sources=make_fetch_sources(), setup_executor=None, run_executor=run_executor,
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
