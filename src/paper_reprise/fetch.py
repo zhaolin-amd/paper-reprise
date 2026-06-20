@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import re
+import subprocess
 import tarfile
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -86,3 +87,15 @@ def resolve_arxiv_id(query: str,
     """Resolve a paper title to a bare arxiv id via the arxiv API. None if no match."""
     xml_text = http_get(arxiv_search_url(query))
     return parse_arxiv_search(xml_text)
+
+
+def _run_git_clone(url: str, dest: str) -> None:
+    subprocess.run(["git", "clone", "--depth", "1", url, dest],
+                   check=True, capture_output=True, text=True, timeout=300)
+
+
+def clone_repo(repo_url: str, dest: Path,
+               *, git_clone: Callable[[str, str], None] = _run_git_clone) -> Path:
+    """Shallow-clone repo_url into dest. Returns dest."""
+    git_clone(repo_url, str(dest))
+    return dest

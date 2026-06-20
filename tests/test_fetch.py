@@ -4,6 +4,7 @@ import urllib.parse
 from pathlib import Path
 
 from paper_reprise.fetch import (
+    clone_repo,
     fetch_latex,
     latex_source_url,
     parse_arxiv_search,
@@ -91,3 +92,19 @@ def test_resolve_arxiv_id_from_title(tmp_path):
 def test_resolve_arxiv_id_no_match_returns_none():
     empty = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>'
     assert resolve_arxiv_id("nonexistent paper xyz", http_get=lambda u: empty) is None
+
+
+def test_clone_repo_invokes_git_and_returns_dest(tmp_path):
+    calls = {}
+
+    def fake_clone(url, dest):
+        calls["url"] = url
+        calls["dest"] = dest
+        Path(dest).mkdir(parents=True, exist_ok=True)
+        (Path(dest) / "README.md").write_text("cloned")
+
+    dest = clone_repo("https://github.com/foo/bar", tmp_path / "repo",
+                      git_clone=fake_clone)
+    assert calls["url"] == "https://github.com/foo/bar"
+    assert dest == tmp_path / "repo"
+    assert (dest / "README.md").read_text() == "cloned"
