@@ -16,6 +16,8 @@ from typing import Callable, Optional
 
 import httpx
 
+from paper_reprise.ingest import find_repo_url
+
 
 def latex_source_url(arxiv_id: str) -> str:
     return f"https://arxiv.org/e-print/{arxiv_id}"
@@ -99,3 +101,30 @@ def clone_repo(repo_url: str, dest: Path,
     """Shallow-clone repo_url into dest. Returns dest."""
     git_clone(repo_url, str(dest))
     return dest
+
+
+def _concat_latex_text(paper_dir: Path) -> str:
+    """Concatenate all .tex files under paper_dir for repo-url scanning."""
+    parts = []
+    for p in sorted(paper_dir.rglob("*.tex")):
+        try:
+            parts.append(p.read_text(errors="ignore"))
+        except OSError:
+            continue
+    return "\n".join(parts)
+
+
+def make_fetch_sources(*, http_get: Callable[[str], bytes] = _http_get_bytes,
+                       git_clone: Callable[[str, str], None] = _run_git_clone) -> Callable:
+    """Build a fetch_sources(rd, arxiv_id, url) callback for the pipeline.
+
+    Fetches latex into rd.paper_dir, scans it for a GitHub repo url, and clones
+    that repo into rd.repo_dir if found. A missing repo link is not an error.
+    """
+    def fetch_sources(rd, arxiv_id: str, url: str) -> None:
+        fetch_latex(arxiv_id, rd.paper_dir, http_get=http_get)
+        repo_url = find_repo_url(_concat_latex_text(rd.paper_dir))
+        if repo_url:
+            clone_repo(repo_url, rd.repo_dir, git_clone=git_clone)
+
+    return fetch_sources

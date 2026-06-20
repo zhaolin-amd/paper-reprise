@@ -7,10 +7,12 @@ from paper_reprise.fetch import (
     clone_repo,
     fetch_latex,
     latex_source_url,
+    make_fetch_sources,
     parse_arxiv_search,
     resolve_arxiv_id,
     unpack_targz,
 )
+from paper_reprise.rundir import RunDir
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -108,3 +110,39 @@ def test_clone_repo_invokes_git_and_returns_dest(tmp_path):
     assert calls["url"] == "https://github.com/foo/bar"
     assert dest == tmp_path / "repo"
     assert (dest / "README.md").read_text() == "cloned"
+
+
+def test_make_fetch_sources_fetches_latex_and_clones_repo(tmp_path):
+    latex = _make_targz({"main.tex": "code at https://github.com/foo/bar yay"})
+    cloned = {}
+
+    def fake_get(url):
+        return latex
+
+    def fake_clone(url, dest):
+        cloned["url"] = url
+        Path(dest).mkdir(parents=True, exist_ok=True)
+        (Path(dest) / "x").write_text("ok")
+
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    fetch_sources = make_fetch_sources(http_get=fake_get, git_clone=fake_clone)
+    fetch_sources(rd, "2401.00001", "https://arxiv.org/abs/2401.00001")
+
+    assert (rd.paper_dir / "main.tex").exists()
+    assert cloned["url"] == "https://github.com/foo/bar"
+    assert (rd.repo_dir / "x").read_text() == "ok"
+
+
+def test_make_fetch_sources_no_repo_link_skips_clone(tmp_path):
+    latex = _make_targz({"main.tex": "no links in this paper"})
+    clone_called = {"n": 0}
+
+    def fake_clone(url, dest):
+        clone_called["n"] += 1
+
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    fetch_sources = make_fetch_sources(http_get=lambda u: latex, git_clone=fake_clone)
+    fetch_sources(rd, "2401.00001", "https://arxiv.org/abs/2401.00001")
+
+    assert (rd.paper_dir / "main.tex").exists()
+    assert clone_called["n"] == 0
