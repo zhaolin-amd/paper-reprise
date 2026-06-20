@@ -26,6 +26,59 @@ ingest → specextract → plan → setup → run → grade → report
 - **report** — bilingual `report.zh.md` / `report.en.md`, always the measured number,
   never the paper's, with full replay info.
 
+### One isolated reproduction path per paper
+
+Every paper gets its own self-contained run directory under `runs/`, and the whole
+reproduction happens inside it — nothing is installed globally and nothing leaks between
+papers:
+
+- the official repo is **cloned into that run dir** (`repo/`), not shared;
+- a **dedicated virtualenv** is built for that paper (`env/`), so each paper pins its own
+  (often mutually incompatible) torch / transformers / CUDA stack;
+- the eval scripts that actually run are the **paper's own** scripts shipped in its repo
+  (e.g. `repo/scripts/eval_model.sh`) — paper-reprise invokes them, it does not reimplement
+  them;
+- all raw outputs, logs, env snapshot, and reports stay under that one directory.
+
+To reproduce N papers you get N independent run dirs; deleting a run dir removes everything
+that run touched. The entire `runs/` tree is gitignored.
+
+## Run directory layout
+
+One run = one directory `runs/<paper-name>-<arxiv_id>-<timestamp>/` (the `<paper-name>`
+slug is best-effort from the arxiv title; omitted when it can't be fetched):
+
+```
+runs/<paper-name>-<arxiv_id>-<timestamp>/
+├── ingest.json          # resolved arxiv id, source url, located repo (url + commit)
+├── paper/               # the paper's LaTeX source, downloaded from arxiv (not OCR'd)
+├── repo/                # the official repo, git-cloned here — its own eval scripts live inside
+├── spec.yaml            # extracted reproduction spec: artifacts × claims × eval protocol
+│                        #   (this is the human-review / hand-edit gate; `resume` re-reads it)
+├── plan.json            # per-claim feasibility estimate (hardware required vs available)
+├── env/                 # the dedicated conda/uv virtualenv built for this paper
+├── env_snapshot.json    # frozen torch/transformers/CUDA + pip freeze (on a successful setup)
+├── setup_log/           # logs from the setup loop: create_env.log, smoke_<n>.log per attempt
+├── setup_patches/       # patch_<n>.txt — one line per change the setup agent made to the env/repo
+├── runs/                # per-claim execution outputs (one subdir per claim id):
+│   └── <claim_id>/
+│       ├── stdout.log         # raw combined stdout+stderr of that claim's eval run
+│       └── actual_config.json # the config the eval was launched with (for the faithfulness check)
+├── report.zh.md         # Chinese reproduction report — the per-claim verdict table
+│                        #   (MATCH / PARTIAL / FAIL / BLOCKED + reason), measured numbers, replay info
+└── report.en.md         # English reproduction report (same content)
+```
+
+Notes:
+
+- `paper/` and `repo/` are created for every run but stay empty if the source fetch is
+  skipped or no official repo is found.
+- `env_snapshot.json` is written only when setup succeeds; on failure the diagnosis is in
+  `setup_log/` and the run stage is reported as BLOCKED.
+- Verdicts are not persisted as a separate file — they are computed in `grade` (pure code)
+  and rendered straight into the two reports; `paper-reprise report <run_dir>` re-renders
+  them from `spec.yaml` + the per-claim `stdout.log` / `actual_config.json`.
+
 ## Usage
 
 ```
