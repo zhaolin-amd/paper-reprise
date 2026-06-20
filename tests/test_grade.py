@@ -103,3 +103,14 @@ def test_missing_actual_key_is_vacuously_faithful(tmp_path):
     out.write_text("perplexity: 5.80")
     g = grade_claim(_claim(), _artifact(), _run(out), actual_config={})
     assert g.verdict == "MATCH"
+
+
+def test_bits_only_artifact_makes_wbits_faithfulness_comparable(tmp_path):
+    # an artifact declared with quant_config={"bits": N} (no wbits) must still get
+    # its weight bit-width compared by the faithfulness check (bits->wbits alias).
+    out = tmp_path / "c1.log"
+    out.write_text("perplexity: 5.80")  # value within tolerance of 5.78
+    art = Artifact(id="a1", base_model="m", method="AWQ", quant_config={"bits": 4})
+    g = grade_claim(_claim(), art, _run(out), actual_config={"seqlen": 2048, "wbits": 8})
+    assert g.verdict == "PARTIAL"          # wbits 4 (spec) vs 8 (actual) caught
+    assert "wbits" in g.reason

@@ -100,3 +100,10 @@ def test_quant_config_bits_aliased_to_wbits():
 def test_quant_config_explicit_wbits_not_overwritten():
     a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={"bits": 2, "wbits": 4})
     assert a.quant_config["wbits"] == 4   # explicit wbits wins
+
+
+def test_quant_config_ternary_bits_aliased():
+    # the GSQ-style spec used bits: "ternary" (a string) — must alias without crashing
+    a = Artifact(id="a1", base_model="m", method="AWQ",
+                 quant_config={"bits": "ternary", "group_size": 128})
+    assert a.quant_config["wbits"] == "ternary"
