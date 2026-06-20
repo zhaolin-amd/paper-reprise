@@ -12,6 +12,7 @@ from paper_reprise.rundir import RunDir
 
 from paper_reprise.fetch import make_fetch_sources, resolve_arxiv_id
 from paper_reprise.ingest import normalize_input
+from paper_reprise.setupstage import make_setup_executor
 
 
 def _timestamp() -> str:
@@ -60,7 +61,8 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         available_hardware=[], approve_spec=approve_spec, approve_plan=approve_plan,
-        fetch_sources=make_fetch_sources(), setup_executor=None, run_executor=run_executor,
+        fetch_sources=make_fetch_sources(), setup_executor=make_setup_executor(),
+        run_executor=run_executor,
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
