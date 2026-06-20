@@ -19,6 +19,10 @@ import httpx
 from paper_reprise.ingest import find_repo_url
 
 
+_MAX_UNPACK_BYTES = 500 * 1024 * 1024   # 500 MB decompressed cap
+_MAX_MEMBERS = 10_000
+
+
 def latex_source_url(arxiv_id: str) -> str:
     return f"https://arxiv.org/e-print/{arxiv_id}"
 
@@ -37,23 +41,25 @@ def fetch_latex(arxiv_id: str, dest: Path,
     return dest
 
 
-def _is_within(base: Path, target: Path) -> bool:
-    try:
-        target.resolve().relative_to(base.resolve())
-        return True
-    except ValueError:
-        return False
-
-
 def unpack_targz(data: bytes, dest: Path) -> None:
-    """Unpack a .tar.gz blob into dest, refusing any member that escapes dest."""
+    """Unpack a .tar.gz blob into dest.
+
+    Untrusted input (arxiv e-print tarballs). Uses tarfile's data filter to
+    block path traversal, symlink/hardlink escapes, and special-device members,
+    and bounds total decompressed size + member count against archive bombs.
+    """
     dest.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-        for member in tar.getmembers():
-            out = dest / member.name
-            if not _is_within(dest, out):
-                raise ValueError(f"unsafe path in archive: {member.name}")
-        tar.extractall(dest)
+        members = tar.getmembers()
+        if len(members) > _MAX_MEMBERS:
+            raise ValueError(f"archive has too many members: {len(members)}")
+        total = sum(m.size for m in members)
+        if total > _MAX_UNPACK_BYTES:
+            raise ValueError(f"archive too large when unpacked: {total} bytes")
+        try:
+            tar.extractall(dest, filter="data")
+        except tarfile.FilterError as e:
+            raise ValueError(f"unsafe member in archive: {e}") from e
 
 
 _ARXIV_ABS_RE = re.compile(r"(\d{4}\.\d{4,5})")

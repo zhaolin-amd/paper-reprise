@@ -48,8 +48,54 @@ def test_unpack_targz_rejects_path_traversal(tmp_path):
         info = tarfile.TarInfo(name="../escape.tex")
         info.size = len(data)
         tar.addfile(info, io.BytesIO(data))
-    with pytest.raises(ValueError, match="unsafe path"):
+    with pytest.raises(ValueError, match="unsafe"):
         unpack_targz(buf.getvalue(), tmp_path)
+
+
+def test_unpack_targz_rejects_symlink_escape(tmp_path):
+    import pytest
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        # a symlink member whose target escapes dest
+        info = tarfile.TarInfo(name="evil")
+        info.type = tarfile.SYMTYPE
+        info.linkname = "../../escape"
+        tar.addfile(info)
+    with pytest.raises(ValueError, match="unsafe"):
+        unpack_targz(buf.getvalue(), tmp_path)
+
+
+def test_unpack_targz_rejects_too_many_members(tmp_path):
+    import pytest
+    import paper_reprise.fetch as fetch_mod
+    monkey_max = 3
+    orig = fetch_mod._MAX_MEMBERS
+    fetch_mod._MAX_MEMBERS = monkey_max
+    try:
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+            for i in range(monkey_max + 1):
+                data = b"x"
+                ti = tarfile.TarInfo(name=f"f{i}.tex")
+                ti.size = len(data)
+                tar.addfile(ti, io.BytesIO(data))
+        with pytest.raises(ValueError, match="too many members"):
+            unpack_targz(buf.getvalue(), tmp_path)
+    finally:
+        fetch_mod._MAX_MEMBERS = orig
+
+
+def test_unpack_targz_rejects_oversize(tmp_path):
+    import pytest
+    import paper_reprise.fetch as fetch_mod
+    orig = fetch_mod._MAX_UNPACK_BYTES
+    fetch_mod._MAX_UNPACK_BYTES = 10
+    try:
+        blob = _make_targz({"main.tex": "x" * 100})
+        with pytest.raises(ValueError, match="too large"):
+            unpack_targz(blob, tmp_path)
+    finally:
+        fetch_mod._MAX_UNPACK_BYTES = orig
 
 
 def test_parse_arxiv_search_returns_first_id():
