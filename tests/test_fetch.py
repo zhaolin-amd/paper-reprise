@@ -5,10 +5,12 @@ from pathlib import Path
 
 from paper_reprise.fetch import (
     clone_repo,
+    fetch_arxiv_title,
     fetch_latex,
     latex_source_url,
     make_fetch_sources,
     parse_arxiv_search,
+    parse_arxiv_title,
     resolve_arxiv_id,
     unpack_targz,
 )
@@ -192,3 +194,24 @@ def test_make_fetch_sources_no_repo_link_skips_clone(tmp_path):
 
     assert (rd.paper_dir / "main.tex").exists()
     assert clone_called["n"] == 0
+
+
+def test_parse_arxiv_title_first_entry():
+    xml = (FIX / "arxiv_search_response.xml").read_text()
+    assert parse_arxiv_title(xml) == "AWQ: Activation-aware Weight Quantization for LLMs"
+
+
+def test_parse_arxiv_title_empty_feed_none():
+    assert parse_arxiv_title('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>') is None
+
+
+def test_fetch_arxiv_title_best_effort_swallows_errors():
+    def boom(url):
+        raise RuntimeError("network down")
+    assert fetch_arxiv_title("2401.00001", http_get=boom) is None
+
+
+def test_fetch_arxiv_title_happy(tmp_path):
+    xml = (FIX / "arxiv_search_response.xml").read_text()
+    assert fetch_arxiv_title("2401.00001", http_get=lambda u: xml) == \
+        "AWQ: Activation-aware Weight Quantization for LLMs"

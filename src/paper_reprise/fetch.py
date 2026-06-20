@@ -97,6 +97,31 @@ def resolve_arxiv_id(query: str,
     return parse_arxiv_search(xml_text)
 
 
+def arxiv_meta_url(arxiv_id: str) -> str:
+    return f"http://export.arxiv.org/api/query?id_list={arxiv_id}&max_results=1"
+
+
+def parse_arxiv_title(xml_text: str) -> Optional[str]:
+    """Return the title of the first <entry> in an arxiv API Atom feed, else None."""
+    root = ET.fromstring(xml_text)
+    entry = root.find(f"{_ATOM}entry")
+    if entry is None:
+        return None
+    title_el = entry.find(f"{_ATOM}title")
+    if title_el is None or not title_el.text:
+        return None
+    return " ".join(title_el.text.split())   # collapse whitespace/newlines
+
+
+def fetch_arxiv_title(arxiv_id: str,
+                      *, http_get: Callable[[str], str] = _http_get_text) -> Optional[str]:
+    """Best-effort: fetch the paper title from the arxiv API. None on any failure."""
+    try:
+        return parse_arxiv_title(http_get(arxiv_meta_url(arxiv_id)))
+    except Exception:
+        return None
+
+
 def _run_git_clone(url: str, dest: str) -> None:
     subprocess.run(["git", "clone", "--depth", "1", url, dest],
                    check=True, capture_output=True, text=True, timeout=300)
