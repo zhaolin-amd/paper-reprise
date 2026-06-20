@@ -12,6 +12,7 @@ from paper_reprise.rundir import RunDir
 
 from paper_reprise.fetch import make_fetch_sources, resolve_arxiv_id
 from paper_reprise.ingest import normalize_input
+from paper_reprise.runexec import make_run_executor
 from paper_reprise.setupstage import make_setup_executor
 
 
@@ -55,14 +56,11 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         click.echo(f"\nPlan flagged: {plan.decision_reason}")
         return click.confirm("Proceed anyway?", default=False)
 
-    def run_executor(claim, artifact, claim_dir):
-        raise RuntimeError("real GPU executor not implemented (Plan 2c)")
-
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         available_hardware=[], approve_spec=approve_spec, approve_plan=approve_plan,
         fetch_sources=make_fetch_sources(), setup_executor=make_setup_executor(),
-        run_executor=run_executor,
+        run_executor=make_run_executor(),
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
@@ -80,21 +78,22 @@ def report(run_dir: str) -> None:
     if spec is None or ingest is None:
         raise click.ClickException("run dir missing spec.yaml or ingest.json")
 
+    import json as _json
+
     artifacts = {a.id: a for a in spec.artifacts}
     from paper_reprise.models import RunResult
     grades, runs = [], []
     for c in spec.claims:
-        log = rd.claim_dir(c.id) / "stdout.log"
+        cdir = rd.claim_dir(c.id)
+        log = cdir / "stdout.log"
         rr = RunResult(claim_id=c.id, command=c.eval_protocol.command,
                        stdout_path=str(log),
                        status="ran" if log.exists() else "blocked",
                        block_reason=None if log.exists() else "no stdout.log")
         runs.append(rr)
-        # PLAN-2 TODO: actual_config={} forces the faithfulness check to pass vacuously
-        # on re-render, so `report` can never detect a config divergence. Persist each
-        # run's actual_config to the run dir (e.g. runs/<claim_id>/actual_config.json)
-        # and read it back here once the real executor records it.
-        grades.append(grade_claim(c, artifacts[c.artifact], rr, actual_config={}))
+        cfg_path = cdir / "actual_config.json"
+        actual_config = _json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
+        grades.append(grade_claim(c, artifacts[c.artifact], rr, actual_config=actual_config))
 
     zh, en = render_reports(spec, ingest, grades, runs, env={}, patches=[])
     (rd.root / "report.zh.md").write_text(zh)
