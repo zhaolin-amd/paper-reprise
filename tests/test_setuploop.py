@@ -2,6 +2,7 @@ from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
 from paper_reprise.rundir import RunDir
 from paper_reprise.setuploop import (
     assemble_snapshot,
+    build_fixer_prompt,
     collect_new_patches,
     select_smoke_command,
     shrink_command,
@@ -71,3 +72,17 @@ def test_collect_new_patches_returns_only_unseen(tmp_path):
     # a newly written note is picked up, sorted by filename
     (d / "patch_1.txt").write_text("added bitsandbytes")
     assert collect_new_patches(d, seen) == ["added bitsandbytes"]
+
+
+def test_build_fixer_prompt_includes_command_traceback_and_patch_contract():
+    prompt = build_fixer_prompt(
+        command="python eval_ppl.py --limit 8",
+        output="ModuleNotFoundError: No module named 'bitsandbytes'",
+        patch_note_path="setup_patches/patch_2.txt",
+    )
+    assert "python eval_ppl.py --limit 8" in prompt
+    assert "ModuleNotFoundError" in prompt
+    assert "setup_patches/patch_2.txt" in prompt
+    # must instruct: one-line note per change, and forbid running real experiments
+    assert "patch" in prompt.lower()
+    assert "do not" in prompt.lower() or "don't" in prompt.lower()

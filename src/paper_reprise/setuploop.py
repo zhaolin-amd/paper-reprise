@@ -55,6 +55,29 @@ def assemble_snapshot(freeze: dict) -> dict:
     }
 
 
+_FIXER_TEMPLATE = """The repo's smoke command failed. Fix the conda/uv environment \
+and, only if necessary, the repo code, so the SAME command can run. This is a SMOKE \
+TEST only — do NOT run real experiments, do NOT change eval parameters that affect \
+numbers (seqlen, calib, dataset, sample count beyond the tiny smoke scale).
+
+Failing command:
+    {command}
+
+Captured output (read the traceback):
+{output}
+
+For EACH change you make (a pinned version, an added package, a patched API line), \
+append one line describing it to `{patch_note}` (create the file; one line per change). \
+Do not run the command yourself — the loop will re-run it to check. Report 'fixed' when done."""
+
+
+def build_fixer_prompt(command: str, output: str, patch_note_path: str) -> str:
+    """Build the headless-claude instruction for one fix turn on a failed smoke run."""
+    return _FIXER_TEMPLATE.format(
+        command=command, output=output, patch_note=patch_note_path
+    )
+
+
 def collect_new_patches(patches_dir: Path, seen: set[str]) -> list[str]:
     """Return the contents of patch-note files in patches_dir not yet in `seen`,
     sorted by filename, and record them in `seen`. This is how the loop learns
