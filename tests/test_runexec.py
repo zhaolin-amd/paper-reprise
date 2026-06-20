@@ -77,10 +77,12 @@ def test_run_eval_nonzero_exit_is_captured(tmp_path):
     assert code == 3
 
 
-def test_detect_gpu_returns_string_or_unknown(monkeypatch):
-    # with no nvidia-smi and no CUDA_VISIBLE_DEVICES, falls back to "unknown"
+def test_detect_gpu_returns_string_or_unknown(monkeypatch, tmp_path):
+    # with no nvidia-smi anywhere and no CUDA_VISIBLE_DEVICES, falls back to "unknown"
     import paper_reprise.runexec as runexec
     monkeypatch.setattr(runexec.shutil, "which", lambda name: None)
+    # patch the absolute-path fallback candidates to a path that doesn't exist
+    monkeypatch.setattr(runexec, "_NVIDIA_SMI_CANDIDATES", ("/nonexistent/nvidia-smi",))
     monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
     assert _detect_gpu() == "unknown"
 
