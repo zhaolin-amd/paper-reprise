@@ -25,7 +25,7 @@ def cli() -> None:
 @click.option("--base-dir", default="runs", help="where run dirs are created")
 @click.option("--yes", is_flag=True, help="auto-approve all gates (non-interactive)")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
-    """Run the reproduction pipeline for a paper (arxiv id / url / .org)."""
+    """Run the reproduction pipeline for a paper (arxiv id or url)."""
     from paper_reprise.pipeline import run_pipeline
 
     def approve_spec(spec):

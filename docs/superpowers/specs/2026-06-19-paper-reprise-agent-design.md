@@ -44,7 +44,7 @@ Adopt a **deterministic pipeline where the agent only enters the Setup stage** (
 One CLI invocation = one paper = one run directory. No queue, no DB, no cron.
 
 ```
-paper-reprise run <arxiv_id | path-to-.org | arxiv_url>
+paper-reprise run <arxiv_id | arxiv_url>
 paper-reprise resume <run_dir>      # resume from last interruption / gate
 paper-reprise report <run_dir>      # re-render the report
 ```
@@ -58,7 +58,7 @@ ingest → specextract → plan → setup → run → grade → report
 
 | Stage | Nature | Responsibility | Output |
 |---|---|---|---|
-| **ingest** | deterministic | arxiv id → fetch LaTeX source + locate official repo; if input is a `.org`, read `#+source:` | `paper/`, `repo/`, `ingest.json` |
+| **ingest** | deterministic | arxiv id/url → fetch LaTeX source + locate official repo | `paper/`, `repo/`, `ingest.json` |
 | **specextract** | 1 headless call | LaTeX+README → full spec → **stop, await approval** | `spec.yaml` |
 | **plan** | deterministic | estimate each claim's GPU/VRAM/runtime → feasibility/anomaly check | `plan.json` |
 | **setup** | agentic debug loop | build conda/uv env, fix deps until the repo's own eval command passes a smoke test | `env/`, `setup_log/`, `env_snapshot.json`, `setup_patches/` |
@@ -81,9 +81,7 @@ grade is pure code, separated from execution; it reads only the raw output persi
 
 ### 3.1 Ingest
 
-Normalize three input forms to an arxiv_id:
-- radar's `.org` file → read `#+source:` to get the arxiv url (radar has already filtered)
-- arxiv url / id → use directly
+Normalize the input (a bare arxiv id or an arxiv url) to an arxiv_id.
 
 Then:
 - **Fetch LaTeX source** (`arxiv.org/e-print/<id>`), do not OCR the PDF — table numbers are far more accurate from LaTeX.

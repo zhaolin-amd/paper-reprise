@@ -24,7 +24,7 @@ paper-reprise/
     parsers.py                    # metric output parsers: PPL / accuracy / speedup
     grade.py                      # pure-code judge: value + faithfulness double check → 4 verdicts
     report.py                     # render report.zh.md / report.en.md
-    ingest.py                     # input normalization (.org/url/id) + latex fetch + repo discovery
+    ingest.py                     # input normalization (arxiv url/id) + latex fetch + repo discovery
     planstage.py                  # feasibility/anomaly sentinel
     headless.py                   # claude -p wrapper, output-file verification (don't trust exit code)
     specextract.py                # specextract stage: call headless → spec.yaml → gate
@@ -34,7 +34,7 @@ paper-reprise/
     cli.py                        # click CLI: run / resume / report
   tests/
     conftest.py                   # shared fixtures
-    fixtures/                     # sample .org / spec.yaml / eval output
+    fixtures/                     # spec.yaml / eval output
     test_models.py
     test_rundir.py
     test_parsers.py
@@ -1040,46 +1040,21 @@ git commit -m "feat: bilingual report rendering (measured-only, with replay info
 
 ---
 
-## Task 7: Ingest — .org Parsing and Input Normalization
+## Task 7: Ingest — Input Normalization
 
 **Files:**
 - Create: `src/paper_reprise/ingest.py`
-- Create: `tests/fixtures/sample.org`
 - Test: `tests/test_ingest.py`
 
-This phase focuses on the purely logic-testable parts: input normalization (`.org` / url / id → arxiv_id + source_url) and repo link discovery (scrape GitHub links out of latex/readme text). Network fetches (latex/clone) are wrapped as injectable functions, stubbed via monkeypatch in tests.
+This phase focuses on the purely logic-testable parts: input normalization (arxiv url / bare id → arxiv_id + source_url) and repo link discovery (scrape GitHub links out of latex/readme text). Network fetches (latex/clone) are wrapped as injectable functions, stubbed via monkeypatch in tests.
 
-- [ ] **Step 1: Write the fixture**
-
-`tests/fixtures/sample.org`:
-```
-#+title:      Ternary Mamba: Grouped QAT of W1.58A16 SSMs
-#+date:       [2026-06-17 Wed 00:17]
-#+source:     https://arxiv.org/abs/2606.18114
-#+authors:    Alice Smith, Bob Jones
-
-* The Problem River
-Some narrative text. Code at https://github.com/example/ternary-mamba here.
-```
-
-- [ ] **Step 2: Write the failing test**
+- [ ] **Step 1: Write the failing test**
 
 `tests/test_ingest.py`:
 ```python
-from pathlib import Path
-
 from paper_reprise.ingest import (
-    normalize_input, parse_org, find_repo_url, arxiv_id_from_url,
+    normalize_input, find_repo_url, arxiv_id_from_url,
 )
-
-FIX = Path(__file__).parent / "fixtures"
-
-
-def test_parse_org_extracts_source_and_meta():
-    meta = parse_org((FIX / "sample.org").read_text())
-    assert meta["source"] == "https://arxiv.org/abs/2606.18114"
-    assert meta["title"].startswith("Ternary Mamba")
-    assert "Alice Smith" in meta["authors"]
 
 
 def test_arxiv_id_from_abs_url():
@@ -1088,14 +1063,6 @@ def test_arxiv_id_from_abs_url():
 
 def test_arxiv_id_from_versioned_url():
     assert arxiv_id_from_url("https://arxiv.org/abs/2401.00001v2") == "2401.00001"
-
-
-def test_normalize_input_from_org_file(tmp_path):
-    f = tmp_path / "x.org"
-    f.write_text("#+source: https://arxiv.org/abs/2401.00001\n")
-    arxiv_id, url = normalize_input(str(f))
-    assert arxiv_id == "2401.00001"
-    assert url == "https://arxiv.org/abs/2401.00001"
 
 
 def test_normalize_input_from_bare_id():
@@ -1118,12 +1085,12 @@ def test_find_repo_url_none_when_absent():
     assert find_repo_url("no links here") is None
 ```
 
-- [ ] **Step 3: Run the test, confirm it fails**
+- [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_ingest.py -v`
 Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.ingest'`
 
-- [ ] **Step 4: Write the implementation**
+- [ ] **Step 3: Write the implementation**
 
 `src/paper_reprise/ingest.py`:
 ```python
@@ -1135,7 +1102,6 @@ callers can patch in tests. The parsing/normalization logic is pure.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Optional
 
 _ARXIV_RE = re.compile(r"(\d{4}\.\d{4,5})")
@@ -1147,20 +1113,6 @@ def arxiv_id_from_url(url: str) -> Optional[str]:
     return m.group(1) if m else None
 
 
-def parse_org(text: str) -> dict:
-    meta: dict = {"authors": []}
-    for line in text.splitlines():
-        m = re.match(r"#\+(\w+):\s*(.*)", line)
-        if not m:
-            continue
-        key, val = m.group(1).lower(), m.group(2).strip()
-        if key == "authors":
-            meta["authors"] = [a.strip() for a in val.split(",") if a.strip()]
-        else:
-            meta[key] = val
-    return meta
-
-
 def find_repo_url(text: str) -> Optional[str]:
     m = _GITHUB_RE.search(text)
     if not m:
@@ -1169,15 +1121,7 @@ def find_repo_url(text: str) -> Optional[str]:
 
 
 def normalize_input(arg: str) -> tuple[str, str]:
-    """Return (arxiv_id, source_url) from a .org path, arxiv url, or bare id."""
-    p = Path(arg)
-    if p.exists() and p.suffix == ".org":
-        meta = parse_org(p.read_text())
-        url = meta.get("source", "")
-        arxiv_id = arxiv_id_from_url(url)
-        if not arxiv_id:
-            raise ValueError(f"no arxiv source in {arg}")
-        return arxiv_id, url
+    """Return (arxiv_id, source_url) from an arxiv url or bare arxiv id."""
     if arg.startswith("http"):
         arxiv_id = arxiv_id_from_url(arg)
         if not arxiv_id:
@@ -1188,16 +1132,16 @@ def normalize_input(arg: str) -> tuple[str, str]:
     raise ValueError(f"unrecognized input: {arg}")
 ```
 
-- [ ] **Step 5: Run the test, confirm it passes**
+- [ ] **Step 4: Run the test, confirm it passes**
 
 Run: `uv run pytest tests/test_ingest.py -v`
 Expected: PASS, all tests green
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_reprise/ingest.py tests/test_ingest.py tests/fixtures/sample.org
-git commit -m "feat: ingest input normalization + org parsing + repo discovery"
+git add src/paper_reprise/ingest.py tests/test_ingest.py
+git commit -m "feat: ingest input normalization + repo discovery"
 ```
 
 ---
@@ -2027,7 +1971,7 @@ def cli() -> None:
 @click.option("--base-dir", default="runs", help="where run dirs are created")
 @click.option("--yes", is_flag=True, help="auto-approve all gates (non-interactive)")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
-    """Run the reproduction pipeline for a paper (arxiv id / url / .org)."""
+    """Run the reproduction pipeline for a paper (arxiv id or url)."""
     from paper_reprise.pipeline import run_pipeline
 
     def approve_spec(spec):
@@ -2167,7 +2111,7 @@ git commit -m "test: shared fixtures + full-suite green"
 - §2 seven stages: ingest (Task 7) / specextract (Task 10) / plan (Task 8) / setup (Task 11) / run (Task 11) / grade (Task 5) / report (Task 6) / orchestration (Task 12). ✓
 - §2.1 gate 1 + plan sentinel: pipeline's `approve_spec` / `approve_plan` + `build_plan.needs_user_decision` (Task 8/12). ✓
 - §2.2 judge isolation: `grade.py` does not import `runstage`, reads only persisted files (Task 5). ✓
-- §3.1 ingest's three input forms + repo discovery: `normalize_input` / `find_repo_url` (Task 7). latex fetch/clone explicitly deferred to Plan 2 (`fetch_sources` placeholder), not an omission. ✓
+- §3.1 ingest input normalization (arxiv id/url) + repo discovery: `normalize_input` / `find_repo_url` (Task 7). latex fetch/clone explicitly deferred to Plan 2 (`fetch_sources` placeholder), not an omission. ✓
 - §3.2 two-layer spec schema: `models.py`'s Artifact/Claim (Task 2). ✓
 - §3.3 runner / calib_status / source: all model fields, used in grade/specextract. ✓
 - §4.1 setup's single exit condition + guardrails: interface+stub (Task 11), real loop deferred to Plan 2 (noted in the file docstring). ✓

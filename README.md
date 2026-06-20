@@ -1,8 +1,8 @@
 # paper-reprise
 
-An agent that reproduces quantization paper results. Given an arxiv paper (or a `.org`
-pushed by llm-paper-radar), it prefers to reproduce the paper's reported numbers by
-invoking the official repo's own scripts, and honestly reports the gap.
+An agent that reproduces quantization paper results. Given an arxiv paper, it prefers to
+reproduce the paper's reported numbers by invoking the official repo's own scripts, and
+honestly reports the gap.
 
 Design doc: [docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md](docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md)
 
@@ -15,7 +15,7 @@ latex fetch + git clone, and the agentic conda/uv setup-debug loop are deferred 
 ## Usage
 
 ```
-paper-reprise run <arxiv_id | path-to-.org | arxiv_url>
+paper-reprise run <arxiv_id | arxiv_url>
 paper-reprise resume <run_dir>
 paper-reprise report <run_dir>
 ```

@@ -6,7 +6,6 @@ callers can patch in tests. The parsing/normalization logic is pure.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Optional
 
 _ARXIV_RE = re.compile(r"(\d{4}\.\d{4,5})")
@@ -18,20 +17,6 @@ def arxiv_id_from_url(url: str) -> Optional[str]:
     return m.group(1) if m else None
 
 
-def parse_org(text: str) -> dict:
-    meta: dict = {"authors": []}
-    for line in text.splitlines():
-        m = re.match(r"#\+(\w+):\s*(.*)", line)
-        if not m:
-            continue
-        key, val = m.group(1).lower(), m.group(2).strip()
-        if key == "authors":
-            meta["authors"] = [a.strip() for a in val.split(",") if a.strip()]
-        else:
-            meta[key] = val
-    return meta
-
-
 def find_repo_url(text: str) -> Optional[str]:
     m = _GITHUB_RE.search(text)
     if not m:
@@ -40,15 +25,7 @@ def find_repo_url(text: str) -> Optional[str]:
 
 
 def normalize_input(arg: str) -> tuple[str, str]:
-    """Return (arxiv_id, source_url) from a .org path, arxiv url, or bare id."""
-    p = Path(arg)
-    if p.exists() and p.suffix == ".org":
-        meta = parse_org(p.read_text())
-        url = meta.get("source", "")
-        arxiv_id = arxiv_id_from_url(url)
-        if not arxiv_id:
-            raise ValueError(f"no arxiv source in {arg}")
-        return arxiv_id, url
+    """Return (arxiv_id, source_url) from an arxiv url or bare arxiv id."""
     if arg.startswith("http"):
         arxiv_id = arxiv_id_from_url(arg)
         if not arxiv_id:
