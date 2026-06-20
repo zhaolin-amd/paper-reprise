@@ -9,12 +9,14 @@ orchestration is offline-testable.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from paper_reprise.models import Artifact, Claim
 
@@ -99,3 +101,51 @@ def _detect_gpu() -> str:
     if visible:
         return f"CUDA_VISIBLE_DEVICES={visible}"
     return "unknown"
+
+
+def _rundir_paths(claim_dir: Path) -> tuple[Path, Path, Path]:
+    """Given rd.claim_dir(id) == rd.root/'runs'/id, derive (root, env_dir, repo_dir)."""
+    root = claim_dir.parent.parent
+    return root, root / "env", root / "repo"
+
+
+def make_run_executor(
+    *,
+    run_eval: Callable[[str, Path, Path, Path], tuple[int, str]] | None = None,
+    detect_gpu: Callable[[], str] | None = None,
+    now: Callable[[], float] | None = None,
+) -> Callable[[Claim, Artifact, Path], dict]:
+    """Build the executor(claim, artifact, claim_dir) -> dict that run_claims injects.
+
+    The executor runs the claim's eval command in the setup-built env, persists
+    raw stdout + the resolved actual_config, and returns run metadata. A non-zero
+    eval raises (run_claims turns that into a BLOCKED result — the eval did not
+    successfully run, which is not the same as 'failed to reproduce')."""
+    run_eval = run_eval or _run_eval
+    detect_gpu = detect_gpu or _detect_gpu
+    now = now or time.monotonic
+
+    def executor(claim: Claim, artifact: Artifact, claim_dir: Path) -> dict:
+        _root, env_dir, repo_dir = _rundir_paths(claim_dir)
+        command = build_eval_command(claim)
+        log_path = claim_dir / "stdout.log"
+        gpu = detect_gpu()
+        start = now()
+        code, _out = run_eval(command, repo_dir, env_dir, log_path)
+        minutes = (now() - start) / 60.0
+
+        actual_config = resolve_actual_config(claim, artifact)
+        (claim_dir / "actual_config.json").write_text(json.dumps(actual_config, indent=2))
+
+        if code != 0:
+            raise RuntimeError(f"eval exited {code}; see {log_path}")
+
+        return {
+            "stdout_path": str(log_path),
+            "actual_config": actual_config,
+            "gpu": gpu,
+            "seed": extract_seed(command),
+            "minutes": minutes,
+        }
+
+    return executor

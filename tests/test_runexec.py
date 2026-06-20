@@ -1,9 +1,14 @@
+import json
+from pathlib import Path
+
 from paper_reprise.models import Artifact, Claim, EvalProtocol
+from paper_reprise.rundir import RunDir
 from paper_reprise.runexec import (
     _detect_gpu,
     _run_eval,
     build_eval_command,
     extract_seed,
+    make_run_executor,
     resolve_actual_config,
 )
 
@@ -77,3 +82,35 @@ def test_detect_gpu_returns_string_or_unknown(monkeypatch):
     monkeypatch.setattr(runexec.shutil, "which", lambda name: None)
     monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
     assert _detect_gpu() == "unknown"
+
+
+def test_executor_runs_persists_and_returns_metadata(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    claim_dir = rd.claim_dir("c1")
+    calls = {}
+
+    def fake_run_eval(command, cwd, env_dir, log_path):
+        calls["command"] = command
+        calls["cwd"] = cwd
+        calls["env_dir"] = env_dir
+        Path(log_path).write_text("perplexity: 5.80")
+        return 0, "perplexity: 5.80"
+
+    executor = make_run_executor(
+        run_eval=fake_run_eval, detect_gpu=lambda: "A100",
+        now=iter([100.0, 220.0]).__next__,
+    )
+    out = executor(_claim("python eval.py --seed 42"), _artifact(), claim_dir)
+
+    # derived paths
+    assert calls["cwd"] == rd.repo_dir
+    assert calls["env_dir"] == rd.root / "env"
+    # returned metadata
+    assert out["stdout_path"] == str(claim_dir / "stdout.log")
+    assert out["gpu"] == "A100"
+    assert out["seed"] == 42
+    assert out["minutes"] == 2.0                      # (220-100)/60
+    assert out["actual_config"]["wbits"] == 4
+    # actual_config persisted for the report re-render
+    saved = json.loads((claim_dir / "actual_config.json").read_text())
+    assert saved["seqlen"] == 2048
