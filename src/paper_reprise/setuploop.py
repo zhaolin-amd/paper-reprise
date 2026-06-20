@@ -26,6 +26,11 @@ from paper_reprise.setupstage import SetupResult
 # Smoke runs must be cheap; guard against a hung command (design §4.1).
 _SMOKE_TIMEOUT_S = 1800
 
+# Guardrails so env creation, the headless fixer, and pip freeze can't hang forever.
+_CREATE_ENV_TIMEOUT_S = 1800
+_FIXER_TIMEOUT_S = 1800
+_FREEZE_TIMEOUT_S = 300
+
 # Tiny-scale flags so the smoke run is cheap (design §4.1: ~8 samples, 1 batch).
 _TINY_FLAGS = "--limit 8 --batch-size 1"
 
@@ -111,7 +116,13 @@ def _create_env(env_dir: Path, manager: str) -> tuple[int, str]:
         cmd = ["uv", "venv", str(env_dir)]
     else:
         cmd = ["conda", "create", "-y", "-p", str(env_dir), "python=3.11"]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              timeout=_CREATE_ENV_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        return 124, "env creation timed out"
+    except FileNotFoundError as e:
+        return 127, str(e)
     return proc.returncode, (proc.stdout + proc.stderr)
 
 
@@ -135,21 +146,31 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
 
 
 def _freeze_env(env_dir: Path) -> dict:
-    """Capture pip freeze + torch/transformers/CUDA versions from env_dir."""
-    proc = subprocess.run([str(env_dir / "bin" / "python"), "-m", "pip", "freeze"],
-                          capture_output=True, text=True)
+    """Capture pip freeze + torch/transformers/CUDA versions from env_dir.
+
+    Best-effort: a hung/missing python binary must not break a passing smoke run,
+    so any failure degrades to an empty freeze (→ assemble_snapshot fills 'unknown').
+    """
+    try:
+        proc = subprocess.run([str(env_dir / "bin" / "python"), "-m", "pip", "freeze"],
+                              capture_output=True, text=True, timeout=_FREEZE_TIMEOUT_S)
+    except Exception:
+        return {"pip_freeze": ""}
     freeze_text = proc.stdout
     versions: dict = {"pip_freeze": freeze_text}
     for line in freeze_text.splitlines():
         for pkg in ("torch", "transformers"):
             if line.lower().startswith(f"{pkg}=="):
                 versions[pkg] = line.split("==", 1)[1].strip()
-    cuda = subprocess.run(
-        [str(env_dir / "bin" / "python"), "-c",
-         "import torch; print(torch.version.cuda)"],
-        capture_output=True, text=True)
-    if cuda.returncode == 0 and cuda.stdout.strip() not in ("", "None"):
-        versions["cuda"] = cuda.stdout.strip()
+    try:
+        cuda = subprocess.run(
+            [str(env_dir / "bin" / "python"), "-c",
+             "import torch; print(torch.version.cuda)"],
+            capture_output=True, text=True, timeout=_FREEZE_TIMEOUT_S)
+        if cuda.returncode == 0 and cuda.stdout.strip() not in ("", "None"):
+            versions["cuda"] = cuda.stdout.strip()
+    except Exception:
+        pass  # cuda probe is best-effort
     return versions
 
 
@@ -158,7 +179,7 @@ def _run_fixer(prompt: str, cwd: Path, patch_note: Path) -> None:
     smoke command, so we ignore the HeadlessResult here (the patch note is the
     only artifact we read back, via collect_new_patches)."""
     run_headless(prompt=prompt, allowed_tools=["Read", "Write", "Edit", "Bash"],
-                 cwd=cwd, expect_file=patch_note)
+                 cwd=cwd, expect_file=patch_note, timeout=_FIXER_TIMEOUT_S)
 
 
 def run_setup_loop(
@@ -175,7 +196,10 @@ def run_setup_loop(
     run_fixer: Callable[[str, Path, Path], None] | None = None,
 ) -> SetupResult:
     """Drive the env-debug loop until the smoke command passes once, or a guardrail
-    (retry cap / timeout) is exceeded. On exhaustion: ok=False, full log handed off."""
+    (retry cap / timeout) is exceeded. On exhaustion: ok=False, full log handed off.
+
+    Contract: this never lets an exception escape — any crash in the loop body is
+    caught and reported as ok=False so the pipeline keeps going (design §4.1)."""
     # Resolve seams at call time so monkeypatching the module globals takes effect
     # (Python default args are bound at def time, so we can't default to the names).
     create_env = create_env or _create_env
@@ -183,6 +207,30 @@ def run_setup_loop(
     freeze_env = freeze_env or _freeze_env
     run_fixer = run_fixer or _run_fixer
 
+    try:
+        return _run_loop_body(rd, spec, manager=manager, max_retries=max_retries,
+                              timeout_s=timeout_s, now=now, create_env=create_env,
+                              run_smoke=run_smoke, freeze_env=freeze_env,
+                              run_fixer=run_fixer)
+    except Exception as e:  # never crash the pipeline; setup failure must be ok=False
+        return SetupResult(ok=False, error=f"setup crashed: {e!r}; see setup_log/")
+
+
+def _run_loop_body(
+    rd: RunDir,
+    spec: Spec,
+    *,
+    manager: str,
+    max_retries: int,
+    timeout_s: float,
+    now: Callable[[], float],
+    create_env: Callable[[Path, str], tuple[int, str]],
+    run_smoke: Callable[[str, Path, Path], tuple[int, str]],
+    freeze_env: Callable[[Path], dict],
+    run_fixer: Callable[[str, Path, Path], None],
+) -> SetupResult:
+    """The actual env-debug loop, with seams already resolved. Wrapped by
+    run_setup_loop so any exception here becomes ok=False rather than a crash."""
     env_dir = rd.root / "env"
     command = select_smoke_command(rd, spec)
     start = now()
@@ -206,8 +254,16 @@ def run_setup_loop(
         code, out = run_smoke(command, rd.repo_dir, env_dir)
         _write_log(rd, f"smoke_{attempt}.log", out)
         if code == 0:
-            snapshot = assemble_snapshot(freeze_env(env_dir))
-            (rd.root / "env_snapshot.json").write_text(json.dumps(snapshot, indent=2))
+            # smoke genuinely passed; freeze/snapshot are best-effort and must NOT
+            # turn a success into a crash.
+            try:
+                snapshot = assemble_snapshot(freeze_env(env_dir))
+            except Exception:
+                snapshot = assemble_snapshot({})  # unknown versions; smoke still passed
+            try:
+                (rd.root / "env_snapshot.json").write_text(json.dumps(snapshot, indent=2))
+            except OSError:
+                pass  # snapshot is best-effort; the env genuinely ran
             return SetupResult(ok=True, env_snapshot=snapshot, patches=patches)
         if attempt >= max_retries:
             return SetupResult(ok=False, patches=patches,

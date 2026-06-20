@@ -178,6 +178,40 @@ def test_loop_times_out_returns_failure(tmp_path):
     assert "timed out" in res.error
 
 
+def test_loop_returns_failure_when_a_seam_raises(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    f = _fakes()
+    def boom_create(env_dir, manager):
+        raise RuntimeError("uv binary not found")
+    f.update(create_env=boom_create)
+    res = run_setup_loop(rd, _spec(), manager="uv", max_retries=2, timeout_s=100.0, **f)
+    assert res.ok is False
+    assert "setup crashed" in res.error
+
+
+def test_loop_freeze_failure_keeps_success_with_unknown_snapshot(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    def boom_freeze(env_dir):
+        raise RuntimeError("python missing in env")
+    f = _fakes()
+    f.update(run_smoke=lambda c, cwd, e: (0, "ok"), freeze_env=boom_freeze)
+    res = run_setup_loop(rd, _spec(), manager="uv", max_retries=2, timeout_s=100.0, **f)
+    assert res.ok is True                       # smoke passed → success preserved
+    assert res.env_snapshot["torch"] == "unknown"
+
+
+def test_run_fixer_passes_timeout_to_run_headless(monkeypatch, tmp_path):
+    import paper_reprise.setuploop as sl
+    captured = {}
+    def fake_run_headless(**kwargs):
+        captured.update(kwargs)
+        from paper_reprise.headless import HeadlessResult
+        return HeadlessResult(ok=True)
+    monkeypatch.setattr(sl, "run_headless", fake_run_headless)
+    sl._run_fixer("prompt", tmp_path, tmp_path / "patch_0.txt")
+    assert captured["timeout"] == sl._FIXER_TIMEOUT_S
+
+
 def test_loop_env_creation_failure_is_surfaced(tmp_path):
     rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
     f = _fakes()
