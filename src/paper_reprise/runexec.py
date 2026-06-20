@@ -85,12 +85,23 @@ def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[i
     return code, out
 
 
+_NVIDIA_SMI_CANDIDATES = ("/usr/bin/nvidia-smi", "/usr/local/bin/nvidia-smi")
+
+
 def _detect_gpu() -> str:
-    """Best-effort GPU label: nvidia-smi name, else CUDA_VISIBLE_DEVICES, else 'unknown'."""
-    if shutil.which("nvidia-smi"):
+    """Best-effort GPU label: nvidia-smi name, else CUDA_VISIBLE_DEVICES, else 'unknown'.
+    Checks shutil.which first, then falls back to known absolute paths so it works even
+    when nvidia-smi is not on PATH (common in some HPC environments)."""
+    smi = shutil.which("nvidia-smi")
+    if not smi:
+        for candidate in _NVIDIA_SMI_CANDIDATES:
+            if shutil.which(candidate) or __import__("pathlib").Path(candidate).is_file():
+                smi = candidate
+                break
+    if smi:
         try:
             proc = subprocess.run(
-                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                [smi, "--query-gpu=name", "--format=csv,noheader"],
                 capture_output=True, text=True, timeout=30)
             name = proc.stdout.strip().splitlines()[0].strip() if proc.stdout.strip() else ""
             if name:
