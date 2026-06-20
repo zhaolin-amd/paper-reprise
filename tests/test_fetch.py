@@ -1,7 +1,10 @@
 import io
 import tarfile
+from pathlib import Path
 
-from paper_reprise.fetch import latex_source_url, unpack_targz
+from paper_reprise.fetch import latex_source_url, parse_arxiv_search, unpack_targz
+
+FIX = Path(__file__).parent / "fixtures"
 
 
 def test_latex_source_url():
@@ -37,3 +40,13 @@ def test_unpack_targz_rejects_path_traversal(tmp_path):
         tar.addfile(info, io.BytesIO(data))
     with pytest.raises(ValueError, match="unsafe path"):
         unpack_targz(buf.getvalue(), tmp_path)
+
+
+def test_parse_arxiv_search_returns_first_id():
+    xml = (FIX / "arxiv_search_response.xml").read_text()
+    assert parse_arxiv_search(xml) == "2401.00001"
+
+
+def test_parse_arxiv_search_empty_feed_returns_none():
+    xml = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>'
+    assert parse_arxiv_search(xml) is None
