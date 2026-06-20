@@ -25,7 +25,7 @@ Running the code itself is already highly standardized in the quantization field
 |---|---|
 | Eval | Run the paper's own scripts first (official > cited-standard > custom rebuild) |
 | Spec | Extract the **full eval protocol** per claim |
-| Path | Official-repo path first; from-scratch is a **reserved interface** |
+| Path | Official-repo path **and** from-scratch path implemented; selected per run by repo presence |
 | Judge | **Process-faithful AND value-in-tolerance** — both required for MATCH |
 | Autonomy | Semi-auto: gate 1 (spec approval) + plan anomaly sentinel |
 | Deployment | Manual CLI, per-paper, file-based state |
@@ -88,7 +88,7 @@ of the deterministic offline normalization.)
 
 Then:
 - **Fetch LaTeX source** (`arxiv.org/e-print/<id>`), do not OCR the PDF — table numbers are far more accurate from LaTeX.
-- **Locate the official repo**, priority: GitHub link in the paper > PapersWithCode > GH code search (by title/method name). Candidates plus confidence are written into `ingest.json`; **if none found, `repo: null`** (future from-scratch provider; this phase simply SKIPs and notes it in the report).
+- **Locate the official repo**, priority: GitHub link in the paper > PapersWithCode > GH code search (by title/method name). Candidates plus confidence are written into `ingest.json`; **if none found, `repo: null`** and the run routes to the from-scratch provider (§6).
 
 ```
 ingest.json:
@@ -270,11 +270,27 @@ Each reproduction produces reusable assets, landing in a directory rather than a
 
 In the CLI form this is just "a directory layout by convention", not extra infrastructure.
 
-## 6. From-Scratch Path (interface reserved this phase)
+## 6. From-Scratch Path (implemented)
 
-Papers without an official repo take the "from-scratch" path. Not implemented this phase, but the architecture reserves for it:
-- **Provider interface**: the official-repo path is an `OfficialRepoProvider`, from-scratch is a `FromScratchProvider`; both implement the same interface (produce quantized products + executable eval commands), converging on the same grade/report.
-- Papers ingest-marked `repo: null` are simply SKIPped this phase, with the report noting "no official repo, pending from-scratch implementation".
+Papers without an official repo take the "from-scratch" path: the agent implements the
+paper's method from its description instead of running a repo's scripts.
+- **Provider selection**: a dispatcher inspects each run at call time and routes the
+  injected setup/run executors — official path when a repo was cloned into `repo/`,
+  from-scratch path when `repo/` is empty (no official repo found). No separate pipeline
+  stage; the same `run_setup` / `run_claims` seams carry both providers (`provider.py`).
+- **From-scratch setup** (`fromscratch.py`): build an env, run a bounded headless-Claude
+  scaffold loop that writes a self-contained implementation into `<run>/impl/` exposing
+  one entrypoint (`impl/run_eval.sh`), smoke-test it — same retry/timeout guardrails, env
+  snapshot, and per-turn patch trail (with smoke-failure feedback) as the official setup loop.
+- **From-scratch run**: execute the scaffolded entrypoint per claim, persist raw output +
+  `actual_config`, BLOCKED on failure — mirroring the official run executor; converges on
+  the same grade/report.
+- **Honesty**: from-scratch claims use `runner: custom` (flagged unofficial); the system
+  trusts the agent's implementation (no cross-check against an official impl), the same
+  faithfulness limitation §5.1 already documents.
+- **Deferred** (as for the official path): the real agentic implementation and GPU
+  execution run behind injectable seams; the skeleton + dispatch + guardrails are built
+  and offline-tested.
 
 ## 7. Run Directory Layout
 
@@ -303,5 +319,7 @@ runs/<paper_name>-<arxiv_id>-<timestamp>/
 - No cross-paper scheduler (multi-GPU only serves claims within a single run).
 - No cost-budget approval gate (resources not a constraint).
 - No LLM grading (numeric comparison done in code).
-- No from-scratch provider this phase (interface only).
-- No title-based input this phase (title → arxiv_id needs an online search; deferred to Plan 2).
+
+(Both the from-scratch provider (§6) and title-based input — earlier deferred — are now
+implemented; the remaining deferrals are the real agentic/GPU execution behind the
+injectable seams and GPU sandboxing.)
