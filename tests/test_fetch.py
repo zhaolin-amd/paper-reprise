@@ -1,11 +1,13 @@
 import io
 import tarfile
+import urllib.parse
 from pathlib import Path
 
 from paper_reprise.fetch import (
     fetch_latex,
     latex_source_url,
     parse_arxiv_search,
+    resolve_arxiv_id,
     unpack_targz,
 )
 
@@ -69,3 +71,23 @@ def test_fetch_latex_downloads_and_unpacks(tmp_path):
     assert calls["url"] == "https://arxiv.org/e-print/2401.00001"
     assert (dest / "main.tex").read_text() == "\\section{Intro}"
     assert dest == tmp_path / "paper"
+
+
+def test_resolve_arxiv_id_from_title(tmp_path):
+    xml = (FIX / "arxiv_search_response.xml").read_text()
+    captured = {}
+
+    def fake_get(url):
+        captured["url"] = url
+        return xml
+
+    got = resolve_arxiv_id("AWQ Activation-aware Weight Quantization", http_get=fake_get)
+    assert got == "2401.00001"
+    # the title must be url-encoded into a ti: query against the arxiv API
+    assert "export.arxiv.org/api/query" in captured["url"]
+    assert "ti:" in urllib.parse.unquote(captured["url"])
+
+
+def test_resolve_arxiv_id_no_match_returns_none():
+    empty = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>'
+    assert resolve_arxiv_id("nonexistent paper xyz", http_get=lambda u: empty) is None

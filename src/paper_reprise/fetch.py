@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import re
 import tarfile
+import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Callable, Optional
@@ -67,3 +68,21 @@ def parse_arxiv_search(xml_text: str) -> Optional[str]:
         return None
     m = _ARXIV_ABS_RE.search(id_el.text)
     return m.group(1) if m else None
+
+
+def _http_get_text(url: str) -> str:
+    resp = httpx.get(url, follow_redirects=True, timeout=30.0)
+    resp.raise_for_status()
+    return resp.text
+
+
+def arxiv_search_url(query: str) -> str:
+    q = urllib.parse.quote(f"ti:{query}")
+    return f"http://export.arxiv.org/api/query?search_query={q}&max_results=1"
+
+
+def resolve_arxiv_id(query: str,
+                     *, http_get: Callable[[str], str] = _http_get_text) -> Optional[str]:
+    """Resolve a paper title to a bare arxiv id via the arxiv API. None if no match."""
+    xml_text = http_get(arxiv_search_url(query))
+    return parse_arxiv_search(xml_text)
