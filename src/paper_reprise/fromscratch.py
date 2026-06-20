@@ -80,22 +80,50 @@ For EACH file you create under `impl/`, append ONE line describing what it \
 implements to `{patch_note}` (create the file; one line per file). When `impl/` \
 and `{entrypoint}` exist and `--smoke` runs, you are done."""
 
+# Appended only on retry turns: the prior smoke run failed, so hand the agent the
+# failing command + its captured output (the traceback) to debug — mirrors
+# setuploop.build_fixer_prompt. The initial scaffold turn has no failure context.
+_SCAFFOLD_FAILURE_TEMPLATE = """
 
-def build_scaffold_prompt(rd: RunDir, spec: Spec) -> str:
+The previous smoke attempt FAILED. Fix `impl/` so the SAME smoke command can run.
+
+Failing command:
+    {command}
+
+Captured output (read the traceback):
+{output}"""
+
+
+def build_scaffold_prompt(
+    rd: RunDir,
+    spec: Spec,
+    patch_note_path: str,
+    *,
+    failure: tuple[str, str] | None = None,
+) -> str:
     """Build the headless-claude instruction to implement the paper's method as a
-    self-contained `impl/` with one runnable entrypoint. Pure string builder."""
+    self-contained `impl/` with one runnable entrypoint. Pure string builder.
+
+    `patch_note_path` is the PER-TURN note path (e.g. `setup_patches/scaffold_0.txt`)
+    embedded in the prompt so each turn's notes land in a distinct file and
+    collect_new_patches_scaffold can capture every turn. `failure`, when given, is the
+    (failing smoke command, captured output) from the prior turn — embedded so the
+    agent can debug. None on the initial scaffold (no failure yet)."""
     methods = ", ".join(sorted({a.method for a in spec.artifacts})) or "the paper's method"
-    return _SCAFFOLD_TEMPLATE.format(
-        methods=methods, entrypoint=_ENTRYPOINT,
-        patch_note="setup_patches/scaffold.txt",
+    prompt = _SCAFFOLD_TEMPLATE.format(
+        methods=methods, entrypoint=_ENTRYPOINT, patch_note=patch_note_path,
     )
+    if failure is not None:
+        command, output = failure
+        prompt += _SCAFFOLD_FAILURE_TEMPLATE.format(command=command, output=output)
+    return prompt
 
 
 def collect_new_patches_scaffold(patches_dir: Path, seen: set[str]) -> list[str]:
     """Set-diff scaffold_*.txt patch notes — the from-scratch analogue of
     setuploop.collect_new_patches (which globs patch_*.txt)."""
     new: list[str] = []
-    for p in sorted(patches_dir.glob("scaffold*.txt")):
+    for p in sorted(patches_dir.glob("scaffold_*.txt")):
         if p.name in seen:
             continue
         seen.add(p.name)
@@ -167,10 +195,12 @@ def _fromscratch_setup_body(
     env_dir = rd.root / "env"
     smoke_cmd = fromscratch_smoke_command()
     entrypoint = rd.root / _ENTRYPOINT
-    prompt = build_scaffold_prompt(rd, spec)
     start = now()
     seen_patches: set[str] = set()
     patches: list[str] = []
+    # Carries the prior turn's failing (command, output) into the next prompt so the
+    # agent can debug the traceback; None on the initial scaffold (no failure yet).
+    failure: tuple[str, str] | None = None
 
     # --- build env once ---
     code, env_log = create_env(env_dir, manager)
@@ -186,6 +216,11 @@ def _fromscratch_setup_body(
             return SetupResult(ok=False, patches=patches,
                                error=f"from-scratch setup timed out after {timeout_s}s "
                                      f"({attempt} attempts); see setup_log/")
+        # Build the prompt PER TURN: a per-turn note path (so each turn's notes land
+        # in a distinct file collect_new_patches_scaffold can capture) and, on retries,
+        # the prior smoke failure so the agent debugs the traceback (Finding 1+2).
+        note_rel = f"setup_patches/scaffold_{attempt}.txt"
+        prompt = build_scaffold_prompt(rd, spec, note_rel, failure=failure)
         produced = run_scaffold(prompt, rd.root, entrypoint, _SCAFFOLD_TIMEOUT_S)
         patches.extend(collect_new_patches_scaffold(rd.setup_patches_dir, seen_patches))
         if produced:
@@ -203,6 +238,8 @@ def _fromscratch_setup_body(
                 except OSError:
                     pass  # snapshot is best-effort; the impl genuinely ran
                 return SetupResult(ok=True, env_snapshot=snapshot, patches=patches)
+            # smoke ran but failed: hand the traceback to the next scaffold turn.
+            failure = (smoke_cmd, out)
         else:
             _write_log(rd, f"scaffold_{attempt}.log",
                        f"scaffold turn {attempt} did not produce {_ENTRYPOINT}")

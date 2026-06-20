@@ -38,7 +38,7 @@ def test_eval_command_invokes_entrypoint_with_claim_id():
 
 def test_scaffold_prompt_instructs_impl_entrypoint_and_forbids_fabrication(tmp_path):
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
-    prompt = build_scaffold_prompt(rd, _spec())
+    prompt = build_scaffold_prompt(rd, _spec(), "setup_patches/scaffold_0.txt")
     # points at the paper source + the spec
     assert "paper/" in prompt
     assert "spec.yaml" in prompt
@@ -51,6 +51,22 @@ def test_scaffold_prompt_instructs_impl_entrypoint_and_forbids_fabrication(tmp_p
     assert "fabricat" in low or "do not invent" in low or "must not invent" in low
     # patch-note discipline: one-line note per file
     assert "one line" in low or "one-line" in low
+    # the per-turn note path is embedded so the loop can collect it
+    assert "setup_patches/scaffold_0.txt" in prompt
+
+
+def test_scaffold_prompt_embeds_smoke_failure_only_when_provided(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    # initial scaffold: no failure context, so no command/traceback
+    initial = build_scaffold_prompt(rd, _spec(), "setup_patches/scaffold_0.txt")
+    assert "bash impl/run_eval.sh --smoke" not in initial
+    assert "BANG_TRACEBACK" not in initial
+    # retry scaffold: failing smoke command + captured output embedded for debugging
+    retry = build_scaffold_prompt(
+        rd, _spec(), "setup_patches/scaffold_1.txt",
+        failure=("bash impl/run_eval.sh --smoke", "BANG_TRACEBACK: boom"))
+    assert "bash impl/run_eval.sh --smoke" in retry
+    assert "BANG_TRACEBACK: boom" in retry
 
 
 def _setup_fakes():
@@ -87,8 +103,13 @@ def test_setup_retries_then_succeeds_and_records_patches(tmp_path):
     n = {"i": 0}
 
     def fake_scaffold(prompt, cwd, expect_file, timeout):
-        # the agent writes a patch note describing the file it implemented
-        (rd.setup_patches_dir / f"scaffold_{n['i']}.txt").write_text(f"impl awq step {n['i']}")
+        # Exercise the REAL per-turn-file contract: the agent writes its note to the
+        # exact relative path the prompt names (not a name the fake invents). Parsing
+        # it out of the prompt is what proves each turn gets a distinct note file.
+        import re
+        m = re.search(r"setup_patches/scaffold_\d+\.txt", prompt)
+        assert m, "prompt must name a per-turn scaffold note path"
+        (rd.root / m.group(0)).write_text(f"impl awq step {n['i']}")
         n["i"] += 1
         return True
 
@@ -98,6 +119,8 @@ def test_setup_retries_then_succeeds_and_records_patches(tmp_path):
     res = run_fromscratch_setup(rd, _spec(), max_retries=5, timeout_s=100.0, **f)
     assert res.ok is True
     assert n["i"] == 2                               # scaffolded, smoke failed, scaffolded again
+    # Both turns' notes must be captured — the per-turn filename is what lets
+    # collect_new_patches_scaffold see the second turn (a fixed name would be deduped).
     assert res.patches == ["impl awq step 0", "impl awq step 1"]
 
 
@@ -142,6 +165,22 @@ def test_setup_scaffold_never_produces_entrypoint_fails(tmp_path):
     res = run_fromscratch_setup(rd, _spec(), max_retries=2, timeout_s=1e9, **f)
     assert res.ok is False
     assert "setup_log/" in res.error
+
+
+def test_setup_exception_in_seam_becomes_ok_false_not_raise(tmp_path):
+    # A crash anywhere in the loop body (here: create_env) must be caught and turned
+    # into ok=False so the pipeline keeps going — mirrors run_setup_loop's guard.
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+
+    def boom_create_env(env_dir, manager):
+        raise RuntimeError("disk on fire")
+
+    f = _setup_fakes()
+    f.update(create_env=boom_create_env)
+    res = run_fromscratch_setup(rd, _spec(), max_retries=3, timeout_s=100.0, **f)
+    assert isinstance(res, SetupResult)
+    assert res.ok is False
+    assert "crashed" in res.error and "disk on fire" in res.error
 
 
 def _artifact():
