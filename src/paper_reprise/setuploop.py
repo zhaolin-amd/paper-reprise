@@ -11,6 +11,8 @@ call) is behind an injectable seam so the whole loop is offline-testable.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from paper_reprise.models import Spec
 from paper_reprise.rundir import RunDir
 
@@ -40,3 +42,27 @@ def select_smoke_command(rd: RunDir, spec: Spec) -> str:
     if spec.claims:
         return shrink_command(spec.claims[0].eval_protocol.command)
     return ""
+
+
+def assemble_snapshot(freeze: dict) -> dict:
+    """Normalize a raw freeze dict into the report's expected keys, keeping the
+    full pip freeze. Missing versions become 'unknown' (never silently dropped)."""
+    return {
+        "torch": freeze.get("torch") or "unknown",
+        "transformers": freeze.get("transformers") or "unknown",
+        "cuda": freeze.get("cuda") or "unknown",
+        "pip_freeze": freeze.get("pip_freeze", ""),
+    }
+
+
+def collect_new_patches(patches_dir: Path, seen: set[str]) -> list[str]:
+    """Return the contents of patch-note files in patches_dir not yet in `seen`,
+    sorted by filename, and record them in `seen`. This is how the loop learns
+    what the agent changed each turn."""
+    new: list[str] = []
+    for p in sorted(patches_dir.glob("patch_*.txt")):
+        if p.name in seen:
+            continue
+        seen.add(p.name)
+        new.append(p.read_text().strip())
+    return new
