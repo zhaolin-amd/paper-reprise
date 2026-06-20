@@ -1,10 +1,14 @@
+import json
+
 from paper_reprise.fromscratch import (
     build_scaffold_prompt,
     fromscratch_eval_command,
     fromscratch_smoke_command,
+    run_fromscratch_setup,
 )
 from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
 from paper_reprise.rundir import RunDir
+from paper_reprise.setupstage import SetupResult
 
 
 def _spec(command="python eval_ppl.py --model m --dataset wikitext2"):
@@ -42,3 +46,94 @@ def test_scaffold_prompt_instructs_impl_entrypoint_and_forbids_fabrication(tmp_p
     assert "fabricat" in low or "do not invent" in low or "must not invent" in low
     # patch-note discipline: one-line note per file
     assert "one line" in low or "one-line" in low
+
+
+def _setup_fakes():
+    return dict(
+        create_env=lambda env_dir, manager: (0, "env created"),
+        run_scaffold=lambda prompt, cwd, expect_file, timeout: True,
+        run_smoke=lambda command, cwd, env_dir: (0, "perplexity: 5.80"),
+        freeze_env=lambda env_dir: {"torch": "2.3.0", "transformers": "4.40.0",
+                                    "cuda": "12.1", "pip_freeze": "torch==2.3.0"},
+        now=iter([0.0, 1.0, 2.0, 3.0, 4.0]).__next__,
+    )
+
+
+def test_setup_success_on_first_scaffold(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    res = run_fromscratch_setup(rd, _spec(), max_retries=3, timeout_s=100.0,
+                                **_setup_fakes())
+    assert isinstance(res, SetupResult)
+    assert res.ok is True
+    assert res.env_snapshot["torch"] == "2.3.0"
+    snap = json.loads((rd.root / "env_snapshot.json").read_text())
+    assert snap["transformers"] == "4.40.0"
+    assert any(rd.setup_log_dir.iterdir())          # log handed off
+
+
+def test_setup_retries_then_succeeds_and_records_patches(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    smoke_codes = iter([1, 0])      # first smoke fails, second passes
+
+    def fake_smoke(command, cwd, env_dir):
+        c = next(smoke_codes)
+        return (c, "boom" if c else "perplexity: 5.80")
+
+    n = {"i": 0}
+
+    def fake_scaffold(prompt, cwd, expect_file, timeout):
+        # the agent writes a patch note describing the file it implemented
+        (rd.setup_patches_dir / f"scaffold_{n['i']}.txt").write_text(f"impl awq step {n['i']}")
+        n["i"] += 1
+        return True
+
+    f = _setup_fakes()
+    f.update(run_smoke=fake_smoke, run_scaffold=fake_scaffold,
+             now=iter([0.0] * 10).__next__)
+    res = run_fromscratch_setup(rd, _spec(), max_retries=5, timeout_s=100.0, **f)
+    assert res.ok is True
+    assert n["i"] == 2                               # scaffolded, smoke failed, scaffolded again
+    assert res.patches == ["impl awq step 0", "impl awq step 1"]
+
+
+def test_setup_hits_retry_cap_returns_failure_with_log(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    f = _setup_fakes()
+    f.update(run_smoke=lambda c, cwd, e: (1, "still broken"),
+             now=iter([0.0] * 20).__next__)
+    res = run_fromscratch_setup(rd, _spec(), max_retries=2, timeout_s=1e9, **f)
+    assert res.ok is False
+    assert "2" in res.error and "setup_log/" in res.error
+    assert not (rd.root / "env_snapshot.json").exists()
+    assert any(rd.setup_log_dir.iterdir())
+
+
+def test_setup_times_out_returns_failure(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    f = _setup_fakes()
+    f.update(run_smoke=lambda c, cwd, e: (1, "boom"),
+             now=iter([0.0, 5.0, 999.0]).__next__)
+    res = run_fromscratch_setup(rd, _spec(), max_retries=99, timeout_s=100.0, **f)
+    assert res.ok is False
+    assert "timed out" in res.error
+
+
+def test_setup_env_creation_failure_is_surfaced(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    f = _setup_fakes()
+    f.update(create_env=lambda env_dir, manager: (1, "uv not found"))
+    res = run_fromscratch_setup(rd, _spec(), max_retries=3, timeout_s=100.0, **f)
+    assert res.ok is False
+    assert "env creation failed" in res.error
+    assert (rd.setup_log_dir / "create_env.log").read_text() == "uv not found"
+
+
+def test_setup_scaffold_never_produces_entrypoint_fails(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    f = _setup_fakes()
+    # scaffold turn never produces the entrypoint; smoke would never be reached
+    f.update(run_scaffold=lambda p, cwd, ef, to: False,
+             now=iter([0.0] * 20).__next__)
+    res = run_fromscratch_setup(rd, _spec(), max_retries=2, timeout_s=1e9, **f)
+    assert res.ok is False
+    assert "setup_log/" in res.error
