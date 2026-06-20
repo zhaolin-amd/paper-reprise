@@ -20,8 +20,15 @@ from pathlib import Path
 from typing import Callable
 
 from paper_reprise.headless import run_headless
-from paper_reprise.models import Claim, Spec
+from paper_reprise.models import Artifact, Claim, Spec
 from paper_reprise.rundir import RunDir
+from paper_reprise.runexec import (
+    _detect_gpu,
+    _rundir_paths,
+    _run_eval,
+    extract_seed,
+    resolve_actual_config,
+)
 from paper_reprise.setuploop import (
     _create_env,
     _freeze_env,
@@ -204,3 +211,45 @@ def _fromscratch_setup_body(
                                error=f"impl smoke still failing after {max_retries} "
                                      f"retries; see setup_log/")
         attempt += 1
+
+
+def make_fromscratch_run_executor(
+    *,
+    run_eval: Callable[[str, Path, Path, Path], tuple[int, str]] | None = None,
+    detect_gpu: Callable[[], str] | None = None,
+    now: Callable[[], float] | None = None,
+) -> Callable[[Claim, Artifact, Path], dict]:
+    """Build the executor(claim, artifact, claim_dir) -> dict that run_claims injects
+    on the from-scratch path. Runs the scaffolded entrypoint for the claim in the
+    setup-built env (cwd = the run root, where impl/ lives), persists raw stdout +
+    the resolved actual_config, and returns run metadata. A non-zero exit raises so
+    run_claims marks the claim BLOCKED (the eval did not run — not 'failed to
+    reproduce'). Mirrors runexec.make_run_executor, reusing its seams."""
+    run_eval = run_eval or _run_eval
+    detect_gpu = detect_gpu or _detect_gpu
+    now = now or time.monotonic
+
+    def executor(claim: Claim, artifact: Artifact, claim_dir: Path) -> dict:
+        root, env_dir, _repo_dir = _rundir_paths(claim_dir)
+        command = fromscratch_eval_command(claim)
+        log_path = claim_dir / "stdout.log"
+        gpu = detect_gpu()
+        start = now()
+        code, _out = run_eval(command, root, env_dir, log_path)
+        minutes = (now() - start) / 60.0
+
+        actual_config = resolve_actual_config(claim, artifact)
+        (claim_dir / "actual_config.json").write_text(json.dumps(actual_config, indent=2))
+
+        if code != 0:
+            raise RuntimeError(f"from-scratch eval exited {code}; see {log_path}")
+
+        return {
+            "stdout_path": str(log_path),
+            "actual_config": actual_config,
+            "gpu": gpu,
+            "seed": extract_seed(command),
+            "minutes": minutes,
+        }
+
+    return executor

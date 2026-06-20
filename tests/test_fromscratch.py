@@ -1,13 +1,16 @@
 import json
+from pathlib import Path
 
 from paper_reprise.fromscratch import (
     build_scaffold_prompt,
     fromscratch_eval_command,
     fromscratch_smoke_command,
+    make_fromscratch_run_executor,
     run_fromscratch_setup,
 )
 from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
 from paper_reprise.rundir import RunDir
+from paper_reprise.runstage import run_claims
 from paper_reprise.setupstage import SetupResult
 
 
@@ -137,3 +140,52 @@ def test_setup_scaffold_never_produces_entrypoint_fails(tmp_path):
     res = run_fromscratch_setup(rd, _spec(), max_retries=2, timeout_s=1e9, **f)
     assert res.ok is False
     assert "setup_log/" in res.error
+
+
+def _artifact():
+    return Artifact(id="a1", base_model="m", method="AWQ",
+                    quant_config={"wbits": 4, "group_size": 128})
+
+
+def test_run_executor_runs_entrypoint_persists_and_returns_metadata(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    claim_dir = rd.claim_dir("c1")
+    calls = {}
+
+    def fake_run_eval(command, cwd, env_dir, log_path):
+        calls["command"] = command
+        calls["cwd"] = cwd
+        calls["env_dir"] = env_dir
+        Path(log_path).write_text("perplexity: 5.80")
+        return 0, "perplexity: 5.80"
+
+    claim = _spec().claims[0]
+    executor = make_fromscratch_run_executor(
+        run_eval=fake_run_eval, detect_gpu=lambda: "A100",
+        now=iter([100.0, 220.0]).__next__)
+    out = executor(claim, _artifact(), claim_dir)
+
+    assert calls["command"] == "bash impl/run_eval.sh c1"
+    assert calls["cwd"] == rd.root                  # impl lives under the run root
+    assert calls["env_dir"] == rd.root / "env"
+    assert out["stdout_path"] == str(claim_dir / "stdout.log")
+    assert out["gpu"] == "A100"
+    assert out["minutes"] == 2.0
+    assert out["actual_config"]["wbits"] == 4
+    assert json.loads((claim_dir / "actual_config.json").read_text())["group_size"] == 128
+
+
+def test_run_executor_nonzero_exit_becomes_blocked_via_run_claims(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+
+    def fail_eval(command, cwd, env_dir, log_path):
+        Path(log_path).write_text("Traceback: not implemented")
+        return 1, "Traceback: not implemented"
+
+    executor = make_fromscratch_run_executor(
+        run_eval=fail_eval, detect_gpu=lambda: "A100", now=iter([0.0, 60.0]).__next__)
+    results, configs = run_claims(rd, _spec(), executor=executor)
+    assert results[0].status == "blocked"
+    assert "exited 1" in results[0].block_reason
+    assert (rd.claim_dir("c1") / "stdout.log").read_text().startswith("Traceback")
+    assert (rd.claim_dir("c1") / "actual_config.json").exists()
