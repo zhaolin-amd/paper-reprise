@@ -180,3 +180,11 @@ def test_cli_report_reads_actual_config_for_faithfulness(tmp_path):
     report = (rd.root / "report.zh.md").read_text()
     assert "PARTIAL" in report          # faithfulness caught the seqlen divergence
     assert "seqlen" in report
+
+
+def test_cli_resume_help_lists_command():
+    from click.testing import CliRunner
+    import paper_reprise.cli as cli_mod
+    res = CliRunner().invoke(cli_mod.cli, ["--help"])
+    assert res.exit_code == 0
+    assert "resume" in res.output

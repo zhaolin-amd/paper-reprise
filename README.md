@@ -30,6 +30,7 @@ ingest → specextract → plan → setup → run → grade → report
 
 ```
 paper-reprise run <arxiv_id | arxiv_url | "paper title">
+paper-reprise resume <run_dir>          # continue an existing run from its spec.yaml
 paper-reprise report <run_dir>          # re-render the report from an existing run
 ```
 

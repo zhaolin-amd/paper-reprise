@@ -52,6 +52,13 @@ def run_pipeline(
         return PipelineResult(root=rd.root, aborted_at="spec-approval")
     rd.write_spec(spec)
 
+    return _finish_pipeline(rd, spec, ingest, available_hardware=available_hardware,
+                            approve_plan=approve_plan, setup_executor=setup_executor,
+                            run_executor=run_executor)
+
+
+def _finish_pipeline(rd, spec, ingest, *, available_hardware, approve_plan,
+                     setup_executor, run_executor) -> PipelineResult:
     # --- plan + sentinel ---
     plan = build_plan(spec, available_hardware)
     rd.write_plan(plan)
@@ -80,3 +87,21 @@ def run_pipeline(
     (rd.root / "report.zh.md").write_text(zh)
     (rd.root / "report.en.md").write_text(en)
     return PipelineResult(root=rd.root, aborted_at=None)
+
+
+def resume_pipeline(run_dir, *, available_hardware, approve_plan,
+                    setup_executor, run_executor) -> PipelineResult:
+    """Continue an existing run from the plan stage, using the spec.yaml already on
+    disk (the user has reviewed/edited it — resuming IS the approval). Skips ingest
+    and specextract."""
+    rd = RunDir.open(Path(run_dir))
+    spec = rd.read_spec()
+    if spec is None:
+        return PipelineResult(root=rd.root, aborted_at="no-spec")
+    ingest = rd.read_ingest()
+    if ingest is None:
+        ingest = IngestInfo(arxiv_id=spec.paper,
+                            source_url=f"https://arxiv.org/abs/{spec.paper}")
+    return _finish_pipeline(rd, spec, ingest, available_hardware=available_hardware,
+                            approve_plan=approve_plan, setup_executor=setup_executor,
+                            run_executor=run_executor)

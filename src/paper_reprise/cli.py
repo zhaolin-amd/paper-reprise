@@ -70,6 +70,29 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
 
 @cli.command()
 @click.argument("run_dir")
+@click.option("--yes", is_flag=True, help="auto-approve gates (non-interactive)")
+def resume(run_dir: str, yes: bool) -> None:
+    """Continue an existing run from its (possibly edited) spec.yaml."""
+    from paper_reprise.pipeline import resume_pipeline
+
+    def approve_plan(plan):
+        if yes:
+            return True
+        click.echo(f"\nPlan flagged: {plan.decision_reason}")
+        return click.confirm("Proceed anyway?", default=False)
+
+    result = resume_pipeline(
+        Path(run_dir), available_hardware=[], approve_plan=approve_plan,
+        setup_executor=make_setup_executor(), run_executor=make_run_executor(),
+    )
+    if result.aborted_at:
+        click.echo(f"Aborted at: {result.aborted_at}")
+    else:
+        click.echo(f"Done. Report: {result.root}/report.zh.md")
+
+
+@cli.command()
+@click.argument("run_dir")
 def report(run_dir: str) -> None:
     """Re-render reports from an existing run dir."""
     rd = RunDir.open(Path(run_dir))
