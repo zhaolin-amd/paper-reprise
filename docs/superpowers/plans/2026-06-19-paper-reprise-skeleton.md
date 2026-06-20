@@ -2122,7 +2122,7 @@ git commit -m "test: shared fixtures + full-suite green"
 - §7 run directory layout: Task 3 RunDir. ✓
 - §8 YAGNI: no queue/DB/cron/cost-gate/LLM-grading. ✓
 
-**Deferred to Plan 2 (not omissions, explicitly scoped out):** real latex fetch and git clone, real conda/uv setup debug loop, real GPU quant+eval executor, real setup_patches collection, real env_snapshot capture. Plan 1 stubs/interfaces them all and tests the assembly.
+**Deferred to Plan 2 (not omissions, explicitly scoped out):** real latex fetch and git clone, real conda/uv setup debug loop, real GPU quant+eval executor, real setup_patches collection, real env_snapshot capture, title-based input (title → arxiv_id needs an online search). Plan 1 stubs/interfaces them all and tests the assembly.
 
 **2. Placeholder scan** — no "TBD/TODO/fill in later" in the plan; all code steps give complete runnable code. The stubs are an intentional scope split, noted in docstrings and self-review, not placeholder debt.
 

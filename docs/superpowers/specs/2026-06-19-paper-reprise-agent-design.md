@@ -81,7 +81,10 @@ grade is pure code, separated from execution; it reads only the raw output persi
 
 ### 3.1 Ingest
 
-Normalize the input (a bare arxiv id or an arxiv url) to an arxiv_id.
+Normalize the input (a bare arxiv id or an arxiv url) to an arxiv_id. (A paper **title**
+is also accepted as input, but resolving title → arxiv_id requires an online arxiv search
+and is therefore deferred to Plan 2, alongside the other network fetches; it is not part
+of the deterministic offline normalization.)
 
 Then:
 - **Fetch LaTeX source** (`arxiv.org/e-print/<id>`), do not OCR the PDF — table numbers are far more accurate from LaTeX.
@@ -299,3 +302,4 @@ runs/<arxiv_id>-<timestamp>/
 - No cost-budget approval gate (resources not a constraint).
 - No LLM grading (numeric comparison done in code).
 - No from-scratch provider this phase (interface only).
+- No title-based input this phase (title → arxiv_id needs an online search; deferred to Plan 2).
