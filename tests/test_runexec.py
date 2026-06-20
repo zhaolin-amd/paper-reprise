@@ -1,0 +1,47 @@
+from paper_reprise.models import Artifact, Claim, EvalProtocol
+from paper_reprise.runexec import build_eval_command, extract_seed, resolve_actual_config
+
+
+def _claim(command="python eval.py --model m", seqlen=2048, stride=2048, few_shot=0):
+    return Claim(
+        id="c1", artifact="a1",
+        eval_protocol=EvalProtocol(runner="official", command=command,
+                                   metric="perplexity", dataset="wikitext2",
+                                   seqlen=seqlen, stride=stride, few_shot=few_shot),
+        expected=5.78, tolerance=0.05, source="T",
+    )
+
+
+def _artifact(wbits=4, group_size=128):
+    qc = {"wbits": wbits}
+    if group_size is not None:
+        qc["group_size"] = group_size
+    return Artifact(id="a1", base_model="m", method="AWQ", quant_config=qc)
+
+
+def test_build_eval_command_returns_protocol_command():
+    assert build_eval_command(_claim("python main.py --reproduce")) == "python main.py --reproduce"
+
+
+def test_extract_seed_dash_flag():
+    assert extract_seed("python eval.py --seed 42 --model m") == 42
+
+
+def test_extract_seed_equals_form():
+    assert extract_seed("python eval.py seed=7") == 7
+
+
+def test_extract_seed_absent_returns_none():
+    assert extract_seed("python eval.py --model m") is None
+
+
+def test_resolve_actual_config_matches_grade_keys():
+    cfg = resolve_actual_config(_claim(seqlen=2048, stride=1024, few_shot=5), _artifact(wbits=4, group_size=128))
+    assert cfg == {"seqlen": 2048, "stride": 1024, "few_shot": 5, "wbits": 4, "group_size": 128}
+
+
+def test_resolve_actual_config_omits_absent_optional_keys():
+    # no stride on the protocol, no group_size on the artifact → those keys omitted
+    c = _claim(seqlen=2048, stride=None, few_shot=0)
+    cfg = resolve_actual_config(c, _artifact(wbits=8, group_size=None))
+    assert cfg == {"seqlen": 2048, "few_shot": 0, "wbits": 8}
