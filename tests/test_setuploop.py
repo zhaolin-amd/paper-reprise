@@ -1,12 +1,16 @@
+import json
+
 from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
 from paper_reprise.rundir import RunDir
 from paper_reprise.setuploop import (
     assemble_snapshot,
     build_fixer_prompt,
     collect_new_patches,
+    run_setup_loop,
     select_smoke_command,
     shrink_command,
 )
+from paper_reprise.setupstage import SetupResult
 
 
 def _spec(command="python eval_ppl.py --model m --dataset wikitext2"):
@@ -86,3 +90,30 @@ def test_build_fixer_prompt_includes_command_traceback_and_patch_contract():
     # must instruct: one-line note per change, and forbid running real experiments
     assert "patch" in prompt.lower()
     assert "do not" in prompt.lower() or "don't" in prompt.lower()
+
+
+def _fakes():
+    """Return a dict of default injectable fakes a test can override per-key."""
+    return dict(
+        create_env=lambda env_dir, manager: (0, "env created"),
+        run_smoke=lambda command, cwd, env_dir: (0, "ok"),
+        freeze_env=lambda env_dir: {"torch": "2.3.0", "transformers": "4.40.0",
+                                    "cuda": "12.1", "pip_freeze": "torch==2.3.0"},
+        run_fixer=lambda prompt, cwd, patch_note: None,
+        now=iter([0.0, 1.0, 2.0, 3.0, 4.0]).__next__,
+    )
+
+
+def test_loop_success_on_first_smoke_pass(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    res = run_setup_loop(rd, _spec(), manager="uv", max_retries=3, timeout_s=100.0,
+                         **_fakes())
+    assert isinstance(res, SetupResult)
+    assert res.ok is True
+    assert res.env_snapshot["torch"] == "2.3.0"
+    assert res.patches == []
+    # snapshot persisted to disk for the report
+    snap = json.loads((rd.root / "env_snapshot.json").read_text())
+    assert snap["transformers"] == "4.40.0"
+    # the smoke output log was handed off into setup_log/
+    assert any(rd.setup_log_dir.iterdir())

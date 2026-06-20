@@ -11,10 +11,14 @@ call) is behind an injectable seam so the whole loop is offline-testable.
 """
 from __future__ import annotations
 
+import json
+import time
 from pathlib import Path
+from typing import Callable
 
 from paper_reprise.models import Spec
 from paper_reprise.rundir import RunDir
+from paper_reprise.setupstage import SetupResult
 
 # Tiny-scale flags so the smoke run is cheap (design §4.1: ~8 samples, 1 batch).
 _TINY_FLAGS = "--limit 8 --batch-size 1"
@@ -89,3 +93,60 @@ def collect_new_patches(patches_dir: Path, seen: set[str]) -> list[str]:
         seen.add(p.name)
         new.append(p.read_text().strip())
     return new
+
+
+def _write_log(rd: RunDir, name: str, text: str) -> None:
+    (rd.setup_log_dir / name).write_text(text)
+
+
+def run_setup_loop(
+    rd: RunDir,
+    spec: Spec,
+    *,
+    manager: str = "uv",
+    max_retries: int = 6,
+    timeout_s: float = 3600.0,
+    now: Callable[[], float] = time.monotonic,
+    create_env: Callable[[Path, str], tuple[int, str]],
+    run_smoke: Callable[[str, Path, Path], tuple[int, str]],
+    freeze_env: Callable[[Path], dict],
+    run_fixer: Callable[[str, Path, Path], None],
+) -> SetupResult:
+    """Drive the env-debug loop until the smoke command passes once, or a guardrail
+    (retry cap / timeout) is exceeded. On exhaustion: ok=False, full log handed off."""
+    env_dir = rd.root / "env"
+    command = select_smoke_command(rd, spec)
+    start = now()
+    seen_patches: set[str] = set()
+    patches: list[str] = []
+
+    # --- build env once ---
+    code, env_log = create_env(env_dir, manager)
+    _write_log(rd, "create_env.log", env_log)
+    if code != 0:
+        return SetupResult(ok=False, patches=patches,
+                           error=f"env creation failed (exit {code}); see setup_log/")
+
+    # --- smoke → fix → retry loop ---
+    attempt = 0
+    while True:
+        if now() - start >= timeout_s:
+            return SetupResult(ok=False, patches=patches,
+                               error=f"setup timed out after {timeout_s}s "
+                                     f"({attempt} attempts); see setup_log/")
+        code, out = run_smoke(command, rd.repo_dir, env_dir)
+        _write_log(rd, f"smoke_{attempt}.log", out)
+        if code == 0:
+            snapshot = assemble_snapshot(freeze_env(env_dir))
+            (rd.root / "env_snapshot.json").write_text(json.dumps(snapshot, indent=2))
+            return SetupResult(ok=True, env_snapshot=snapshot, patches=patches)
+        if attempt >= max_retries:
+            return SetupResult(ok=False, patches=patches,
+                               error=f"smoke test still failing after {max_retries} "
+                                     f"retries; see setup_log/")
+        # hand the traceback to the agent; record what it changed
+        note_rel = f"setup_patches/patch_{attempt}.txt"
+        prompt = build_fixer_prompt(command, out, note_rel)
+        run_fixer(prompt, rd.root, rd.setup_patches_dir / f"patch_{attempt}.txt")
+        patches.extend(collect_new_patches(rd.setup_patches_dir, seen_patches))
+        attempt += 1
