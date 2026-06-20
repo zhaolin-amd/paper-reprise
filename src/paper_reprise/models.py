@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 Runner = Literal["official", "cited-standard", "custom"]
 CalibStatus = Literal["known", "UNKNOWN"]
@@ -31,6 +31,24 @@ class Artifact(BaseModel):
     method: str
     quant_config: dict
     calib_status: CalibStatus = "known"
+
+    @field_validator("calib_status", mode="before")
+    @classmethod
+    def _normalize_calib_status(cls, v):
+        if isinstance(v, str):
+            u = v.strip().upper()
+            if u == "KNOWN":
+                return "known"
+            if u == "UNKNOWN":
+                return "UNKNOWN"
+        return v
+
+    @model_validator(mode="after")
+    def _alias_bits_to_wbits(self) -> "Artifact":
+        qc = self.quant_config
+        if isinstance(qc, dict) and "wbits" not in qc and "bits" in qc:
+            qc["wbits"] = qc["bits"]
+        return self
 
 
 class Claim(BaseModel):

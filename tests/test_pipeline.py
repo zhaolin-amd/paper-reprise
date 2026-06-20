@@ -107,3 +107,33 @@ def test_pipeline_aborts_when_setup_fails(tmp_path, monkeypatch):
     )
     assert result.aborted_at == "setup"
     assert not (result.root / "report.zh.md").exists()
+
+
+def test_resume_continues_from_existing_spec(tmp_path, monkeypatch):
+    # first, create a run dir with spec.yaml + ingest.json already present
+    import shutil
+    from paper_reprise.models import IngestInfo
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    shutil.copy(FIX / "extracted_spec.yaml", rd.root / "spec.yaml")
+    rd.write_ingest(IngestInfo(arxiv_id="2401.00001",
+                               source_url="https://arxiv.org/abs/2401.00001"))
+
+    result = pipeline.resume_pipeline(
+        rd.root, available_hardware=["A100-80G"],
+        approve_plan=lambda plan: True,
+        setup_executor=_fake_setup, run_executor=_fake_executor,
+    )
+    assert result.aborted_at is None
+    assert (result.root / "report.zh.md").exists()
+    assert "MATCH 1" in (result.root / "report.zh.md").read_text()
+
+
+def test_resume_aborts_when_no_spec(tmp_path):
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")  # no spec.yaml
+    result = pipeline.resume_pipeline(
+        rd.root, available_hardware=[], approve_plan=lambda p: True,
+        setup_executor=_fake_setup, run_executor=_fake_executor,
+    )
+    assert result.aborted_at == "no-spec"

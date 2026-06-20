@@ -72,3 +72,38 @@ def test_verdict_enum_values():
     cg = ClaimGrade(claim_id="c1", verdict="MATCH", measured=5.80, expected=5.78,
                     reason="", checks={"value": True, "faithful": True})
     assert cg.verdict == "MATCH"
+
+
+def test_calib_status_accepts_uppercase_known():
+    a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={}, calib_status="KNOWN")
+    assert a.calib_status == "known"
+
+
+def test_calib_status_accepts_lowercase_unknown():
+    a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={}, calib_status="unknown")
+    assert a.calib_status == "UNKNOWN"
+
+
+def test_calib_status_rejects_garbage():
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        Artifact(id="a1", base_model="m", method="AWQ", quant_config={}, calib_status="maybe")
+
+
+def test_quant_config_bits_aliased_to_wbits():
+    a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={"bits": 2, "group_size": 128})
+    assert a.quant_config["wbits"] == 2
+    assert a.quant_config["bits"] == 2   # original preserved
+
+
+def test_quant_config_explicit_wbits_not_overwritten():
+    a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={"bits": 2, "wbits": 4})
+    assert a.quant_config["wbits"] == 4   # explicit wbits wins
+
+
+def test_quant_config_ternary_bits_aliased():
+    # the GSQ-style spec used bits: "ternary" (a string) — must alias without crashing
+    a = Artifact(id="a1", base_model="m", method="AWQ",
+                 quant_config={"bits": "ternary", "group_size": 128})
+    assert a.quant_config["wbits"] == "ternary"
