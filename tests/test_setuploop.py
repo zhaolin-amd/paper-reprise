@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from paper_reprise.models import Artifact, Claim, EvalProtocol, Spec
 from paper_reprise.rundir import RunDir
@@ -117,3 +118,29 @@ def test_loop_success_on_first_smoke_pass(tmp_path):
     assert snap["transformers"] == "4.40.0"
     # the smoke output log was handed off into setup_log/
     assert any(rd.setup_log_dir.iterdir())
+
+
+def test_loop_fails_twice_then_succeeds_and_records_patches(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    smoke_codes = iter([1, 1, 0])  # fail, fail, pass
+
+    def fake_smoke(command, cwd, env_dir):
+        c = next(smoke_codes)
+        return (c, "traceback" if c else "ok")
+
+    fix_calls = {"n": 0}
+
+    def fake_fixer(prompt, cwd, patch_note):
+        # the real agent writes a patch note describing its change
+        Path(patch_note).write_text(f"patch step {fix_calls['n']}")
+        fix_calls["n"] += 1
+
+    f = _fakes()
+    f.update(run_smoke=fake_smoke, run_fixer=fake_fixer,
+             now=iter([0.0] * 10).__next__)
+    res = run_setup_loop(rd, _spec(), manager="uv", max_retries=5, timeout_s=100.0, **f)
+
+    assert res.ok is True
+    assert fix_calls["n"] == 2                       # two fix turns before success
+    assert res.patches == ["patch step 0", "patch step 1"]
+    assert res.env_snapshot["torch"] == "2.3.0"
