@@ -1,5 +1,6 @@
 from click.testing import CliRunner
 
+import paper_reprise.cli as cli_mod
 from paper_reprise.cli import cli
 
 
@@ -37,3 +38,47 @@ def test_cli_report_rerenders(tmp_path, monkeypatch):
     res = CliRunner().invoke(cli, ["report", str(rd.root)])
     assert res.exit_code == 0
     assert (rd.root / "report.zh.md").exists()
+
+
+def test_cli_run_resolves_title_then_aborts_on_specextract(tmp_path, monkeypatch):
+    # title → arxiv id resolution happens; then specextract has no real spec so
+    # the pipeline aborts at specextract (no GPU work needed). We assert the
+    # resolver was consulted and the run dir is created under the resolved id.
+    seen = {}
+
+    def fake_resolve(query, **kwargs):
+        seen["query"] = query
+        return "2401.00001"
+
+    def fake_fetch_sources_factory(**kwargs):
+        def _fs(rd, arxiv_id, url):
+            seen["fetched"] = arxiv_id
+        return _fs
+
+    monkeypatch.setattr(cli_mod, "resolve_arxiv_id", fake_resolve)
+    monkeypatch.setattr(cli_mod, "make_fetch_sources", fake_fetch_sources_factory)
+    # no real source content → specextract aborts; force it deterministically so the
+    # test does not depend on a `claude` binary being absent from the environment.
+    import paper_reprise.pipeline as pipeline_mod
+    monkeypatch.setattr(pipeline_mod, "extract_spec", lambda rd: None)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli,
+        ["run", "AWQ Activation-aware Weight Quantization",
+         "--base-dir", str(tmp_path), "--yes"],
+    )
+    assert res.exit_code == 0
+    assert seen["query"] == "AWQ Activation-aware Weight Quantization"
+    assert seen["fetched"] == "2401.00001"
+    assert "Aborted at: specextract" in res.output
+
+
+def test_cli_run_unresolvable_title_errors(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli_mod, "resolve_arxiv_id", lambda q, **k: None)
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "no such paper", "--base-dir", str(tmp_path), "--yes"]
+    )
+    assert res.exit_code != 0
+    assert "could not resolve" in res.output.lower()
