@@ -28,7 +28,8 @@ few_shot, extra_args}}
 Rules:
 - runner: prefer "official" (the repo's own eval script). Use "cited-standard" if the \
 paper explicitly cites a standard impl; "custom" only as last resort.
-- If calibration config cannot be determined, set calib_status: UNKNOWN.
+- calib_status: use exactly `known` (lowercase) when the calibration config is determinable, or `UNKNOWN` (uppercase) when it cannot be determined.
+- quant_config: use the key `wbits` (not `bits`) for the weight bit-width.
 - Default tolerance: perplexity 0.05, accuracy 0.5. If the paper states one, use it.
 - source: pin each claim to its location, e.g. "Table 3, row 2, col W4".
 
