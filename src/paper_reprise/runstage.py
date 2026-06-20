@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-from paper_repro.models import RunResult, Spec
-from paper_repro.rundir import RunDir
+from paper_reprise.models import RunResult, Spec
+from paper_reprise.rundir import RunDir
 
 
 def run_claims(rd: RunDir, spec: Spec,

@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from paper_repro.models import Artifact, Claim, ClaimGrade, RunResult
-from paper_repro.parsers import parse_metric
+from paper_reprise.models import Artifact, Claim, ClaimGrade, RunResult
+from paper_reprise.parsers import parse_metric
 
 # config keys whose divergence breaks faithfulness
 _FAITHFUL_KEYS = ("seqlen", "stride", "wbits", "group_size", "few_shot")

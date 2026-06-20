@@ -1,7 +1,7 @@
-from paper_repro.models import (
+from paper_reprise.models import (
     Spec, Artifact, Claim, EvalProtocol, RepoInfo, ClaimGrade, RunResult, IngestInfo,
 )
-from paper_repro.report import render_reports
+from paper_reprise.report import render_reports
 
 
 def _ctx():

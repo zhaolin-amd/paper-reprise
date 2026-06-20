@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from paper_repro.ingest import (
+from paper_reprise.ingest import (
     normalize_input, parse_org, find_repo_url, arxiv_id_from_url,
 )
 

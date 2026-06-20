@@ -44,9 +44,9 @@ Adopt a **deterministic pipeline where the agent only enters the Setup stage** (
 One CLI invocation = one paper = one run directory. No queue, no DB, no cron.
 
 ```
-paper-repro run <arxiv_id | path-to-.org | arxiv_url>
-paper-repro resume <run_dir>      # resume from last interruption / gate
-paper-repro report <run_dir>      # re-render the report
+paper-reprise run <arxiv_id | path-to-.org | arxiv_url>
+paper-reprise resume <run_dir>      # resume from last interruption / gate
+paper-reprise report <run_dir>      # re-render the report
 ```
 
 Seven deterministic stages, orchestrated in Python; each stage reads the prior stage's artifact and writes its own artifact into the run directory:

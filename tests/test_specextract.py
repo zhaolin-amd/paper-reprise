@@ -1,9 +1,9 @@
 import shutil
 from pathlib import Path
 
-import paper_repro.specextract as specextract
-from paper_repro.headless import HeadlessResult
-from paper_repro.rundir import RunDir
+import paper_reprise.specextract as specextract
+from paper_reprise.headless import HeadlessResult
+from paper_reprise.rundir import RunDir
 
 FIX = Path(__file__).parent / "fixtures"
 

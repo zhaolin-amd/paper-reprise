@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from paper_repro.models import Spec, Artifact, Claim, EvalProtocol
-from paper_repro.rundir import RunDir
-from paper_repro.setupstage import run_setup, SetupResult
-from paper_repro.runstage import run_claims
+from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+from paper_reprise.rundir import RunDir
+from paper_reprise.setupstage import run_setup, SetupResult
+from paper_reprise.runstage import run_claims
 
 
 def _spec():

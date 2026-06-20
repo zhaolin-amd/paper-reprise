@@ -9,15 +9,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-from paper_repro.grade import grade_claim
-from paper_repro.ingest import normalize_input
-from paper_repro.models import IngestInfo
-from paper_repro.planstage import build_plan
-from paper_repro.report import render_reports
-from paper_repro.rundir import RunDir
-from paper_repro.runstage import run_claims
-from paper_repro.setupstage import run_setup
-from paper_repro.specextract import extract_spec
+from paper_reprise.grade import grade_claim
+from paper_reprise.ingest import normalize_input
+from paper_reprise.models import IngestInfo
+from paper_reprise.planstage import build_plan
+from paper_reprise.report import render_reports
+from paper_reprise.rundir import RunDir
+from paper_reprise.runstage import run_claims
+from paper_reprise.setupstage import run_setup
+from paper_reprise.specextract import extract_spec
 
 
 @dataclass

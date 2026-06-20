@@ -1,5 +1,5 @@
-from paper_repro.models import IngestInfo, Spec, Artifact, Claim, EvalProtocol
-from paper_repro.rundir import RunDir
+from paper_reprise.models import IngestInfo, Spec, Artifact, Claim, EvalProtocol
+from paper_reprise.rundir import RunDir
 
 
 def _spec():

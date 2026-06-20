@@ -1,6 +1,6 @@
 """Typed contracts shared across all pipeline stages.
 
-This module depends on nothing else in paper_repro — it is the pure schema.
+This module depends on nothing else in paper_reprise — it is the pure schema.
 """
 from __future__ import annotations
 

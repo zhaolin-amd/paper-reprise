@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from paper_repro.models import ClaimGrade, IngestInfo, RunResult, Spec
+from paper_reprise.models import ClaimGrade, IngestInfo, RunResult, Spec
 
 
 def _summary(grades: list[ClaimGrade]) -> str:

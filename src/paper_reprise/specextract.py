@@ -8,9 +8,9 @@ from typing import Optional
 
 import yaml
 
-from paper_repro.headless import run_headless
-from paper_repro.models import Spec
-from paper_repro.rundir import RunDir
+from paper_reprise.headless import run_headless
+from paper_reprise.models import Spec
+from paper_reprise.rundir import RunDir
 
 _PROMPT_TEMPLATE = """You are extracting a machine-checkable reproduction spec from a \
 quantization paper. Read the LaTeX sources in `paper/` and the official repo README in \

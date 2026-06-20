@@ -1,23 +1,23 @@
-# paper-repro Deterministic Skeleton Implementation Plan
+# paper-reprise Deterministic Skeleton Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up the deterministic pipeline skeleton for paper-repro — able to run `ingest → specextract → plan → setup → run → grade → report` end to end, with grade, report, and the data contracts (models) fully TDD-implemented and locked; specextract/setup/run wired through their interfaces with mock claude and fixtures, leaving real GPU quantization/eval to a later Plan 2.
+**Goal:** Stand up the deterministic pipeline skeleton for paper-reprise — able to run `ingest → specextract → plan → setup → run → grade → report` end to end, with grade, report, and the data contracts (models) fully TDD-implemented and locked; specextract/setup/run wired through their interfaces with mock claude and fixtures, leaving real GPU quantization/eval to a later Plan 2.
 
 **Architecture:** Deterministic Python orchestration; each stage reads/writes typed artifacts in the run directory (Approach B). The agent's nondeterminism is confined to the setup stage (interface + stub this phase). grade is pure code, isolated from execution — reads only the persisted raw output + spec — implementing the "process-faithful AND value-in-tolerance" double check and the MATCH/PARTIAL/FAIL/BLOCKED four verdicts.
 
 **Tech Stack:** Python 3.12, pydantic v2 (data models), click (CLI), pyyaml (spec), pytest (tests), uv (deps/venv), `claude -p` headless (specextract/setup, reusing llm-paper-radar's invocation pattern).
 
-Design doc: `docs/superpowers/specs/2026-06-19-paper-repro-agent-design.md`
+Design doc: `docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md`
 
 ---
 
 ## File Structure
 
 ```
-paper-repro/
+paper-reprise/
   pyproject.toml                  # project metadata + deps + pytest/ruff config
-  src/paper_repro/
+  src/paper_reprise/
     __init__.py
     models.py                     # pydantic models: EvalProtocol/Artifact/Claim/Spec/IngestInfo/PlanReport/ClaimGrade/RunResult
     rundir.py                     # RunDir: directory layout + artifact I/O
@@ -56,14 +56,14 @@ paper-repro/
 
 **Files:**
 - Create: `pyproject.toml`
-- Create: `src/paper_repro/__init__.py`
+- Create: `src/paper_reprise/__init__.py`
 - Create: `tests/__init__.py`
 
 - [ ] **Step 1: Write pyproject.toml**
 
 ```toml
 [project]
-name = "paper-repro"
+name = "paper-reprise"
 version = "0.1.0"
 description = "Reproduce quantization paper results from arxiv / official repos"
 requires-python = ">=3.11"
@@ -85,7 +85,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/paper_repro"]
+packages = ["src/paper_reprise"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -97,9 +97,9 @@ target-version = "py311"
 
 - [ ] **Step 2: Create package entry**
 
-`src/paper_repro/__init__.py`:
+`src/paper_reprise/__init__.py`:
 ```python
-"""paper-repro: reproduce quantization paper results."""
+"""paper-reprise: reproduce quantization paper results."""
 
 __version__ = "0.1.0"
 ```
@@ -110,18 +110,18 @@ __version__ = "0.1.0"
 
 - [ ] **Step 3: Sync deps, create venv**
 
-Run: `cd /proj/xcohdstaff7/zhaolin/code/paper-repro && uv sync`
+Run: `cd /proj/xcohdstaff7/zhaolin/code/paper-reprise && uv sync`
 Expected: creates `.venv/`, installs click/pydantic/pyyaml/httpx/pytest/ruff, no errors.
 
 - [ ] **Step 4: Verify import**
 
-Run: `uv run python -c "import paper_repro; print(paper_repro.__version__)"`
+Run: `uv run python -c "import paper_reprise; print(paper_reprise.__version__)"`
 Expected: prints `0.1.0`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add pyproject.toml src/paper_repro/__init__.py tests/__init__.py uv.lock
+git add pyproject.toml src/paper_reprise/__init__.py tests/__init__.py uv.lock
 git commit -m "chore: project scaffold with uv + pytest"
 ```
 
@@ -130,7 +130,7 @@ git commit -m "chore: project scaffold with uv + pytest"
 ## Task 2: Data Models (contracts)
 
 **Files:**
-- Create: `src/paper_repro/models.py`
+- Create: `src/paper_reprise/models.py`
 - Test: `tests/test_models.py`
 
 These pydantic models are the contract shared across all stages. Once the field names are set, later tasks must follow them strictly.
@@ -142,7 +142,7 @@ These pydantic models are the contract shared across all stages. Once the field 
 import pytest
 from pydantic import ValidationError
 
-from paper_repro.models import (
+from paper_reprise.models import (
     EvalProtocol, Artifact, Claim, Spec, IngestInfo, RepoInfo,
     PlanReport, ClaimPlan, ClaimGrade, RunResult, Verdict, Runner, CalibStatus,
 )
@@ -218,15 +218,15 @@ def test_verdict_enum_values():
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_models.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.models'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.models'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/models.py`:
+`src/paper_reprise/models.py`:
 ```python
 """Typed contracts shared across all pipeline stages.
 
-This module depends on nothing else in paper_repro — it is the pure schema.
+This module depends on nothing else in paper_reprise — it is the pure schema.
 """
 from __future__ import annotations
 
@@ -343,7 +343,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/models.py tests/test_models.py
+git add src/paper_reprise/models.py tests/test_models.py
 git commit -m "feat: typed contracts (Spec/Claim/Grade/...) with cross-ref validation"
 ```
 
@@ -352,7 +352,7 @@ git commit -m "feat: typed contracts (Spec/Claim/Grade/...) with cross-ref valid
 ## Task 3: RunDir Layout and I/O
 
 **Files:**
-- Create: `src/paper_repro/rundir.py`
+- Create: `src/paper_reprise/rundir.py`
 - Test: `tests/test_rundir.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -361,8 +361,8 @@ git commit -m "feat: typed contracts (Spec/Claim/Grade/...) with cross-ref valid
 ```python
 from pathlib import Path
 
-from paper_repro.models import IngestInfo, Spec, Artifact, Claim, EvalProtocol
-from paper_repro.rundir import RunDir
+from paper_reprise.models import IngestInfo, Spec, Artifact, Claim, EvalProtocol
+from paper_reprise.rundir import RunDir
 
 
 def _spec():
@@ -414,11 +414,11 @@ def test_read_missing_spec_returns_none(tmp_path):
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_rundir.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.rundir'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.rundir'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/rundir.py`:
+`src/paper_reprise/rundir.py`:
 ```python
 """Run directory layout and typed artifact I/O.
 
@@ -431,7 +431,7 @@ from typing import Optional
 
 import yaml
 
-from paper_repro.models import IngestInfo, PlanReport, Spec
+from paper_reprise.models import IngestInfo, PlanReport, Spec
 
 
 class RunDir:
@@ -520,7 +520,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/rundir.py tests/test_rundir.py
+git add src/paper_reprise/rundir.py tests/test_rundir.py
 git commit -m "feat: RunDir layout + typed artifact I/O"
 ```
 
@@ -529,7 +529,7 @@ git commit -m "feat: RunDir layout + typed artifact I/O"
 ## Task 4: Metric Parsers
 
 **Files:**
-- Create: `src/paper_repro/parsers.py`
+- Create: `src/paper_reprise/parsers.py`
 - Test: `tests/test_parsers.py`
 
 The run stage persists the eval script's raw stdout; the grade stage uses these parsers to extract the numbers. If it can't parse, return None explicitly (so grade marks it BLOCKED/UNPARSEABLE) — never guess.
@@ -538,7 +538,7 @@ The run stage persists the eval script's raw stdout; the grade stage uses these 
 
 `tests/test_parsers.py`:
 ```python
-from paper_repro.parsers import parse_metric
+from paper_reprise.parsers import parse_metric
 
 
 def test_parse_perplexity_simple():
@@ -577,11 +577,11 @@ def test_unknown_metric_returns_none():
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_parsers.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.parsers'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.parsers'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/parsers.py`:
+`src/paper_reprise/parsers.py`:
 ```python
 """Metric extraction from raw eval-script stdout.
 
@@ -637,7 +637,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/parsers.py tests/test_parsers.py
+git add src/paper_reprise/parsers.py tests/test_parsers.py
 git commit -m "feat: metric parsers (ppl/accuracy/speedup) returning None on miss"
 ```
 
@@ -646,7 +646,7 @@ git commit -m "feat: metric parsers (ppl/accuracy/speedup) returning None on mis
 ## Task 5: Grade — Pure-Code Judge (core)
 
 **Files:**
-- Create: `src/paper_repro/grade.py`
+- Create: `src/paper_reprise/grade.py`
 - Test: `tests/test_grade.py`
 
 This is the crown of the whole system. Two independent checks (value-in-tolerance + process-faithfulness), four verdicts. grade reads only spec + the run's persisted output; **it does not import runstage, does not re-run, and knows no execution context beyond the target value**.
@@ -661,10 +661,10 @@ Verdict rules (consistent with design §5.1):
 
 `tests/test_grade.py`:
 ```python
-from paper_repro.models import (
+from paper_reprise.models import (
     Artifact, Claim, EvalProtocol, Spec, RunResult, RepoInfo,
 )
-from paper_repro.grade import grade_claim
+from paper_reprise.grade import grade_claim
 
 
 def _claim(seqlen=2048, calib_status="known", expected=5.78, tol=0.05):
@@ -741,11 +741,11 @@ def test_blocked_when_calib_unknown(tmp_path):
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_grade.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.grade'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.grade'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/grade.py`:
+`src/paper_reprise/grade.py`:
 ```python
 """Pure-code judge. Isolated from execution: reads only spec + run's persisted output.
 
@@ -764,8 +764,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from paper_repro.models import Artifact, Claim, ClaimGrade, RunResult
-from paper_repro.parsers import parse_metric
+from paper_reprise.models import Artifact, Claim, ClaimGrade, RunResult
+from paper_reprise.parsers import parse_metric
 
 # config keys whose divergence breaks faithfulness
 _FAITHFUL_KEYS = ("seqlen", "stride", "wbits", "group_size", "few_shot")
@@ -846,7 +846,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/grade.py tests/test_grade.py
+git add src/paper_reprise/grade.py tests/test_grade.py
 git commit -m "feat: pure-code judge with value+faithfulness double check, 4 verdicts"
 ```
 
@@ -855,7 +855,7 @@ git commit -m "feat: pure-code judge with value+faithfulness double check, 4 ver
 ## Task 6: Report — Bilingual Rendering
 
 **Files:**
-- Create: `src/paper_repro/report.py`
+- Create: `src/paper_reprise/report.py`
 - Test: `tests/test_report.py`
 
 Render `report.zh.md` and `report.en.md`. Always use the measured raw numbers, never fill in paper numbers; each claim carries its replay info.
@@ -864,10 +864,10 @@ Render `report.zh.md` and `report.en.md`. Always use the measured raw numbers, n
 
 `tests/test_report.py`:
 ```python
-from paper_repro.models import (
+from paper_reprise.models import (
     Spec, Artifact, Claim, EvalProtocol, RepoInfo, ClaimGrade, RunResult, IngestInfo,
 )
-from paper_repro.report import render_reports
+from paper_reprise.report import render_reports
 
 
 def _ctx():
@@ -922,11 +922,11 @@ def test_env_snapshot_in_report():
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_report.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.report'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.report'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/report.py`:
+`src/paper_reprise/report.py`:
 ```python
 """Render bilingual reproduction reports (zh + en) as two markdown strings.
 
@@ -938,7 +938,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from paper_repro.models import ClaimGrade, IngestInfo, RunResult, Spec
+from paper_reprise.models import ClaimGrade, IngestInfo, RunResult, Spec
 
 
 def _summary(grades: list[ClaimGrade]) -> str:
@@ -1034,7 +1034,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/report.py tests/test_report.py
+git add src/paper_reprise/report.py tests/test_report.py
 git commit -m "feat: bilingual report rendering (measured-only, with replay info)"
 ```
 
@@ -1043,7 +1043,7 @@ git commit -m "feat: bilingual report rendering (measured-only, with replay info
 ## Task 7: Ingest — .org Parsing and Input Normalization
 
 **Files:**
-- Create: `src/paper_repro/ingest.py`
+- Create: `src/paper_reprise/ingest.py`
 - Create: `tests/fixtures/sample.org`
 - Test: `tests/test_ingest.py`
 
@@ -1068,7 +1068,7 @@ Some narrative text. Code at https://github.com/example/ternary-mamba here.
 ```python
 from pathlib import Path
 
-from paper_repro.ingest import (
+from paper_reprise.ingest import (
     normalize_input, parse_org, find_repo_url, arxiv_id_from_url,
 )
 
@@ -1121,11 +1121,11 @@ def test_find_repo_url_none_when_absent():
 - [ ] **Step 3: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_ingest.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.ingest'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.ingest'`
 
 - [ ] **Step 4: Write the implementation**
 
-`src/paper_repro/ingest.py`:
+`src/paper_reprise/ingest.py`:
 ```python
 """Ingest stage: normalize input to (arxiv_id, source_url), discover official repo.
 
@@ -1196,7 +1196,7 @@ Expected: PASS, all tests green
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/paper_repro/ingest.py tests/test_ingest.py tests/fixtures/sample.org
+git add src/paper_reprise/ingest.py tests/test_ingest.py tests/fixtures/sample.org
 git commit -m "feat: ingest input normalization + org parsing + repo discovery"
 ```
 
@@ -1205,7 +1205,7 @@ git commit -m "feat: ingest input normalization + org parsing + repo discovery"
 ## Task 8: Plan — Feasibility/Anomaly Sentinel
 
 **Files:**
-- Create: `src/paper_repro/planstage.py`
+- Create: `src/paper_reprise/planstage.py`
 - Test: `tests/test_planstage.py`
 
 plan passes silently by default (cost not a constraint). It sets `needs_user_decision=True` only in two cases: infeasible hardware, or estimate wildly diverging from the paper's self-report (a quality signal, usually meaning specextract got something wrong).
@@ -1214,8 +1214,8 @@ plan passes silently by default (cost not a constraint). It sets `needs_user_dec
 
 `tests/test_planstage.py`:
 ```python
-from paper_repro.models import Spec, Artifact, Claim, EvalProtocol
-from paper_repro.planstage import build_plan
+from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+from paper_reprise.planstage import build_plan
 
 
 def _spec_with_hw(hardware):
@@ -1250,11 +1250,11 @@ def test_no_hardware_requirement_is_feasible():
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_planstage.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.planstage'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.planstage'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/planstage.py`:
+`src/paper_reprise/planstage.py`:
 ```python
 """Plan stage: feasibility / anomaly sentinel.
 
@@ -1263,7 +1263,7 @@ only on (1) infeasible hardware, or (2) estimate wildly diverging from the paper
 """
 from __future__ import annotations
 
-from paper_repro.models import ClaimPlan, PlanReport, Spec
+from paper_reprise.models import ClaimPlan, PlanReport, Spec
 
 
 def _hardware_feasible(required: str | None, available: list[str]) -> bool:
@@ -1299,7 +1299,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/planstage.py tests/test_planstage.py
+git add src/paper_reprise/planstage.py tests/test_planstage.py
 git commit -m "feat: plan stage feasibility/anomaly sentinel (silent pass by default)"
 ```
 
@@ -1308,7 +1308,7 @@ git commit -m "feat: plan stage feasibility/anomaly sentinel (silent pass by def
 ## Task 9: Headless — claude -p Wrapper
 
 **Files:**
-- Create: `src/paper_repro/headless.py`
+- Create: `src/paper_reprise/headless.py`
 - Test: `tests/test_headless.py`
 
 Reuse llm-paper-radar's pattern: `claude -p --permission-mode acceptEdits --allowedTools "..."`, prompt via stdin, **don't trust the exit code — judge success by whether the output file appeared**. The subprocess call is wrapped as injectable, monkeypatched in tests.
@@ -1319,8 +1319,8 @@ Reuse llm-paper-radar's pattern: `claude -p --permission-mode acceptEdits --allo
 ```python
 from pathlib import Path
 
-import paper_repro.headless as headless
-from paper_repro.headless import run_headless
+import paper_reprise.headless as headless
+from paper_reprise.headless import run_headless
 
 
 def test_success_when_output_file_appears(tmp_path, monkeypatch):
@@ -1355,11 +1355,11 @@ def test_failure_when_nonzero_and_missing(tmp_path, monkeypatch):
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_headless.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.headless'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.headless'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/headless.py`:
+`src/paper_reprise/headless.py`:
 ```python
 """Wrapper around `claude -p` headless invocation (mirrors llm-paper-radar).
 
@@ -1410,7 +1410,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/headless.py tests/test_headless.py
+git add src/paper_reprise/headless.py tests/test_headless.py
 git commit -m "feat: headless claude -p wrapper with output-file verification"
 ```
 
@@ -1419,7 +1419,7 @@ git commit -m "feat: headless claude -p wrapper with output-file verification"
 ## Task 10: SpecExtract Stage (headless, mockable)
 
 **Files:**
-- Create: `src/paper_repro/specextract.py`
+- Create: `src/paper_reprise/specextract.py`
 - Create: `tests/fixtures/extracted_spec.yaml`
 - Test: `tests/test_specextract.py`
 
@@ -1465,9 +1465,9 @@ claims:
 import shutil
 from pathlib import Path
 
-import paper_repro.specextract as specextract
-from paper_repro.headless import HeadlessResult
-from paper_repro.rundir import RunDir
+import paper_reprise.specextract as specextract
+from paper_reprise.headless import HeadlessResult
+from paper_reprise.rundir import RunDir
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -1508,11 +1508,11 @@ def test_specextract_returns_none_on_invalid_yaml(tmp_path, monkeypatch):
 - [ ] **Step 3: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_specextract.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.specextract'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.specextract'`
 
 - [ ] **Step 4: Write the implementation**
 
-`src/paper_repro/specextract.py`:
+`src/paper_reprise/specextract.py`:
 ```python
 """SpecExtract stage: one headless claude call → spec.yaml → validated Spec.
 
@@ -1524,9 +1524,9 @@ from typing import Optional
 
 import yaml
 
-from paper_repro.headless import run_headless
-from paper_repro.models import Spec
-from paper_repro.rundir import RunDir
+from paper_reprise.headless import run_headless
+from paper_reprise.models import Spec
+from paper_reprise.rundir import RunDir
 
 _PROMPT_TEMPLATE = """You are extracting a machine-checkable reproduction spec from a \
 quantization paper. Read the LaTeX sources in `paper/` and the official repo README in \
@@ -1577,7 +1577,7 @@ Expected: PASS, all tests green
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/paper_repro/specextract.py tests/test_specextract.py tests/fixtures/extracted_spec.yaml
+git add src/paper_reprise/specextract.py tests/test_specextract.py tests/fixtures/extracted_spec.yaml
 git commit -m "feat: specextract stage (headless → validated Spec)"
 ```
 
@@ -1586,8 +1586,8 @@ git commit -m "feat: specextract stage (headless → validated Spec)"
 ## Task 11: Setup / Run Stage Interfaces and Stubs
 
 **Files:**
-- Create: `src/paper_repro/setupstage.py`
-- Create: `src/paper_repro/runstage.py`
+- Create: `src/paper_reprise/setupstage.py`
+- Create: `src/paper_reprise/runstage.py`
 - Test: `tests/test_stages_stub.py`
 
 No real GPU this phase. setup returns an env snapshot (stub); the ability for run to persist "what the eval command should output" is left to Plan 2. For now run provides a stub that consumes the RunResult contract and supports injecting an "executor" for pipeline testing. This way both paths (official-repo / from-scratch) will later fill the same executor interface.
@@ -1598,10 +1598,10 @@ No real GPU this phase. setup returns an env snapshot (stub); the ability for ru
 ```python
 from pathlib import Path
 
-from paper_repro.models import Spec, Artifact, Claim, EvalProtocol
-from paper_repro.rundir import RunDir
-from paper_repro.setupstage import run_setup, SetupResult
-from paper_repro.runstage import run_claims
+from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+from paper_reprise.rundir import RunDir
+from paper_reprise.setupstage import run_setup, SetupResult
+from paper_reprise.runstage import run_claims
 
 
 def _spec():
@@ -1656,11 +1656,11 @@ def test_run_claims_marks_blocked_on_executor_error(tmp_path):
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_stages_stub.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.setupstage'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.setupstage'`
 
 - [ ] **Step 3: Write setupstage.py**
 
-`src/paper_repro/setupstage.py`:
+`src/paper_reprise/setupstage.py`:
 ```python
 """Setup stage: the (future) agentic env-debug loop.
 
@@ -1674,8 +1674,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from paper_repro.models import Spec
-from paper_repro.rundir import RunDir
+from paper_reprise.models import Spec
+from paper_reprise.rundir import RunDir
 
 
 @dataclass
@@ -1698,7 +1698,7 @@ def run_setup(rd: RunDir, spec: Spec,
 
 - [ ] **Step 4: Write runstage.py**
 
-`src/paper_repro/runstage.py`:
+`src/paper_reprise/runstage.py`:
 ```python
 """Run stage: deterministic execution of quant + eval per claim.
 
@@ -1713,8 +1713,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-from paper_repro.models import RunResult, Spec
-from paper_repro.rundir import RunDir
+from paper_reprise.models import RunResult, Spec
+from paper_reprise.rundir import RunDir
 
 
 def run_claims(rd: RunDir, spec: Spec,
@@ -1749,7 +1749,7 @@ Expected: PASS, all tests green
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/paper_repro/setupstage.py src/paper_repro/runstage.py tests/test_stages_stub.py
+git add src/paper_reprise/setupstage.py src/paper_reprise/runstage.py tests/test_stages_stub.py
 git commit -m "feat: setup/run stage interfaces with injectable executor (stubs)"
 ```
 
@@ -1758,7 +1758,7 @@ git commit -m "feat: setup/run stage interfaces with injectable executor (stubs)
 ## Task 12: Pipeline Orchestration + Gates
 
 **Files:**
-- Create: `src/paper_repro/pipeline.py`
+- Create: `src/paper_reprise/pipeline.py`
 - Test: `tests/test_pipeline.py`
 
 Wire the stages together. Gate 1 (spec approval) and the plan sentinel are implemented via injected callbacks, so tests can auto-approve while the real CLI pops an AskUserQuestion / waits for the user. grade uses Task 5's `grade_claim` per claim; report uses Task 6 to render.
@@ -1770,8 +1770,8 @@ Wire the stages together. Gate 1 (spec approval) and the plan sentinel are imple
 import shutil
 from pathlib import Path
 
-import paper_repro.pipeline as pipeline
-from paper_repro.setupstage import SetupResult
+import paper_reprise.pipeline as pipeline
+from paper_reprise.setupstage import SetupResult
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -1779,7 +1779,7 @@ FIX = Path(__file__).parent / "fixtures"
 def _fake_specextract(rd):
     shutil.copy(FIX / "extracted_spec.yaml", rd.root / "spec.yaml")
     import yaml
-    from paper_repro.models import Spec
+    from paper_reprise.models import Spec
     return Spec.model_validate(yaml.safe_load((rd.root / "spec.yaml").read_text()))
 
 
@@ -1828,11 +1828,11 @@ def test_pipeline_aborts_when_spec_rejected(tmp_path, monkeypatch):
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_pipeline.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.pipeline'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.pipeline'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/pipeline.py`:
+`src/paper_reprise/pipeline.py`:
 ```python
 """Deterministic orchestration of the 7 stages with two gates.
 
@@ -1845,15 +1845,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-from paper_repro.grade import grade_claim
-from paper_repro.ingest import normalize_input
-from paper_repro.models import IngestInfo
-from paper_repro.planstage import build_plan
-from paper_repro.report import render_reports
-from paper_repro.rundir import RunDir
-from paper_repro.runstage import run_claims
-from paper_repro.setupstage import run_setup
-from paper_repro.specextract import extract_spec
+from paper_reprise.grade import grade_claim
+from paper_reprise.ingest import normalize_input
+from paper_reprise.models import IngestInfo
+from paper_reprise.planstage import build_plan
+from paper_reprise.report import render_reports
+from paper_reprise.rundir import RunDir
+from paper_reprise.runstage import run_claims
+from paper_reprise.setupstage import run_setup
+from paper_reprise.specextract import extract_spec
 
 
 @dataclass
@@ -1930,7 +1930,7 @@ Expected: PASS, all tests green
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/paper_repro/pipeline.py tests/test_pipeline.py
+git add src/paper_reprise/pipeline.py tests/test_pipeline.py
 git commit -m "feat: pipeline orchestration with spec-approval + plan gates"
 ```
 
@@ -1939,7 +1939,7 @@ git commit -m "feat: pipeline orchestration with spec-approval + plan gates"
 ## Task 13: CLI
 
 **Files:**
-- Create: `src/paper_repro/cli.py`
+- Create: `src/paper_reprise/cli.py`
 - Modify: `pyproject.toml` (add `[project.scripts]`)
 - Test: `tests/test_cli.py`
 
@@ -1951,7 +1951,7 @@ The `run` command wires the real dependencies (network fetch, interactive gates,
 ```python
 from click.testing import CliRunner
 
-from paper_repro.cli import cli
+from paper_reprise.cli import cli
 
 
 def test_cli_help():
@@ -1969,8 +1969,8 @@ def test_cli_run_help_lists_yes_flag():
 
 def test_cli_report_rerenders(tmp_path, monkeypatch):
     # build a minimal run dir with spec + grades already present
-    from paper_repro.rundir import RunDir
-    from paper_repro.models import (Spec, Artifact, Claim, EvalProtocol, RepoInfo,
+    from paper_reprise.rundir import RunDir
+    from paper_reprise.models import (Spec, Artifact, Claim, EvalProtocol, RepoInfo,
                                     IngestInfo)
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
     spec = Spec(paper="2401.00001", repo=RepoInfo(url="u", commit="c"),
@@ -1994,13 +1994,13 @@ def test_cli_report_rerenders(tmp_path, monkeypatch):
 - [ ] **Step 2: Run the test, confirm it fails**
 
 Run: `uv run pytest tests/test_cli.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'paper_repro.cli'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'paper_reprise.cli'`
 
 - [ ] **Step 3: Write the implementation**
 
-`src/paper_repro/cli.py`:
+`src/paper_reprise/cli.py`:
 ```python
-"""paper-repro CLI: run / resume / report."""
+"""paper-reprise CLI: run / resume / report."""
 from __future__ import annotations
 
 import datetime as _dt
@@ -2008,9 +2008,9 @@ from pathlib import Path
 
 import click
 
-from paper_repro.grade import grade_claim
-from paper_repro.report import render_reports
-from paper_repro.rundir import RunDir
+from paper_reprise.grade import grade_claim
+from paper_reprise.report import render_reports
+from paper_reprise.rundir import RunDir
 
 
 def _timestamp() -> str:
@@ -2028,7 +2028,7 @@ def cli() -> None:
 @click.option("--yes", is_flag=True, help="auto-approve all gates (non-interactive)")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
     """Run the reproduction pipeline for a paper (arxiv id / url / .org)."""
-    from paper_repro.pipeline import run_pipeline
+    from paper_reprise.pipeline import run_pipeline
 
     def approve_spec(spec):
         if yes:
@@ -2071,7 +2071,7 @@ def report(run_dir: str) -> None:
         raise click.ClickException("run dir missing spec.yaml or ingest.json")
 
     artifacts = {a.id: a for a in spec.artifacts}
-    from paper_repro.models import RunResult
+    from paper_reprise.models import RunResult
     grades, runs = [], []
     for c in spec.claims:
         log = rd.claim_dir(c.id) / "stdout.log"
@@ -2097,7 +2097,7 @@ if __name__ == "__main__":
 Insert into `pyproject.toml` after the `[project]` table (after the `dependencies` array, before `[dependency-groups]`):
 ```toml
 [project.scripts]
-paper-repro = "paper_repro.cli:cli"
+paper-reprise = "paper_reprise.cli:cli"
 ```
 
 - [ ] **Step 5: Run the test, confirm it passes**
@@ -2107,13 +2107,13 @@ Expected: PASS, all tests green
 
 - [ ] **Step 6: Full suite + CLI smoke**
 
-Run: `uv run pytest -q && uv sync && uv run paper-repro --help`
-Expected: all tests pass; `paper-repro --help` prints the run/report subcommands
+Run: `uv run pytest -q && uv sync && uv run paper-reprise --help`
+Expected: all tests pass; `paper-reprise --help` prints the run/report subcommands
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/paper_repro/cli.py pyproject.toml tests/test_cli.py uv.lock
+git add src/paper_reprise/cli.py pyproject.toml tests/test_cli.py uv.lock
 git commit -m "feat: click CLI (run/report) with console script entrypoint"
 ```
 

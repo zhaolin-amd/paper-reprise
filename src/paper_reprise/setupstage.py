@@ -10,8 +10,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from paper_repro.models import Spec
-from paper_repro.rundir import RunDir
+from paper_reprise.models import Spec
+from paper_reprise.rundir import RunDir
 
 
 @dataclass

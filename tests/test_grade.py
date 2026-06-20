@@ -1,7 +1,7 @@
-from paper_repro.models import (
+from paper_reprise.models import (
     Artifact, Claim, EvalProtocol, RunResult,
 )
-from paper_repro.grade import grade_claim
+from paper_reprise.grade import grade_claim
 
 
 def _claim(seqlen=2048, calib_status="known", expected=5.78, tol=0.05):

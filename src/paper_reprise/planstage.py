@@ -5,7 +5,7 @@ only on (1) infeasible hardware, or (2) estimate wildly diverging from the paper
 """
 from __future__ import annotations
 
-from paper_repro.models import ClaimPlan, PlanReport, Spec
+from paper_reprise.models import ClaimPlan, PlanReport, Spec
 
 
 def _hardware_feasible(required: str | None, available: list[str]) -> bool:

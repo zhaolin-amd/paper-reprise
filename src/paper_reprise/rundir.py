@@ -9,7 +9,7 @@ from typing import Optional
 
 import yaml
 
-from paper_repro.models import IngestInfo, PlanReport, Spec
+from paper_reprise.models import IngestInfo, PlanReport, Spec
 
 
 class RunDir:

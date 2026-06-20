@@ -1,4 +1,4 @@
-from paper_repro.parsers import parse_metric
+from paper_reprise.parsers import parse_metric
 
 
 def test_parse_perplexity_simple():

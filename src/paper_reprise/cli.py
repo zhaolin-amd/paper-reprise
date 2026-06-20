@@ -1,4 +1,4 @@
-"""paper-repro CLI: run / resume / report."""
+"""paper-reprise CLI: run / resume / report."""
 from __future__ import annotations
 
 import datetime as _dt
@@ -6,9 +6,9 @@ from pathlib import Path
 
 import click
 
-from paper_repro.grade import grade_claim
-from paper_repro.report import render_reports
-from paper_repro.rundir import RunDir
+from paper_reprise.grade import grade_claim
+from paper_reprise.report import render_reports
+from paper_reprise.rundir import RunDir
 
 
 def _timestamp() -> str:
@@ -26,7 +26,7 @@ def cli() -> None:
 @click.option("--yes", is_flag=True, help="auto-approve all gates (non-interactive)")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
     """Run the reproduction pipeline for a paper (arxiv id / url / .org)."""
-    from paper_repro.pipeline import run_pipeline
+    from paper_reprise.pipeline import run_pipeline
 
     def approve_spec(spec):
         if yes:
@@ -68,7 +68,7 @@ def report(run_dir: str) -> None:
         raise click.ClickException("run dir missing spec.yaml or ingest.json")
 
     artifacts = {a.id: a for a in spec.artifacts}
-    from paper_repro.models import RunResult
+    from paper_reprise.models import RunResult
     grades, runs = [], []
     for c in spec.claims:
         log = rd.claim_dir(c.id) / "stdout.log"

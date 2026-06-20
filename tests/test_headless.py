@@ -1,5 +1,5 @@
-import paper_repro.headless as headless
-from paper_repro.headless import run_headless
+import paper_reprise.headless as headless
+from paper_reprise.headless import run_headless
 
 
 def test_success_when_output_file_appears(tmp_path, monkeypatch):

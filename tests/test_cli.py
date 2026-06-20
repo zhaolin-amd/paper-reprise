@@ -1,6 +1,6 @@
 from click.testing import CliRunner
 
-from paper_repro.cli import cli
+from paper_reprise.cli import cli
 
 
 def test_cli_help():
@@ -17,8 +17,8 @@ def test_cli_run_help_lists_yes_flag():
 
 
 def test_cli_report_rerenders(tmp_path, monkeypatch):
-    from paper_repro.rundir import RunDir
-    from paper_repro.models import (Spec, Artifact, Claim, EvalProtocol, RepoInfo,
+    from paper_reprise.rundir import RunDir
+    from paper_reprise.models import (Spec, Artifact, Claim, EvalProtocol, RepoInfo,
                                     IngestInfo)
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
     spec = Spec(paper="2401.00001", repo=RepoInfo(url="u", commit="c"),

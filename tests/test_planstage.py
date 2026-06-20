@@ -1,5 +1,5 @@
-from paper_repro.models import Spec, Artifact, Claim, EvalProtocol
-from paper_repro.planstage import build_plan
+from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+from paper_reprise.planstage import build_plan
 
 
 def _spec_with_hw(hardware):

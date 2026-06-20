@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from paper_repro.models import (
+from paper_reprise.models import (
     EvalProtocol, Artifact, Claim, Spec, RepoInfo,
     ClaimGrade, Verdict,
 )
