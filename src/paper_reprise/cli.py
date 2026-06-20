@@ -10,9 +10,8 @@ from paper_reprise.grade import grade_claim
 from paper_reprise.report import render_reports
 from paper_reprise.rundir import RunDir
 
-import re as _re
-
 from paper_reprise.fetch import make_fetch_sources, resolve_arxiv_id
+from paper_reprise.ingest import normalize_input
 
 
 def _timestamp() -> str:
@@ -32,8 +31,11 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
     """Run the reproduction pipeline for a paper (arxiv id, url, or title)."""
     from paper_reprise.pipeline import run_pipeline
 
-    # Title input: not a bare arxiv id and not a URL → resolve via arxiv API.
-    if not _re.fullmatch(r"\d{4}\.\d{4,5}", input_arg) and not input_arg.startswith("http"):
+    # If the input isn't a recognizable arxiv id/url, treat it as a title and
+    # resolve it via the arxiv API before handing off to the pipeline.
+    try:
+        normalize_input(input_arg)
+    except ValueError:
         resolved = resolve_arxiv_id(input_arg)
         if resolved is None:
             raise click.ClickException(f"could not resolve title to an arxiv id: {input_arg}")

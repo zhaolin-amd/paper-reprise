@@ -31,6 +31,8 @@ def normalize_input(arg: str) -> tuple[str, str]:
         if not arxiv_id:
             raise ValueError(f"cannot extract arxiv id from {arg}")
         return arxiv_id, f"https://arxiv.org/abs/{arxiv_id}"
-    if _ARXIV_RE.fullmatch(arg):
-        return arg, f"https://arxiv.org/abs/{arg}"
+    m = re.fullmatch(r"(\d{4}\.\d{4,5})(v\d+)?", arg)
+    if m:
+        arxiv_id = m.group(1)
+        return arxiv_id, f"https://arxiv.org/abs/{arxiv_id}"
     raise ValueError(f"unrecognized input: {arg}")

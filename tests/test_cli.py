@@ -74,6 +74,29 @@ def test_cli_run_resolves_title_then_aborts_on_specextract(tmp_path, monkeypatch
     assert "Aborted at: specextract" in res.output
 
 
+def test_cli_run_versioned_id_not_treated_as_title(tmp_path, monkeypatch):
+    # a versioned bare id must NOT go to the title resolver
+    called = {"resolve": 0}
+    monkeypatch.setattr(cli_mod, "resolve_arxiv_id",
+                        lambda q, **k: called.__setitem__("resolve", called["resolve"] + 1) or "X")
+
+    def fake_factory(**kwargs):
+        def _fs(rd, arxiv_id, url):
+            called["fetched_id"] = arxiv_id
+        return _fs
+    monkeypatch.setattr(cli_mod, "make_fetch_sources", fake_factory)
+    import paper_reprise.pipeline as pipeline_mod
+    monkeypatch.setattr(pipeline_mod, "extract_spec", lambda rd: None)
+
+    from click.testing import CliRunner
+    res = CliRunner().invoke(
+        cli_mod.cli, ["run", "2401.00001v2", "--base-dir", str(tmp_path), "--yes"]
+    )
+    assert res.exit_code == 0
+    assert called["resolve"] == 0          # resolver NOT consulted
+    assert called["fetched_id"] == "2401.00001"   # version stripped by normalize_input in pipeline
+
+
 def test_cli_run_unresolvable_title_errors(tmp_path, monkeypatch):
     monkeypatch.setattr(cli_mod, "resolve_arxiv_id", lambda q, **k: None)
     from click.testing import CliRunner
