@@ -227,13 +227,27 @@ def test_cli_run_fetches_title_for_run_dir_name(tmp_path, monkeypatch):
 
 
 def test_cli_run_without_yes_stops_for_spec_review(tmp_path, monkeypatch):
-    # default (no --yes): the spec gate returns False, run halts at spec-approval
-    # and prints how to review + resume — it does NOT proceed to setup/run.
+    # default (no --yes): approve_spec calls spec_selection_prompt interactively;
+    # when the user enters "q" it returns False, pipeline aborts at spec-approval
+    # and prints the retry/resume message.
     import paper_reprise.cli as cli_mod
     captured = {}
 
     def fake_pipeline(**kwargs):
-        captured["approve_spec_result"] = kwargs["approve_spec"](None)
+        # call approve_spec with a minimal real spec so spec_selection_prompt works
+        from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+        spec = Spec(
+            paper="2401.00001", repo=None,
+            artifacts=[Artifact(id="a1", base_model="org/M", method="GSQ",
+                                quant_config={"wbits": 4})],
+            claims=[Claim(id="c1", artifact="a1",
+                          eval_protocol=EvalProtocol(runner="official", command="e",
+                                                     metric="ppl", dataset="wiki"),
+                          expected=5.8, tolerance=0.05, source="T1")],
+        )
+        from unittest.mock import patch
+        with patch("paper_reprise.cli.click.prompt", return_value="q"):
+            captured["approve_spec_result"] = kwargs["approve_spec"](spec)
         from paper_reprise.pipeline import PipelineResult
         return PipelineResult(root=tmp_path, aborted_at="spec-approval")
 
@@ -243,9 +257,9 @@ def test_cli_run_without_yes_stops_for_spec_review(tmp_path, monkeypatch):
     from click.testing import CliRunner
     res = CliRunner().invoke(cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path)])
     assert res.exit_code == 0
-    assert captured["approve_spec_result"] is False          # default = stop for review
+    assert captured["approve_spec_result"] is False          # "q" aborts
     assert "resume" in res.output.lower()
-    assert "spec.yaml" in res.output
+    assert "retry" in res.output.lower()
 
 
 def test_cli_run_with_yes_approves_spec(tmp_path, monkeypatch):
@@ -395,3 +409,59 @@ def test_cli_run_injects_dispatching_executors(tmp_path, monkeypatch):
     assert captured["setup_executor"](rd, spec) == "fromscratch-setup"
     cd = rd.claim_dir("c1")
     assert captured["run_executor"](spec.claims[0], spec.artifacts[0], cd) == "fromscratch-run"
+
+
+def test_cli_run_interactive_selection_filters_spec_and_continues(tmp_path, monkeypatch):
+    """Gate 1 now asks the user to select claims; selected subset gets written to
+    spec.yaml and the pipeline continues (no spec-approval abort)."""
+    import paper_reprise.pipeline as pipeline_mod
+    from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+
+    captured_spec = {}
+
+    def fake_extract_spec(rd):
+        spec = Spec(
+            paper="2401.00001", repo=None,
+            artifacts=[
+                Artifact(id="a1", base_model="org/M1", method="GSQ",
+                         quant_config={"wbits": 2}),
+                Artifact(id="a2", base_model="org/M2", method="GSQ",
+                         quant_config={"wbits": 3}),
+            ],
+            claims=[
+                Claim(id="c1", artifact="a1",
+                      eval_protocol=EvalProtocol(runner="official", command="eval1",
+                                                  metric="ppl", dataset="wiki"),
+                      expected=5.8, tolerance=0.05, source="T1"),
+                Claim(id="c2", artifact="a2",
+                      eval_protocol=EvalProtocol(runner="official", command="eval2",
+                                                  metric="ppl", dataset="wiki"),
+                      expected=6.1, tolerance=0.05, source="T2"),
+            ],
+        )
+        return spec
+
+    def fake_finish_pipeline(rd, spec, ingest, **kwargs):
+        captured_spec["claims"] = [c.id for c in spec.claims]
+        captured_spec["artifacts"] = [a.id for a in spec.artifacts]
+        return pipeline_mod.PipelineResult(root=rd.root, aborted_at=None)
+
+    monkeypatch.setattr(pipeline_mod, "extract_spec", fake_extract_spec)
+    monkeypatch.setattr(pipeline_mod, "_finish_pipeline", fake_finish_pipeline)
+    monkeypatch.setattr(cli_mod, "make_fetch_sources",
+                        lambda **k: (lambda rd, arxiv_id, url: None))
+
+    from unittest.mock import patch
+    with patch("paper_reprise.cli.click.prompt", return_value="1"):
+        res = CliRunner().invoke(
+            cli_mod.cli,
+            ["run", "2401.00001", "--base-dir", str(tmp_path)],
+        )
+
+    assert res.exit_code == 0
+    assert "spec-approval" not in res.output   # did NOT abort
+    # Only the first claim (and its artifact) made it through
+    assert captured_spec["claims"] == ["c1"]
+    assert captured_spec["artifacts"] == ["a1"]
+    # Second artifact was pruned (no claim references it)
+    assert "a2" not in captured_spec["artifacts"]

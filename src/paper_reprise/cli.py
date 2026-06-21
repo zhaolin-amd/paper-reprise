@@ -139,11 +139,6 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         click.echo(f"[resolve] '{input_arg}' → {resolved}")
         input_arg = resolved
 
-    # Spec gate: by default require the user to review which models/claims to
-    # reproduce. The run halts at "spec-approval" unless --yes is given.
-    def approve_spec(spec):
-        return yes
-
     def approve_plan(plan):
         if yes:
             return True
@@ -153,6 +148,15 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
     arxiv_id, _url = normalize_input(input_arg)
     _title = fetch_arxiv_title(arxiv_id)
     paper_name = short_name(_title) if _title else None
+
+    # Spec gate: by default require the user to review which models/claims to
+    # reproduce. The run halts at "spec-approval" unless --yes is given.
+    display_label = paper_name or arxiv_id
+
+    def approve_spec(spec):
+        if yes:
+            return True
+        return spec_selection_prompt(spec, display_label)
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         paper_name=paper_name,
@@ -161,11 +165,8 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         run_executor=_run_executor(),
     )
     if result.aborted_at == "spec-approval":
-        spec = RunDir.open(result.root).read_spec()
-        n = len(spec.claims) if spec else "?"
-        click.echo(f"\nExtracted {n} claims into {result.root}/spec.yaml")
-        click.echo("Review/edit which models & claims to reproduce, then continue with:")
-        click.echo(f"  paper-reprise resume {result.root}")
+        click.echo(f"\nAborted at claim selection. Run dir: {result.root}")
+        click.echo(f"To retry: paper-reprise resume {result.root}")
     elif result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
