@@ -206,7 +206,9 @@ def test_run_executor_runs_entrypoint_persists_and_returns_metadata(tmp_path):
         now=iter([100.0, 220.0]).__next__)
     out = executor(claim, _artifact(), claim_dir)
 
-    assert calls["command"] == "bash impl/run_eval.sh c1"
+    # command is made model-aware: PAPER_REPRISE_MODEL export + the entrypoint
+    assert calls["command"].endswith("bash impl/run_eval.sh c1")
+    assert calls["command"].startswith("export PAPER_REPRISE_MODEL=")
     assert calls["cwd"] == rd.root                  # impl lives under the run root
     assert calls["env_dir"] == rd.root / "env"
     assert out["stdout_path"] == str(claim_dir / "stdout.log")

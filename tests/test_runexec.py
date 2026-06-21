@@ -119,6 +119,36 @@ def test_executor_runs_persists_and_returns_metadata(tmp_path):
     assert saved["seqlen"] == 2048
 
 
+def test_executor_resolves_model_into_command(tmp_path, monkeypatch):
+    # end-to-end: the command handed to the seam is model-resolved ({model}
+    # substituted with the snapshot path + PAPER_REPRISE_MODEL exported), not just
+    # the bare protocol command. Guards against dropping resolved_command.
+    base = tmp_path / "cache"
+    snap = base / "meta-llama" / "Llama-3.2-1B"
+    snap.mkdir(parents=True)
+    (snap / "config.json").write_text("{}")
+    monkeypatch.setenv("PAPER_REPRISE_MODEL_BASE", str(base))
+    monkeypatch.setenv("PAPER_REPRISE_DOWNLOAD_DIR", str(tmp_path / "dl"))
+
+    rd = RunDir.create(tmp_path / "run", arxiv_id="p", timestamp="t")
+    claim_dir = rd.claim_dir("c1")
+    seen = {}
+
+    def fake_run_eval(command, cwd, env_dir, log_path):
+        seen["command"] = command
+        Path(log_path).write_text("perplexity: 5.80")
+        return 0, ""
+
+    artifact = Artifact(id="a1", base_model="meta-llama/Llama-3.2-1B", method="AWQ",
+                        quant_config={"wbits": 4})
+    executor = make_run_executor(run_eval=fake_run_eval, detect_gpu=lambda: "H200",
+                                 now=iter([0.0, 60.0]).__next__)
+    executor(_claim("python eval.py --model {model}"), artifact, claim_dir)
+
+    assert seen["command"] == (
+        f"export PAPER_REPRISE_MODEL={snap}; python eval.py --model {snap}")
+
+
 def _spec_one(command="python eval.py"):
     return Spec(paper="p", repo=None, artifacts=[_artifact()],
                 claims=[_claim(command)])

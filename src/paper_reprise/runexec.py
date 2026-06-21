@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from paper_reprise.models import Artifact, Claim
+from paper_reprise.modelpaths import hf_env_overlay, resolved_command
 
 _SEED_PATTERNS = (
     r"--seed[=\s]+(\d+)",
@@ -63,10 +64,12 @@ def resolve_actual_config(claim: Claim, artifact: Artifact) -> dict:
 
 
 def _activated_env(env_dir: Path) -> dict:
-    """Return an environment dict with env_dir's venv/conda prefix activated."""
+    """Return an environment dict with env_dir's venv/conda prefix activated, plus
+    the model-path overlay (read shared cache / download missing to scratch)."""
     env = dict(os.environ)
     env["PATH"] = f"{env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
     env["VIRTUAL_ENV"] = str(env_dir)
+    env.update(hf_env_overlay())
     return env
 
 
@@ -138,7 +141,7 @@ def make_run_executor(
 
     def executor(claim: Claim, artifact: Artifact, claim_dir: Path) -> dict:
         _root, env_dir, repo_dir = _rundir_paths(claim_dir)
-        command = build_eval_command(claim)
+        command = resolved_command(build_eval_command(claim), artifact.base_model)
         log_path = claim_dir / "stdout.log"
         gpu = detect_gpu()
         start = now()
