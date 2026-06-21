@@ -258,7 +258,7 @@ def test_cli_run_without_yes_stops_for_spec_review(tmp_path, monkeypatch):
     res = CliRunner().invoke(cli_mod.cli, ["run", "2401.00001", "--base-dir", str(tmp_path)])
     assert res.exit_code == 0
     assert captured["approve_spec_result"] is False          # "q" aborts
-    assert "resume" in res.output.lower()
+    assert "paper-reprise run" in res.output
     assert "retry" in res.output.lower()
 
 
@@ -338,6 +338,7 @@ def test_selection_zero_claims_aborts():
     assert kept is False
     # spec is unchanged (abort before mutation)
     assert len(spec.claims) == 2
+    assert len(spec.artifacts) == 2  # unchanged on abort
 
 
 def test_selection_q_aborts():
@@ -348,6 +349,7 @@ def test_selection_q_aborts():
         kept = spec_selection_prompt(spec, "test-paper")
     assert kept is False
     assert len(spec.claims) == 2  # unchanged
+    assert len(spec.artifacts) == 2  # unchanged on abort
 
 
 def test_selection_single_claim():

@@ -118,13 +118,13 @@ def cli() -> None:
 @click.argument("input_arg")
 @click.option("--base-dir", default="runs", help="where run dirs are created")
 @click.option("--yes", is_flag=True,
-              help="skip the spec review and run straight through (non-interactive)")
+              help="skip interactive claim selection and reproduce all claims end to end")
 def run(input_arg: str, base_dir: str, yes: bool) -> None:
     """Run the reproduction pipeline for a paper (arxiv id, url, or title).
 
-    By default the run STOPS after extracting spec.yaml so you can review and edit
-    which models/claims to reproduce, then continue with `resume`. Pass --yes to
-    skip that review and run end to end.
+    By default presents the extracted claims interactively so you can choose which
+    to reproduce, then continues the pipeline. Pass --yes to skip selection and
+    reproduce all claims end to end.
     """
     from paper_reprise.pipeline import run_pipeline
 
@@ -149,14 +149,13 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
     _title = fetch_arxiv_title(arxiv_id)
     paper_name = short_name(_title) if _title else None
 
-    # Spec gate: by default require the user to review which models/claims to
-    # reproduce. The run halts at "spec-approval" unless --yes is given.
     display_label = paper_name or arxiv_id
 
     def approve_spec(spec):
         if yes:
             return True
         return spec_selection_prompt(spec, display_label)
+
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         paper_name=paper_name,
@@ -165,8 +164,8 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         run_executor=_run_executor(),
     )
     if result.aborted_at == "spec-approval":
-        click.echo(f"\nAborted at claim selection. Run dir: {result.root}")
-        click.echo(f"To retry: paper-reprise resume {result.root}")
+        click.echo("\nAborted at claim selection.")
+        click.echo(f"To retry: paper-reprise run {input_arg}")
     elif result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
