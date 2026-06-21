@@ -39,9 +39,11 @@ def test_eval_command_invokes_entrypoint_with_claim_id():
 def test_scaffold_prompt_instructs_impl_entrypoint_and_forbids_fabrication(tmp_path):
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
     prompt = build_scaffold_prompt(rd, _spec(), "setup_patches/scaffold_0.txt")
-    # points at the paper source + the spec
+    # points at the paper source + the REDACTED spec (never the full spec.yaml as
+    # the thing to read — expected/tolerance are withheld there)
     assert "paper/" in prompt
-    assert "spec.yaml" in prompt
+    assert "spec.public.yaml" in prompt
+    assert "redact" in prompt.lower()
     # the single runnable entrypoint contract
     assert "impl/run_eval.sh" in prompt
     # the method to implement is surfaced from the spec
@@ -250,8 +252,8 @@ def test_make_fromscratch_setup_executor_runs_with_injected_io(tmp_path, monkeyp
 
 
 def test_run_scaffold_seam_success_keyed_on_entrypoint_file(tmp_path, monkeypatch):
-    # _run_scaffold returns True iff the expected entrypoint appears (run_headless
-    # contract). We stub run_headless to simulate the agent writing the file.
+    # _run_scaffold returns True iff the entrypoint exists AND this turn modified
+    # impl/. We stub run_headless to simulate the agent writing the file.
     expect = tmp_path / "impl" / "run_eval.sh"
 
     def fake_run_headless(prompt, allowed_tools, cwd, expect_file, timeout=None):
@@ -262,3 +264,49 @@ def test_run_scaffold_seam_success_keyed_on_entrypoint_file(tmp_path, monkeypatc
 
     monkeypatch.setattr(fromscratch, "run_headless", fake_run_headless)
     assert fromscratch._run_scaffold("prompt", tmp_path, expect, 5.0) is True
+
+
+def test_run_scaffold_noop_turn_with_stale_entrypoint_returns_false(tmp_path, monkeypatch):
+    # A later turn that crashed/did nothing leaves the entrypoint from an earlier
+    # turn on disk. run_headless's file-existence contract would call that 'ok', but
+    # _run_scaffold must report not-produced because impl/ did not change this turn.
+    expect = tmp_path / "impl" / "run_eval.sh"
+    expect.parent.mkdir(parents=True, exist_ok=True)
+    expect.write_text("echo perplexity: 5.8")          # left by a prior turn
+
+    def noop_run_headless(prompt, allowed_tools, cwd, expect_file, timeout=None):
+        from paper_reprise.headless import HeadlessResult
+        return HeadlessResult(ok=True, output_path=expect_file)   # touched nothing
+
+    monkeypatch.setattr(fromscratch, "run_headless", noop_run_headless)
+    assert fromscratch._run_scaffold("prompt", tmp_path, expect, 5.0) is False
+
+
+def test_setup_writes_redacted_public_spec_without_expected(tmp_path):
+    # The from-scratch setup must drop a spec.public.yaml the agent can read, with
+    # the paper's expected/tolerance/source stripped; the full spec.yaml is the
+    # grade artifact and is not what the agent is pointed at.
+    import yaml
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    run_fromscratch_setup(rd, _spec(), max_retries=3, timeout_s=100.0, **_setup_fakes())
+    pub = rd.root / "spec.public.yaml"
+    assert pub.exists()
+    data = yaml.safe_load(pub.read_text())
+    claim = data["claims"][0]
+    assert "expected" not in claim and "tolerance" not in claim and "source" not in claim
+    # method + eval protocol (what must be implemented) are preserved
+    assert data["artifacts"][0]["method"] == "AWQ"
+    assert claim["eval_protocol"]["metric"] == "perplexity"
+
+
+def test_setup_rejects_smoke_that_exits_zero_without_metric(tmp_path):
+    # A silent exit-0 smoke (no metric printed) must NOT pass setup — it proves
+    # nothing computed. With max_retries=1 and every smoke silent, setup fails.
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    f = _setup_fakes()
+    f.update(run_smoke=lambda c, cwd, e: (0, "done, no errors"),
+             now=iter([0.0] * 20).__next__)
+    res = run_fromscratch_setup(rd, _spec(), max_retries=1, timeout_s=1e9, **f)
+    assert res.ok is False
+    # the augmented failure message was logged for the next turn / the operator
+    assert "no parseable metric" in (rd.setup_log_dir / "smoke_0.log").read_text()
