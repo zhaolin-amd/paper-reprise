@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import datetime as _dt
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    from paper_reprise.models import Spec
 
 from paper_reprise.grade import grade_claim
 from paper_reprise.report import render_reports
@@ -39,6 +43,66 @@ def _run_executor():
     return make_run_dispatcher(
         official=make_run_executor(),
         fromscratch=make_fromscratch_run_executor())
+
+
+def _claim_row(i: int, claim, artifacts: dict) -> str:
+    """One display row for the claim table."""
+    art = artifacts.get(claim.artifact)
+    model = art.base_model.split("/")[-1] if art else "?"
+    wbits = art.quant_config.get("wbits", "?") if art else "?"
+    group = art.quant_config.get("group_size", "") if art else ""
+    config = f"W{wbits}G{group}" if group else f"W{wbits}"
+    hw = claim.hardware or "—"
+    return (f"  {i:>2}  {claim.id:<30} {model:<24} {config:<9} "
+            f"{claim.eval_protocol.metric:<11} {claim.expected:<9.2f} {hw}")
+
+
+def spec_selection_prompt(spec: "Spec", label: str) -> bool:
+    """Print the extracted claims as a numbered table and ask the user to select
+    which to reproduce. Mutates spec.claims and spec.artifacts in-place to keep
+    only the chosen subset and prune orphaned artifacts. Returns False to abort."""
+    claims = spec.claims
+    artifacts = {a.id: a for a in spec.artifacts}
+
+    header = (f"  {'#':>2}  {'claim-id':<30} {'model':<24} {'config':<9} "
+              f"{'metric':<11} {'expected':<9} {'hardware'}")
+    click.echo(f"\nExtracted {len(claims)} claims from {label} — pick which to reproduce:\n")
+    click.echo(header)
+    click.echo("  " + "-" * (len(header) - 2))
+    for i, c in enumerate(claims, 1):
+        click.echo(_claim_row(i, c, artifacts))
+
+    raw = click.prompt(
+        '\nEnter numbers (e.g. "1 3"), "all", or "q" to abort',
+        default="all",
+    )
+    raw = raw.strip().lower()
+    if raw == "q":
+        click.echo("Aborted.")
+        return False
+    if raw == "all":
+        indices = set(range(len(claims)))
+    else:
+        chosen = []
+        for tok in raw.split():
+            if tok.isdigit():
+                n = int(tok)
+                if 1 <= n <= len(claims):
+                    chosen.append(n - 1)
+        indices = set(chosen)
+
+    if not indices:
+        click.echo("No valid claims selected — aborting.")
+        return False
+
+    selected_claims = [claims[i] for i in sorted(indices)]
+    referenced_artifacts = {c.artifact for c in selected_claims}
+    selected_artifacts = [a for a in spec.artifacts if a.id in referenced_artifacts]
+
+    spec.claims = selected_claims
+    spec.artifacts = selected_artifacts
+    click.echo(f"Selected {len(selected_claims)} claim(s). Continuing…")
+    return True
 
 
 def _timestamp() -> str:

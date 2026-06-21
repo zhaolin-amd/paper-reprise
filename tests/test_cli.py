@@ -267,6 +267,88 @@ def test_cli_run_with_yes_approves_spec(tmp_path, monkeypatch):
     assert captured["approve_spec_result"] is True           # --yes auto-approves
 
 
+# ── spec_selection_prompt ────────────────────────────────────────────────────
+
+def _make_spec(n_claims=3):
+    """Build a Spec with n_claims each referencing a distinct artifact."""
+    from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol
+    artifacts = [
+        Artifact(id=f"art-{i}", base_model=f"org/Model-{i}B",
+                 method="GSQ", quant_config={"wbits": 2, "group_size": 128})
+        for i in range(n_claims)
+    ]
+    claims = [
+        Claim(id=f"c{i}", artifact=f"art-{i}",
+              eval_protocol=EvalProtocol(runner="official", command=f"eval {i}",
+                                         metric="avg_acc", dataset="arc"),
+              expected=70.0 + i, tolerance=0.5, source=f"Table 1 row {i}",
+              hardware="1x A100")
+        for i in range(n_claims)
+    ]
+    return Spec(paper="2401.00001", repo=None, artifacts=artifacts, claims=claims)
+
+
+def test_selection_all_keeps_everything():
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(3)
+    with patch("paper_reprise.cli.click.prompt", return_value="all"):
+        kept = spec_selection_prompt(spec, "test-paper")
+    assert kept is True
+    assert len(spec.claims) == 3
+    assert len(spec.artifacts) == 3
+
+
+def test_selection_subset_keeps_chosen_and_prunes_orphans():
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(3)
+    with patch("paper_reprise.cli.click.prompt", return_value="1 3"):
+        kept = spec_selection_prompt(spec, "test-paper")
+    assert kept is True
+    assert [c.id for c in spec.claims] == ["c0", "c2"]
+    # artifact for c1 (art-1) must be pruned — no claim references it anymore
+    remaining_artifact_ids = {a.id for a in spec.artifacts}
+    assert "art-0" in remaining_artifact_ids
+    assert "art-2" in remaining_artifact_ids
+    assert "art-1" not in remaining_artifact_ids
+
+
+def test_selection_zero_claims_aborts():
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(2)
+    # "5" is out of range — no valid claim selected
+    with patch("paper_reprise.cli.click.prompt", return_value="5"):
+        kept = spec_selection_prompt(spec, "test-paper")
+    assert kept is False
+    # spec is unchanged (abort before mutation)
+    assert len(spec.claims) == 2
+
+
+def test_selection_q_aborts():
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(2)
+    with patch("paper_reprise.cli.click.prompt", return_value="q"):
+        kept = spec_selection_prompt(spec, "test-paper")
+    assert kept is False
+    assert len(spec.claims) == 2  # unchanged
+
+
+def test_selection_single_claim():
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(3)
+    with patch("paper_reprise.cli.click.prompt", return_value="2"):
+        kept = spec_selection_prompt(spec, "test-paper")
+    assert kept is True
+    assert len(spec.claims) == 1
+    assert spec.claims[0].id == "c1"   # claim index 2 → c1 (1-based)
+    assert len(spec.artifacts) == 1
+    assert spec.artifacts[0].id == "art-1"
+
+
 def test_cli_run_injects_dispatching_executors(tmp_path, monkeypatch):
     # the CLI must inject executors that route by repo presence: with an empty
     # repo dir they pick the from-scratch executor. We assert the injected setup
