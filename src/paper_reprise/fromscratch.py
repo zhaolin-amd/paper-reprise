@@ -21,6 +21,7 @@ from typing import Callable
 
 from paper_reprise.headless import run_headless
 from paper_reprise.models import Artifact, Claim, Spec
+from paper_reprise.modelpaths import resolved_command
 from paper_reprise.rundir import RunDir
 from paper_reprise.runexec import (
     _detect_gpu,
@@ -280,7 +281,7 @@ def make_fromscratch_run_executor(
 
     def executor(claim: Claim, artifact: Artifact, claim_dir: Path) -> dict:
         root, env_dir, _repo_dir = _rundir_paths(claim_dir)
-        command = fromscratch_eval_command(claim)
+        command = resolved_command(fromscratch_eval_command(claim), artifact.base_model)
         log_path = claim_dir / "stdout.log"
         gpu = detect_gpu()
         start = now()

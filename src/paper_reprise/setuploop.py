@@ -20,6 +20,7 @@ from typing import Callable
 
 from paper_reprise.headless import run_headless
 from paper_reprise.models import Spec
+from paper_reprise.modelpaths import hf_env_overlay, resolved_command
 from paper_reprise.rundir import RunDir
 from paper_reprise.setupstage import SetupResult
 
@@ -145,6 +146,8 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
     env = dict(os.environ)
     env["PATH"] = f"{env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
     env["VIRTUAL_ENV"] = str(env_dir)
+    # Read models from the shared cache / download missing ones to scratch.
+    env.update(hf_env_overlay())
     with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as out_f:
         out_path = Path(out_f.name)
     try:
@@ -252,6 +255,14 @@ def _run_loop_body(
     run_setup_loop so any exception here becomes ok=False rather than a crash."""
     env_dir = rd.root / "env"
     command = select_smoke_command(rd, spec)
+    # Resolve the model the same way the real eval will, so the smoke proves the
+    # SAME command (per the fixer prompt) — else a {model}/$PAPER_REPRISE_MODEL
+    # reference would fail smoke but pass eval (false negative).
+    if command and spec.claims:
+        artifacts = {a.id: a for a in spec.artifacts}
+        art = artifacts.get(spec.claims[0].artifact)
+        if art is not None:
+            command = resolved_command(command, art.base_model)
     start = now()
     seen_patches: set[str] = set()
     patches: list[str] = []
