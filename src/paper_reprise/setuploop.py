@@ -112,7 +112,13 @@ def _write_log(rd: RunDir, name: str, text: str) -> None:
 
 
 def _create_env(env_dir: Path, manager: str) -> tuple[int, str]:
-    """Create a conda/uv env at env_dir. Returns (exit_code, combined log)."""
+    """Create a conda/uv env at env_dir. Returns (exit_code, combined log).
+
+    Idempotent: if an interpreter already exists at env_dir (e.g. a re-`resume`
+    after a prior run), reuse it instead of failing — `uv venv` and `conda create`
+    both refuse to clobber an existing env. The smoke test still re-validates it."""
+    if (env_dir / "bin" / "python").exists():
+        return 0, f"env already exists at {env_dir}; reusing"
     if manager == "uv":
         cmd = ["uv", "venv", str(env_dir)]
     else:
@@ -152,7 +158,8 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
         out_path = Path(out_f.name)
     try:
         with open(out_path, "w") as out_f:
-            proc = subprocess.run(command, shell=True, cwd=str(cwd), env=env,
+            proc = subprocess.run(command, shell=True, executable="/bin/bash",
+                                  cwd=str(cwd), env=env,
                                   stdout=out_f, stderr=subprocess.STDOUT,
                                   timeout=_SMOKE_TIMEOUT_S)
         output = out_path.read_text(errors="replace")
