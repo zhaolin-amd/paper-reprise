@@ -16,7 +16,8 @@ ingest → specextract → plan → setup → run → grade → report
 
 - **ingest** — fetch the arxiv LaTeX source, locate and clone the official repo.
 - **specextract** — read the paper + repo (headless Claude) into a machine-checkable spec
-  of claims (model × config × eval protocol × expected number); stops for your approval.
+  of claims (model × config × eval protocol × expected number); then presents the claims
+  for you to pick which to reproduce.
 - **plan** — feasibility check; flags claims whose required hardware isn't available.
 - **setup** — the one agentic stage: build a conda/uv env and let Claude fix dependencies
   until the repo's own eval command passes a smoke test, under retry/timeout guardrails.
@@ -50,11 +51,12 @@ slug is best-effort from the arxiv title; omitted when it can't be fetched):
 
 ```
 runs/<paper-name>-<arxiv_id>-<timestamp>/
-├── ingest.json          # resolved arxiv id, source url, located repo (url + commit)
+├── ingest.json          # resolved arxiv id + source url (the located repo url/commit are
+│                        #   recorded in spec.yaml by specextract, not here)
 ├── paper/               # the paper's LaTeX source, downloaded from arxiv (not OCR'd)
 ├── repo/                # the official repo, git-cloned here — its own eval scripts live inside
 ├── spec.yaml            # extracted reproduction spec: artifacts × claims × eval protocol
-│                        #   (this is the human-review / hand-edit gate; `resume` re-reads it)
+│                        #   (the interactive claim picker writes the chosen subset here; `resume` re-reads it)
 ├── spec.public.yaml     # from-scratch path only: redacted spec the implementer agent reads
 │                        #   (expected/tolerance/source stripped so it can't target the number)
 ├── plan.json            # per-claim feasibility estimate (hardware required vs available)
@@ -91,14 +93,33 @@ paper-reprise report <run_dir>          # re-render the report from an existing 
 
 A short alias `reprise` is also installed (e.g. `reprise run 2401.00001`).
 
-**By default `run` stops after extracting `spec.yaml`** — so you can review and edit
-**which models/claims** to reproduce (the spec is LLM-extracted from the paper and may
-mis-pick or mis-read, e.g. the required hardware). Edit the file, then `resume <run_dir>`
-to continue. Pass `--yes` to skip the review and run end to end (non-interactive / CI).
+**By default `run` presents the extracted claims interactively** — after specextract it
+prints a numbered table (claim id / model / config / metric / expected / hardware) and asks
+which to reproduce (`"1 3"`, `"all"`, or `"q"` to abort). The spec is LLM-extracted from the
+paper and may mis-pick or mis-read (e.g. required hardware), so this is your review gate; the
+chosen subset is kept (orphaned artifacts pruned) and the pipeline continues automatically.
+Pass `--yes` to skip selection and reproduce **all** claims end to end (non-interactive / CI).
+
+For finer control you can still hand-edit `spec.yaml` in the run dir and `resume <run_dir>`
+— `resume` runs whatever claims the file contains, without re-prompting.
 
 **Reproducing efficiency/accuracy at scale needs a GPU** — quantization papers run on real
 models. Without a GPU the pipeline still runs through setup and reports the run stage as
 BLOCKED rather than fabricating numbers.
+
+### Model cache
+
+Models are read from a **shared cache first** and anything missing is **downloaded to scratch**
+(never `$HOME`, never the read-only shared cache). Two env knobs control the paths:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PAPER_REPRISE_MODEL_BASE` | `/group/amdneuralopt/huggingface/pretrained_models` | Shared cache root, `<org>/<model>` snapshot layout. A model id (`meta-llama/Llama-3.2-1B`) resolves to its local snapshot here when `config.json` exists — avoiding re-download / re-auth for gated models. |
+| `PAPER_REPRISE_DOWNLOAD_DIR` | `/scratch/$USER/pretrained_models` | Where HF downloads missing models (`HF_HUB_CACHE`). |
+
+Defaults are site-specific — override either var to run elsewhere. An eval command may use a
+`{model}` placeholder (substituted with the resolved path) and may reference `$PAPER_REPRISE_MODEL`
+(exported into the eval shell, e.g. spec `extra_args: GSQ_MODEL_NAME=$PAPER_REPRISE_MODEL`).
 
 ## Status
 

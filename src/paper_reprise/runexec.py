@@ -75,17 +75,25 @@ def _activated_env(env_dir: Path) -> dict:
 
 def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[int, str]:
     """Run the eval command in the built env, persist combined output to log_path,
-    return (exit_code, output). A per-call timeout guards a hung eval."""
+    return (exit_code, output). A per-call timeout guards a hung eval.
+
+    Runs under bash (repo eval commands routinely use bashisms like `set -o
+    pipefail`; shell=True defaults to /bin/sh = dash on Debian/Ubuntu). Output is
+    streamed straight to log_path rather than a PIPE: many repos launch a
+    background server (e.g. vLLM via `( … ) &`) that inherits the child's stdout
+    and would hold a pipe open after the shell exits, blocking subprocess.run on
+    pipe EOF until the timeout. A file fd does not have that problem."""
     try:
-        proc = subprocess.run(command, shell=True, cwd=str(cwd), env=_activated_env(env_dir),
-                              capture_output=True, text=True, timeout=_EVAL_TIMEOUT_S)
-        out = proc.stdout + proc.stderr
-        code = proc.returncode
-    except subprocess.TimeoutExpired as e:
-        out = f"eval timed out after {_EVAL_TIMEOUT_S}s\n{e}"
-        code = 124
-    log_path.write_text(out)
-    return code, out
+        with open(log_path, "w") as out_f:
+            proc = subprocess.run(command, shell=True, executable="/bin/bash",
+                                  cwd=str(cwd), env=_activated_env(env_dir),
+                                  stdout=out_f, stderr=subprocess.STDOUT,
+                                  timeout=_EVAL_TIMEOUT_S)
+        out = log_path.read_text(errors="replace")
+        return proc.returncode, out
+    except subprocess.TimeoutExpired:
+        out = log_path.read_text(errors="replace") if log_path.exists() else ""
+        return 124, f"eval timed out after {_EVAL_TIMEOUT_S}s\n{out[-2000:]}"
 
 
 _NVIDIA_SMI_CANDIDATES = ("/usr/bin/nvidia-smi", "/usr/local/bin/nvidia-smi")
