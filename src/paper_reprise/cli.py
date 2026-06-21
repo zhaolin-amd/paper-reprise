@@ -164,8 +164,8 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         run_executor=_run_executor(),
     )
     if result.aborted_at == "spec-approval":
-        click.echo("\nAborted at claim selection.")
-        click.echo(f"To retry: paper-reprise run {input_arg}")
+        click.echo(f"\nAborted at claim selection. Run dir: {result.root}")
+        click.echo(f"To pick again: paper-reprise run {input_arg}")
     elif result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
     else:

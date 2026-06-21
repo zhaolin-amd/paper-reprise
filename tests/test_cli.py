@@ -259,7 +259,8 @@ def test_cli_run_without_yes_stops_for_spec_review(tmp_path, monkeypatch):
     assert res.exit_code == 0
     assert captured["approve_spec_result"] is False          # "q" aborts
     assert "paper-reprise run" in res.output
-    assert "retry" in res.output.lower()
+    assert "pick again" in res.output.lower()
+    assert str(tmp_path) in res.output
 
 
 def test_cli_run_with_yes_approves_spec(tmp_path, monkeypatch):
@@ -452,6 +453,7 @@ def test_cli_run_interactive_selection_filters_spec_and_continues(tmp_path, monk
     monkeypatch.setattr(pipeline_mod, "_finish_pipeline", fake_finish_pipeline)
     monkeypatch.setattr(cli_mod, "make_fetch_sources",
                         lambda **k: (lambda rd, arxiv_id, url: None))
+    monkeypatch.setattr(cli_mod, "fetch_arxiv_title", lambda arxiv_id: None)
 
     from unittest.mock import patch
     with patch("paper_reprise.cli.click.prompt", return_value="1"):
