@@ -18,6 +18,20 @@ def _slug(text: str, max_len: int = 40) -> str:
     return s[:max_len].strip("-")
 
 
+def public_spec_dict(spec: Spec) -> dict:
+    """Redacted view of a spec, safe to expose to the from-scratch implementer.
+
+    Drops each claim's `expected`, `tolerance` and `source` — i.e. the paper's
+    reported number, the pass band, and where it came from — so the agent cannot
+    read the target it is graded against. Method, eval protocol and quant config
+    are preserved (they are what must be implemented). Pure dict transform."""
+    d = spec.model_dump()
+    for claim in d.get("claims", []):
+        for k in ("expected", "tolerance", "source"):
+            claim.pop(k, None)
+    return d
+
+
 class RunDir:
     def __init__(self, root: Path):
         self.root = Path(root)
@@ -82,6 +96,20 @@ class RunDir:
         (self.root / "spec.yaml").write_text(
             yaml.safe_dump(spec.model_dump(), sort_keys=False, allow_unicode=True)
         )
+
+    def write_public_spec(self, spec: Spec) -> Path:
+        """Write the redacted spec the from-scratch agent is allowed to read.
+
+        The paper's expected values, tolerances and source citations are stripped
+        from every claim (see public_spec_dict), so an honest implementation is
+        built against the method + eval protocol only and never sees the number it
+        is supposed to hit — the honesty barrier of the from-scratch path
+        (design §6). The full spec.yaml stays the grade/human-review artifact."""
+        p = self.root / "spec.public.yaml"
+        p.write_text(
+            yaml.safe_dump(public_spec_dict(spec), sort_keys=False, allow_unicode=True)
+        )
+        return p
 
     def read_spec(self) -> Optional[Spec]:
         p = self.root / "spec.yaml"

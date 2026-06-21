@@ -55,6 +55,8 @@ runs/<paper-name>-<arxiv_id>-<timestamp>/
 ├── repo/                # the official repo, git-cloned here — its own eval scripts live inside
 ├── spec.yaml            # extracted reproduction spec: artifacts × claims × eval protocol
 │                        #   (this is the human-review / hand-edit gate; `resume` re-reads it)
+├── spec.public.yaml     # from-scratch path only: redacted spec the implementer agent reads
+│                        #   (expected/tolerance/source stripped so it can't target the number)
 ├── plan.json            # per-claim feasibility estimate (hardware required vs available)
 ├── env/                 # the dedicated conda/uv virtualenv built for this paper
 ├── env_snapshot.json    # frozen torch/transformers/CUDA + pip freeze (on a successful setup)

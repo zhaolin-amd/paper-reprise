@@ -15,6 +15,7 @@ offline-testable; the autouse fixture backstops anything that forgets.
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import Callable
@@ -45,6 +46,21 @@ _SCAFFOLD_TIMEOUT_S = 1800
 # eval commands"). Kept conventional so the smoke + run commands are deterministic.
 _ENTRYPOINT = "impl/run_eval.sh"
 
+# The redacted spec the agent is pointed at (expected/tolerance/source stripped).
+# The full spec.yaml is never named to the agent — see _SCAFFOLD_TEMPLATE.
+_PUBLIC_SPEC = "spec.public.yaml"
+
+# A smoke run that exits 0 must also PRINT a parseable metric line; a silent exit 0
+# (e.g. `--smoke) exit 0`) proves nothing computed and must not pass setup. Matches
+# the `name: <number>` format the prompt asks for; the metric name is a plain word
+# so traceback lines like `foo.py:123` don't count as a metric.
+_METRIC_LINE = re.compile(r"[A-Za-z][A-Za-z0-9_ ]*:\s*[-+]?\d+(?:\.\d+)?")
+
+
+def _smoke_reported_metric(output: str) -> bool:
+    """True iff the smoke output contains at least one `metric: number` line."""
+    return bool(_METRIC_LINE.search(output))
+
 
 def fromscratch_smoke_command() -> str:
     """Tiny-scale invocation of the scaffolded entrypoint for the smoke test."""
@@ -61,8 +77,9 @@ paper's quantization method ({methods}) from scratch, as a SELF-CONTAINED \
 implementation under `impl/` in this run directory.
 
 Read the paper LaTeX source in `paper/` and the extracted reproduction spec in \
-`spec.yaml` (artifacts = quantized products, claims = one metric each). Implement \
-exactly the method and eval protocol the spec describes.
+`{public_spec}` (artifacts = quantized products, claims = one metric each). The \
+paper's expected values and tolerances are intentionally REDACTED from it. \
+Implement exactly the method and eval protocol the spec describes.
 
 Expose EXACTLY ONE runnable entrypoint `{entrypoint}` that:
   - takes a single argument: a claim id (e.g. `c1`), or `--smoke` for a tiny-scale \
@@ -75,7 +92,9 @@ HONESTY RULES (mandatory):
   - Do NOT fabricate, invent, or hard-code any result number. The entrypoint must \
 COMPUTE the metric. A run that cannot compute must exit non-zero, never print a \
 made-up value.
-  - Do NOT read the paper's expected values or tolerances to shortcut the result.
+  - Do NOT read the paper's expected values or tolerances to shortcut the result. \
+`{public_spec}` is the only spec you need; do NOT read any other spec file \
+(e.g. `spec.yaml`) — the expected numbers are deliberately withheld.
 
 For EACH file you create under `impl/`, append ONE line describing what it \
 implements to `{patch_note}` (create the file; one line per file). When `impl/` \
@@ -113,6 +132,7 @@ def build_scaffold_prompt(
     methods = ", ".join(sorted({a.method for a in spec.artifacts})) or "the paper's method"
     prompt = _SCAFFOLD_TEMPLATE.format(
         methods=methods, entrypoint=_ENTRYPOINT, patch_note=patch_note_path,
+        public_spec=_PUBLIC_SPEC,
     )
     if failure is not None:
         command, output = failure
@@ -132,14 +152,36 @@ def collect_new_patches_scaffold(patches_dir: Path, seen: set[str]) -> list[str]
     return new
 
 
+def _impl_tree_state(impl_dir: Path) -> dict[str, tuple[int, int]]:
+    """Map file -> (mtime_ns, size) under impl_dir, for detecting whether a scaffold
+    turn actually touched the tree. Empty when impl_dir does not exist yet."""
+    state: dict[str, tuple[int, int]] = {}
+    if not impl_dir.exists():
+        return state
+    for p in impl_dir.rglob("*"):
+        if p.is_file():
+            st = p.stat()
+            state[str(p)] = (st.st_mtime_ns, st.st_size)
+    return state
+
+
 def _run_scaffold(prompt: str, cwd: Path, expect_file: Path, timeout: float) -> bool:
-    """One headless-claude 'implement the method' turn. Success = the expected
-    entrypoint file appeared (run_headless's own contract). The loop re-runs the
-    smoke command to judge whether the impl actually works; this only reports that
-    the agent produced the entrypoint."""
+    """One headless-claude 'implement the method' turn. Success = the entrypoint
+    exists AND this turn actually modified `impl/`.
+
+    run_headless's own contract keys success on the entrypoint FILE existing, but
+    once an earlier turn created it that file lingers: a later turn that crashed,
+    timed out, or did nothing would still look 'produced', so the loop would burn a
+    smoke retry on byte-identical code (and the 'did not produce' branch would be
+    dead). We snapshot impl/ before and after and require a real change, so a no-op
+    turn is reported as not-produced. The loop still re-runs smoke to judge whether
+    the changed impl actually works."""
+    impl_dir = expect_file.parent
+    before = _impl_tree_state(impl_dir)
     res = run_headless(prompt=prompt, allowed_tools=["Read", "Write", "Edit", "Bash"],
                        cwd=cwd, expect_file=expect_file, timeout=timeout)
-    return res.ok
+    after = _impl_tree_state(impl_dir)
+    return res.ok and after != before
 
 
 def _write_log(rd: RunDir, name: str, text: str) -> None:
@@ -203,6 +245,9 @@ def _fromscratch_setup_body(
     # agent can debug the traceback; None on the initial scaffold (no failure yet).
     failure: tuple[str, str] | None = None
 
+    # --- redacted spec the agent is allowed to read (honesty barrier, design §6) ---
+    rd.write_public_spec(spec)
+
     # --- build env once ---
     code, env_log = create_env(env_dir, manager)
     _write_log(rd, "create_env.log", env_log)
@@ -226,6 +271,14 @@ def _fromscratch_setup_body(
         patches.extend(collect_new_patches_scaffold(rd.setup_patches_dir, seen_patches))
         if produced:
             code, out = run_smoke(smoke_cmd, rd.root, env_dir)
+            # An exit-0 smoke that printed no metric proves nothing computed — treat
+            # it as a failure so the next turn must make the entrypoint emit one,
+            # rather than freezing a silent no-op impl as a success (honesty gate).
+            if code == 0 and not _smoke_reported_metric(out):
+                code = 1
+                out = ("smoke exited 0 but printed no parseable metric line "
+                       "(expected e.g. `perplexity: 5.80`); the entrypoint must "
+                       "COMPUTE and print the metric, not exit silently.\n\n" + out)
             _write_log(rd, f"smoke_{attempt}.log", out)
             if code == 0:
                 # smoke genuinely passed; freeze/snapshot are best-effort and must
