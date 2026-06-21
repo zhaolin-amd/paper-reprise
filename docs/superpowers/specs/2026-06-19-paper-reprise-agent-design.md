@@ -27,7 +27,7 @@ Running the code itself is already highly standardized in the quantization field
 | Spec | Extract the **full eval protocol** per claim |
 | Path | Official-repo path **and** from-scratch path implemented; selected per run by repo presence |
 | Judge | **Process-faithful AND value-in-tolerance** — both required for MATCH |
-| Autonomy | Semi-auto: gate 1 (spec approval) + plan anomaly sentinel |
+| Autonomy | Semi-auto: gate 1 (claim selection) + plan anomaly sentinel |
 | Deployment | Manual CLI, per-paper, file-based state |
 | Tech stack | Claude Code headless (setup debugging) + conda/uv isolation |
 | Compute | Multi-GPU available, cost not a constraint |
@@ -53,13 +53,13 @@ Seven deterministic stages, orchestrated in Python; each stage reads the prior s
 
 ```
 ingest → specextract → plan → setup → run → grade → report
-                ⤷[gate 1: spec approval]   ⤷[plan: feasibility/anomaly sentinel]
+                ⤷[gate 1: claim selection]   ⤷[plan: feasibility/anomaly sentinel]
 ```
 
 | Stage | Nature | Responsibility | Output |
 |---|---|---|---|
 | **ingest** | deterministic | arxiv id/url → fetch LaTeX source + locate official repo | `paper/`, `repo/`, `ingest.json` |
-| **specextract** | 1 headless call | LaTeX+README → full spec → **stop, await approval** | `spec.yaml` |
+| **specextract** | 1 headless call | LaTeX+README → full spec → **interactive claim selection** | `spec.yaml` |
 | **plan** | deterministic | estimate each claim's GPU/VRAM/runtime → feasibility/anomaly check | `plan.json` |
 | **setup** | agentic debug loop | build conda/uv env, fix deps until the repo's own eval command passes a smoke test | `env/`, `setup_log/`, `env_snapshot.json`, `setup_patches/` |
 | **run** | deterministic | quantize per artifact, invoke eval script per claim, persist raw output | `runs/<claim_id>/` |
@@ -68,7 +68,7 @@ ingest → specextract → plan → setup → run → grade → report
 
 ### 2.1 Gates
 
-- **Gate 1 (spec approval):** stop after specextract; the user reviews `spec.yaml` before continuing. Prevents a mis-extracted protocol from wasting the whole downstream run.
+- **Gate 1 (claim selection):** after specextract, the CLI prints the extracted claims as a numbered table and the user picks which to reproduce (`"1 3"` / `"all"` / `"q"`); the chosen subset is written to `spec.yaml` (orphaned artifacts pruned) and the pipeline continues. `--yes` reproduces all claims non-interactively. (Power users can still hand-edit `spec.yaml` and `resume`.) Prevents a mis-extracted protocol from wasting the whole downstream run.
 - **plan feasibility/anomaly sentinel:** silent pass by default (cost is not a constraint). Escalates to a single `AskUserQuestion` only in two cases:
   1. **Infeasible hardware** — a claim needs a GPU type/VRAM the environment simply doesn't have;
   2. **Estimate wildly diverges from the paper** — the plan estimate far exceeds the paper's self-reported cost (e.g. paper says 4 GPU-hours, estimate says 200), which usually means specextract got something wrong; a quality signal worth a glance before burning resources.
@@ -88,14 +88,24 @@ of the deterministic offline normalization.)
 
 Then:
 - **Fetch LaTeX source** (`arxiv.org/e-print/<id>`), do not OCR the PDF — table numbers are far more accurate from LaTeX.
-- **Locate the official repo**, priority: GitHub link in the paper > PapersWithCode > GH code search (by title/method name). Candidates plus confidence are written into `ingest.json`; **if none found, `repo: null`** and the run routes to the from-scratch provider (§6).
+- **Locate the official repo**: scan the fetched LaTeX for a GitHub link and clone it into `repo/`. **If none is found the dir stays empty** and the run routes to the from-scratch provider (§6).
 
 ```
 ingest.json:
-  arxiv_id, title, authors, source_url
-  repo: {url, commit, confidence, evidence} | null
-  latex_path, repo_path
+  arxiv_id, source_url
 ```
+
+> Implementation note: `ingest.json` currently records only `arxiv_id` and `source_url`.
+> The located repo's `url` + `commit` are recorded in `spec.yaml` (by specextract, which
+> reads the cloned repo), not in `ingest.json`. The richer schema below (title, authors,
+> repo confidence/evidence, latex_path, repo_path) is aspirational — not yet populated.
+>
+> ```
+> ingest.json (aspirational):
+>   arxiv_id, title, authors, source_url
+>   repo: {url, commit, confidence, evidence} | null
+>   latex_path, repo_path
+> ```
 
 ### 3.2 Spec Schema (two layers: artifact + claim)
 
@@ -146,7 +156,7 @@ claims:                                # one = one grading unit
 One headless call, fed the full LaTeX + README, producing the YAML above.
 - By default **extract main results only** (the paper's headline/bolded ones), rest on demand.
 - If the paper doesn't state a tolerance, use the default (PPL ±0.05, acc ±0.5%) and flag "default value, please confirm".
-- **Stop** after extraction; the user reviews `spec.yaml`: check numbers/protocol/tolerance, only proceed after edits.
+- After extraction the CLI presents the claims as a numbered table; the user selects which to reproduce (check numbers/protocol/tolerance against the listed expected/hardware). The chosen subset is written to `spec.yaml` and the run continues; `--yes` keeps all claims. For edits beyond selection, hand-edit `spec.yaml` and `resume`.
 
 ## 4. Setup / Run / Failure Modes
 
