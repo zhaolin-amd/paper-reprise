@@ -100,20 +100,6 @@ to continue. Pass `--yes` to skip the review and run end to end (non-interactive
 models. Without a GPU the pipeline still runs through setup and reports the run stage as
 BLOCKED rather than fabricating numbers.
 
-### Model cache
-
-Models are read from a **shared cache first** and anything missing is **downloaded to scratch**
-(never $HOME, never the read-only shared cache). Two env knobs control the paths:
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `PAPER_REPRISE_MODEL_BASE` | `/group/amdneuralopt/huggingface/pretrained_models` | Shared cache root, `<org>/<model>` snapshot layout. A model id (`meta-llama/Llama-3.2-1B`) resolves to its local snapshot here when `config.json` exists — avoiding re-download / re-auth for gated models. |
-| `PAPER_REPRISE_DOWNLOAD_DIR` | `/scratch/$USER/pretrained_models` | Where HF downloads missing models (`HF_HUB_CACHE`). |
-
-The defaults are site-specific; override either var to run elsewhere. An eval command may use a
-`{model}` placeholder (substituted with the resolved path) and may reference `$PAPER_REPRISE_MODEL`
-(exported into the eval shell, e.g. spec `extra_args: GSQ_MODEL_NAME=$PAPER_REPRISE_MODEL`).
-
 ## Status
 
 The full pipeline is implemented and runs end to end, both for papers with an official repo
