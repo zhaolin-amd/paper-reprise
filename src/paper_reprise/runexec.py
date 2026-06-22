@@ -13,6 +13,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -73,6 +74,21 @@ def _activated_env(env_dir: Path) -> dict:
     return env
 
 
+def _reap_process_group(pid: int) -> None:
+    """SIGKILL the whole process group led by `pid`.
+
+    A child started with start_new_session=True is its own session+group leader, so
+    its pgid == pid. Killing the group reaps any background descendants the command
+    left running — e.g. a vLLM server and its EngineCore workers, which repo eval
+    scripts routinely orphan on a non-zero exit (they reparent to init but keep the
+    original group, so killpg still reaches them). Only this command's own session is
+    touched, never unrelated jobs. No-op if the group is already gone."""
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
 def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[int, str]:
     """Run the eval command in the built env, persist combined output to log_path,
     return (exit_code, output). A per-call timeout guards a hung eval.
@@ -81,19 +97,31 @@ def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[i
     pipefail`; shell=True defaults to /bin/sh = dash on Debian/Ubuntu). Output is
     streamed straight to log_path rather than a PIPE: many repos launch a
     background server (e.g. vLLM via `( … ) &`) that inherits the child's stdout
-    and would hold a pipe open after the shell exits, blocking subprocess.run on
-    pipe EOF until the timeout. A file fd does not have that problem."""
-    try:
-        with open(log_path, "w") as out_f:
-            proc = subprocess.run(command, shell=True, executable="/bin/bash",
-                                  cwd=str(cwd), env=_activated_env(env_dir),
-                                  stdout=out_f, stderr=subprocess.STDOUT,
-                                  timeout=_EVAL_TIMEOUT_S)
-        out = log_path.read_text(errors="replace")
-        return proc.returncode, out
-    except subprocess.TimeoutExpired:
-        out = log_path.read_text(errors="replace") if log_path.exists() else ""
-        return 124, f"eval timed out after {_EVAL_TIMEOUT_S}s\n{out[-2000:]}"
+    and would hold a pipe open after the shell exits, blocking on pipe EOF until the
+    timeout. A file fd does not have that problem.
+
+    Runs in a NEW SESSION (start_new_session) and reaps the whole process group on
+    return or timeout, so a background server the eval script leaves behind (vLLM +
+    its EngineCore workers are the canonical case) does not leak across claims/runs,
+    holding the port and GPU memory."""
+    with open(log_path, "w") as out_f:
+        proc = subprocess.Popen(command, shell=True, executable="/bin/bash",
+                                cwd=str(cwd), env=_activated_env(env_dir),
+                                stdout=out_f, stderr=subprocess.STDOUT,
+                                start_new_session=True)
+        try:
+            code = proc.wait(timeout=_EVAL_TIMEOUT_S)
+            out = log_path.read_text(errors="replace")
+            return code, out
+        except subprocess.TimeoutExpired:
+            out = log_path.read_text(errors="replace") if log_path.exists() else ""
+            return 124, f"eval timed out after {_EVAL_TIMEOUT_S}s\n{out[-2000:]}"
+        finally:
+            _reap_process_group(proc.pid)
+            try:
+                proc.wait(timeout=10)   # reap the (now-killed) leader itself
+            except (subprocess.TimeoutExpired, ChildProcessError, OSError):
+                pass
 
 
 _NVIDIA_SMI_CANDIDATES = ("/usr/bin/nvidia-smi", "/usr/local/bin/nvidia-smi")

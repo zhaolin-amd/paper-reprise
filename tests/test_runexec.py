@@ -77,6 +77,31 @@ def test_run_eval_nonzero_exit_is_captured(tmp_path):
     assert code == 3
 
 
+def test_run_eval_reaps_orphaned_background_process(tmp_path):
+    # The eval command exits immediately but leaves a background server alive in its
+    # session (the vLLM-leak shape). _run_eval runs in a new session and killpg's the
+    # group on return, so the orphan must NOT survive the call.
+    import subprocess as sp
+    import time
+
+    log = tmp_path / "stdout.log"
+    env_dir = tmp_path / "env"
+    (env_dir / "bin").mkdir(parents=True)
+    marker = "paper_reprise_orphan_2718281828"   # unique so we match only our child
+    # foreground shell exits at once; a backgrounded subshell sleeps (the "server")
+    code, _ = _run_eval(f"( sleep 120 ; echo {marker} ) & echo started",
+                        cwd=tmp_path, env_dir=env_dir, log_path=log)
+    assert code == 0
+    time.sleep(0.6)
+    found = sp.run(["pgrep", "-fa", marker], capture_output=True, text=True)
+    if found.returncode == 0:        # safety: don't leak if the assert is about to fail
+        for line in found.stdout.splitlines():
+            pid = line.split(" ", 1)[0]
+            if pid.isdigit():
+                sp.run(["kill", "-9", pid])
+    assert found.returncode != 0, f"orphan leaked: {found.stdout!r}"
+
+
 def test_detect_gpu_returns_string_or_unknown(monkeypatch, tmp_path):
     # with no nvidia-smi anywhere and no CUDA_VISIBLE_DEVICES, falls back to "unknown"
     import paper_reprise.runexec as runexec
