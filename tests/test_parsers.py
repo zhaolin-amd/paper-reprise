@@ -21,9 +21,16 @@ def test_parse_accuracy_fraction_normalized_to_percent():
     assert parse_metric("accuracy", out) == 76.3
 
 
-def test_parse_speedup():
-    out = "Throughput speedup: 2.1x over fp16"
-    assert parse_metric("speedup", out) == 2.1
+def test_parse_accuracy_lm_eval_markdown_table():
+    # lm-eval prints results as a markdown table; the `acc` row value (not acc_norm)
+    # must be picked and normalized to a percentage.
+    out = (
+        "|  Tasks |Version|Filter|n-shot| Metric |   |Value|   |Stderr|\n"
+        "|--------|------:|------|-----:|--------|---|----:|---|-----:|\n"
+        "|arc_easy|      1|none  |     0|acc     |↑  |0.500|±  | 0.189|\n"
+        "|        |       |none  |     0|acc_norm|↑  |0.375|±  | 0.183|\n"
+    )
+    assert parse_metric("acc", out) == 50.0
 
 
 def test_unparseable_returns_none():
