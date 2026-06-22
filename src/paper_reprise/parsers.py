@@ -14,6 +14,10 @@ _PPL_PATTERNS = [
 ]
 _ACC_PATTERNS = [
     r"acc[a-z,_ ]*[:\s=]+([0-9]+\.?[0-9]*)\s*%",   # "acc: 76.3%"
+    # lm-eval markdown table row: "|acc     |↑  |0.500|±  |0.189|" — the `acc`
+    # metric cell, then the direction cell, then the value cell. \bacc\b so the
+    # `acc_norm` row isn't matched by the bare `acc` metric.
+    r"\bacc\b[^|\n]*\|[^|\n]*\|\s*([0-9]*\.?[0-9]+)",
     r"acc[a-z,_ ]*[:\s=]+([0-9]*\.?[0-9]+)",        # "acc,none: 0.763"
 ]
 _SPEEDUP_PATTERNS = [
