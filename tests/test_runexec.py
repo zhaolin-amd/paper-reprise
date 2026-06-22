@@ -78,9 +78,10 @@ def test_run_eval_nonzero_exit_is_captured(tmp_path):
 
 
 def test_run_eval_reaps_orphaned_background_process(tmp_path):
-    # The eval command exits immediately but leaves a background server alive in its
-    # session (the vLLM-leak shape). _run_eval runs in a new session and killpg's the
-    # group on return, so the orphan must NOT survive the call.
+    # The eval command exits immediately but leaves a background "server" alive (the
+    # vLLM-leak shape). `set -m` puts that server in its OWN process group within the
+    # session — exactly what vLLM does — so a group-only kill on the leader would miss
+    # it; _run_eval reaps the whole SESSION, so the orphan must NOT survive the call.
     import subprocess as sp
     import time
 
@@ -88,8 +89,7 @@ def test_run_eval_reaps_orphaned_background_process(tmp_path):
     env_dir = tmp_path / "env"
     (env_dir / "bin").mkdir(parents=True)
     marker = "paper_reprise_orphan_2718281828"   # unique so we match only our child
-    # foreground shell exits at once; a backgrounded subshell sleeps (the "server")
-    code, _ = _run_eval(f"( sleep 120 ; echo {marker} ) & echo started",
+    code, _ = _run_eval(f"set -m; ( sleep 120 ; echo {marker} ) & echo started",
                         cwd=tmp_path, env_dir=env_dir, log_path=log)
     assert code == 0
     time.sleep(0.6)

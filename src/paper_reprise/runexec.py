@@ -74,19 +74,39 @@ def _activated_env(env_dir: Path) -> dict:
     return env
 
 
-def _reap_process_group(pid: int) -> None:
-    """SIGKILL the whole process group led by `pid`.
+def _reap_session(sid: int) -> None:
+    """SIGKILL every process in session `sid`.
 
-    A child started with start_new_session=True is its own session+group leader, so
-    its pgid == pid. Killing the group reaps any background descendants the command
-    left running — e.g. a vLLM server and its EngineCore workers, which repo eval
-    scripts routinely orphan on a non-zero exit (they reparent to init but keep the
-    original group, so killpg still reaches them). Only this command's own session is
-    touched, never unrelated jobs. No-op if the group is already gone."""
+    A child started with start_new_session=True is the session leader, so its
+    sid == its pid. We reap by SESSION, not process group: a background server the
+    eval script leaves running (vLLM is the canonical case) puts its workers — the
+    EngineCore GPU processes — into a SEPARATE process group within the session, so
+    a plain killpg on the leader's group misses them. Scanning by session id catches
+    every descendant regardless of group, while staying scoped to this command's own
+    session (unrelated jobs live in other sessions and are never signalled; this
+    process is in the parent session, so it is never hit).
+
+    Linux-specific (reads /proc); a no-op where /proc is unavailable."""
     try:
-        os.killpg(pid, signal.SIGKILL)
-    except (ProcessLookupError, PermissionError):
-        pass
+        entries = os.listdir("/proc")
+    except OSError:
+        return
+    me = os.getpid()
+    for entry in entries:
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/stat") as f:
+                data = f.read()
+            # fields after the (comm): state ppid pgrp session ... — session is idx 3
+            session = int(data[data.rindex(")") + 1:].split()[3])
+        except (OSError, ValueError, IndexError):
+            continue
+        if session == sid and int(entry) != me:
+            try:
+                os.kill(int(entry), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
 
 
 def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[int, str]:
@@ -117,7 +137,7 @@ def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[i
             out = log_path.read_text(errors="replace") if log_path.exists() else ""
             return 124, f"eval timed out after {_EVAL_TIMEOUT_S}s\n{out[-2000:]}"
         finally:
-            _reap_process_group(proc.pid)
+            _reap_session(proc.pid)     # proc is the new session leader (sid == pid)
             try:
                 proc.wait(timeout=10)   # reap the (now-killed) leader itself
             except (subprocess.TimeoutExpired, ChildProcessError, OSError):
