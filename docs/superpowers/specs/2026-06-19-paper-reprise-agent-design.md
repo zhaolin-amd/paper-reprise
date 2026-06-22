@@ -63,7 +63,7 @@ ingest → specextract → plan → setup → run → grade → report
 | **plan** | deterministic | estimate each claim's GPU/VRAM/runtime → feasibility/anomaly check | `plan.json` |
 | **setup** | agentic debug loop | build conda/uv env, fix deps until the repo's own eval command passes a smoke test | `env/`, `setup_log/`, `env_snapshot.json`, `setup_patches/` |
 | **run** | deterministic | quantize per artifact, invoke eval script per claim, persist raw output | `runs/<claim_id>/` |
-| **grade** | pure code | parse output, value+faithfulness double check, verdict MATCH/PARTIAL/FAIL/BLOCKED | `grades.json` |
+| **grade** | pure code | parse output, value+faithfulness double check, verdict MATCH/PARTIAL/FAIL/BLOCKED | verdicts rendered into the reports (not persisted separately) |
 | **report** | deterministic | render bilingual reports | `report.zh.md`, `report.en.md` |
 
 ### 2.1 Gates
@@ -298,9 +298,9 @@ paper's method from its description instead of running a repo's scripts.
 - **Honesty**: from-scratch claims use `runner: custom` (flagged unofficial); the system
   trusts the agent's implementation (no cross-check against an official impl), the same
   faithfulness limitation §5.1 already documents.
-- **Deferred** (as for the official path): the real agentic implementation and GPU
-  execution run behind injectable seams; the skeleton + dispatch + guardrails are built
-  and offline-tested.
+- **Seams** (as on the official path): the live headless-Claude scaffold call and GPU
+  execution run behind injectable seams so the whole path is offline-testable; the
+  implementation, dispatch and guardrails themselves are built and shipped.
 
 ## 7. Run Directory Layout
 
@@ -310,14 +310,14 @@ runs/<paper_name>-<arxiv_id>-<timestamp>/
   paper/                 # LaTeX source
   repo/                  # cloned official repo
   spec.yaml
+  spec.public.yaml       # from-scratch path only: redacted spec the implementer reads
   plan.json
   env/                   # conda/uv env (or reference)
   env_snapshot.json
   setup_log/
   setup_patches/
   runs/<claim_id>/       # per-claim raw output, command, seed
-  grades.json
-  report.zh.md
+  report.zh.md           # verdicts are rendered here, not a separate grades.json
   report.en.md
 ```
 

@@ -1,8 +1,9 @@
-"""Setup stage: the (future) agentic env-debug loop.
+"""Setup stage: the agentic env-debug loop.
 
-Plan 1 provides a stub returning a placeholder env snapshot. Plan 2 will replace
-the body with a bounded headless claude loop that builds a conda/uv env and runs
-the repo's smoke test until it passes once. The signature stays stable.
+`run_setup` delegates to an injected setup executor — the bounded headless-Claude
+loop that builds a conda/uv env and fixes deps until the smoke test passes once
+(official path: setuploop; no-repo path: fromscratch). With no executor it falls
+back to a stub env snapshot, used only for offline/contract tests.
 """
 from __future__ import annotations
 

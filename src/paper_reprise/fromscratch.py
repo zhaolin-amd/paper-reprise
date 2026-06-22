@@ -25,6 +25,7 @@ from paper_reprise.models import Artifact, Claim, Spec
 from paper_reprise.modelpaths import resolved_command
 from paper_reprise.rundir import RunDir
 from paper_reprise.runexec import (
+    EvalFailed,
     _detect_gpu,
     _rundir_paths,
     _run_eval,
@@ -51,10 +52,14 @@ _ENTRYPOINT = "impl/run_eval.sh"
 _PUBLIC_SPEC = "spec.public.yaml"
 
 # A smoke run that exits 0 must also PRINT a parseable metric line; a silent exit 0
-# (e.g. `--smoke) exit 0`) proves nothing computed and must not pass setup. Matches
-# the `name: <number>` format the prompt asks for; the metric name is a plain word
-# so traceback lines like `foo.py:123` don't count as a metric.
-_METRIC_LINE = re.compile(r"[A-Za-z][A-Za-z0-9_ ]*:\s*[-+]?\d+(?:\.\d+)?")
+# (e.g. `--smoke) exit 0`) proves nothing computed and must not pass setup. Requires
+# a STANDALONE `metric: number` line (single-word name, value is the whole line) —
+# the format the prompt asks for. Anchored so diagnostic prose like `exit code: 0`,
+# `batch size: 8` or a `foo.py:123` traceback line does NOT count as a metric.
+_METRIC_LINE = re.compile(
+    r"^[ \t]*[A-Za-z][A-Za-z0-9_]*[ \t]*:[ \t]*[-+]?\d+(?:\.\d+)?[ \t]*$",
+    re.MULTILINE,
+)
 
 
 def _smoke_reported_metric(output: str) -> bool:
@@ -237,6 +242,15 @@ def _fromscratch_setup_body(
     run_fromscratch_setup so any exception becomes ok=False rather than a crash."""
     env_dir = rd.root / "env"
     smoke_cmd = fromscratch_smoke_command()
+    # Resolve the model the same way the per-claim eval does (export PAPER_REPRISE_MODEL
+    # / {model} substitution), so the smoke proves the SAME conditions — else an impl
+    # that locates the model via $PAPER_REPRISE_MODEL would fail smoke but pass eval.
+    # Mirrors setuploop._run_loop_body's smoke resolution on the official path.
+    if spec.claims:
+        artifacts = {a.id: a for a in spec.artifacts}
+        art = artifacts.get(spec.claims[0].artifact)
+        if art is not None:
+            smoke_cmd = resolved_command(smoke_cmd, art.base_model)
     entrypoint = rd.root / _ENTRYPOINT
     start = now()
     seen_patches: set[str] = set()
@@ -345,9 +359,10 @@ def make_fromscratch_run_executor(
         (claim_dir / "actual_config.json").write_text(json.dumps(actual_config, indent=2))
 
         if code != 0:
-            raise RuntimeError(f"from-scratch eval exited {code}; see {log_path}")
+            raise EvalFailed(command, f"from-scratch eval exited {code}; see {log_path}")
 
         return {
+            "command": command,
             "stdout_path": str(log_path),
             "actual_config": actual_config,
             "gpu": gpu,

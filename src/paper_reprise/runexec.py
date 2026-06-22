@@ -131,6 +131,16 @@ def _rundir_paths(claim_dir: Path) -> tuple[Path, Path, Path]:
     return root, root / "env", root / "repo"
 
 
+class EvalFailed(RuntimeError):
+    """Raised when the eval subprocess exits non-zero. Carries the command that
+    ACTUALLY ran so run_claims can record it on the BLOCKED result (the report's
+    replay info must show what executed, not the unresolved spec command)."""
+
+    def __init__(self, command: str, message: str):
+        super().__init__(message)
+        self.command = command
+
+
 def make_run_executor(
     *,
     run_eval: Callable[[str, Path, Path, Path], tuple[int, str]] | None = None,
@@ -160,9 +170,10 @@ def make_run_executor(
         (claim_dir / "actual_config.json").write_text(json.dumps(actual_config, indent=2))
 
         if code != 0:
-            raise RuntimeError(f"eval exited {code}; see {log_path}")
+            raise EvalFailed(command, f"eval exited {code}; see {log_path}")
 
         return {
+            "command": command,
             "stdout_path": str(log_path),
             "actual_config": actual_config,
             "gpu": gpu,
