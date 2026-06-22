@@ -21,6 +21,7 @@ from typing import Callable
 from paper_reprise.headless import run_headless
 from paper_reprise.models import Spec
 from paper_reprise.modelpaths import hf_env_overlay, resolved_command
+from paper_reprise.runexec import _reap_session
 from paper_reprise.rundir import RunDir
 from paper_reprise.setupstage import SetupResult
 
@@ -147,6 +148,10 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
     shell exits, causing subprocess.run to block forever waiting for pipe EOF.
     Writing to a temp file avoids this: the shell's stdout/stderr go to the file;
     disowned children may keep writing there but the shell exits independently.
+
+    Runs in a NEW SESSION and reaps the whole process group on return/timeout, so a
+    background server the smoke command leaves behind (e.g. vLLM + EngineCore) is
+    not leaked — same lifecycle guarantee as the eval path (runexec._run_eval).
     """
     import tempfile
     env = dict(os.environ)
@@ -156,18 +161,26 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
     env.update(hf_env_overlay())
     with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as out_f:
         out_path = Path(out_f.name)
+    proc = None
     try:
         with open(out_path, "w") as out_f:
-            proc = subprocess.run(command, shell=True, executable="/bin/bash",
-                                  cwd=str(cwd), env=env,
-                                  stdout=out_f, stderr=subprocess.STDOUT,
-                                  timeout=_SMOKE_TIMEOUT_S)
+            proc = subprocess.Popen(command, shell=True, executable="/bin/bash",
+                                    cwd=str(cwd), env=env,
+                                    stdout=out_f, stderr=subprocess.STDOUT,
+                                    start_new_session=True)
+            code = proc.wait(timeout=_SMOKE_TIMEOUT_S)
         output = out_path.read_text(errors="replace")
-        return proc.returncode, output
+        return code, output
     except subprocess.TimeoutExpired:
         output = out_path.read_text(errors="replace") if out_path.exists() else ""
         return 124, f"smoke command timed out after {_SMOKE_TIMEOUT_S}s\n{output[-2000:]}"
     finally:
+        if proc is not None:
+            _reap_session(proc.pid)     # proc is the new session leader (sid == pid)
+            try:
+                proc.wait(timeout=10)
+            except (subprocess.TimeoutExpired, ChildProcessError, OSError):
+                pass
         try:
             out_path.unlink()
         except OSError:
