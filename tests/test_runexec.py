@@ -171,6 +171,26 @@ def test_nonzero_eval_becomes_blocked_via_run_claims(tmp_path):
     assert (rd.claim_dir("c1") / "stdout.log").read_text().startswith("Traceback")
     # actual_config.json was written before the raise (for the report re-render)
     assert (rd.claim_dir("c1") / "actual_config.json").exists()
+    # blocked result records the command that ACTUALLY ran (resolved), carried by
+    # EvalFailed — not the unresolved spec command (report replays this verbatim)
+    assert results[0].command.startswith("export PAPER_REPRISE_MODEL=")
+    assert results[0].command.endswith("python eval.py")
+
+
+def test_run_claims_records_resolved_command_on_success(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+
+    def ok_eval(command, cwd, env_dir, log_path):
+        Path(log_path).write_text("perplexity: 5.80")
+        return 0, ""
+
+    executor = make_run_executor(run_eval=ok_eval, detect_gpu=lambda: "A100",
+                                 now=iter([0.0, 60.0]).__next__)
+    results, _ = run_claims(rd, _spec_one("python eval.py"), executor=executor)
+    # the model-resolved command, not the bare protocol command
+    assert results[0].command.startswith("export PAPER_REPRISE_MODEL=")
+    assert results[0].command.endswith("python eval.py")
+    assert results[0].command != "python eval.py"
 
 
 def test_successful_eval_is_ran_via_run_claims(tmp_path):

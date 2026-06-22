@@ -234,6 +234,11 @@ def test_run_executor_nonzero_exit_becomes_blocked_via_run_claims(tmp_path):
     assert "exited 1" in results[0].block_reason
     assert (rd.claim_dir("c1") / "stdout.log").read_text().startswith("Traceback")
     assert (rd.claim_dir("c1") / "actual_config.json").exists()
+    # the recorded command is the resolved entrypoint that actually ran, NOT the
+    # unresolved spec command (which the from-scratch path never executes)
+    assert results[0].command.startswith("export PAPER_REPRISE_MODEL=")
+    assert results[0].command.endswith("bash impl/run_eval.sh c1")
+    assert "eval_ppl.py" not in results[0].command
 
 
 def test_make_fromscratch_setup_executor_runs_with_injected_io(tmp_path, monkeypatch):
@@ -297,6 +302,36 @@ def test_setup_writes_redacted_public_spec_without_expected(tmp_path):
     # method + eval protocol (what must be implemented) are preserved
     assert data["artifacts"][0]["method"] == "AWQ"
     assert claim["eval_protocol"]["metric"] == "perplexity"
+
+
+def test_setup_resolves_model_into_smoke_command(tmp_path):
+    # The from-scratch smoke must run under the SAME model resolution as the eval
+    # (PAPER_REPRISE_MODEL exported), mirroring the official path — else an impl that
+    # finds the model via $PAPER_REPRISE_MODEL fails smoke but would pass eval.
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    seen = {}
+
+    def capture_smoke(command, cwd, env_dir):
+        seen["command"] = command
+        return (0, "perplexity: 5.80")
+
+    f = _setup_fakes()
+    f.update(run_smoke=capture_smoke)
+    run_fromscratch_setup(rd, _spec(), max_retries=2, timeout_s=100.0, **f)
+    assert seen["command"].startswith("export PAPER_REPRISE_MODEL=")
+    assert seen["command"].endswith("bash impl/run_eval.sh --smoke")
+
+
+def test_smoke_metric_gate_accepts_metric_rejects_prose():
+    from paper_reprise.fromscratch import _smoke_reported_metric
+    # a standalone metric line passes, even amid log noise
+    assert _smoke_reported_metric("perplexity: 5.80")
+    assert _smoke_reported_metric("loading model...\naccuracy: 0.87\ndone")
+    # diagnostic prose with `word: number` must NOT count as a metric
+    assert not _smoke_reported_metric("exit code: 0")
+    assert not _smoke_reported_metric("batch size: 8")
+    assert not _smoke_reported_metric("see foo.py:123 for details")
+    assert not _smoke_reported_metric("all good, no errors")
 
 
 def test_setup_rejects_smoke_that_exits_zero_without_metric(tmp_path):
