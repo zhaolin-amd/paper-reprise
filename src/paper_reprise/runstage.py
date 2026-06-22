@@ -1,11 +1,12 @@
 """Run stage: deterministic execution of quant + eval per claim.
 
-The actual quantization/eval is delegated to an `executor` callable (one impl per
-provider: official-repo now, from-scratch later). Plan 1 wires the contract and
-the on-disk write / blocked-handling; Plan 2 supplies the real GPU executor.
+The actual quantization/eval is delegated to an `executor` callable, one impl per
+provider (official-repo: runexec; no-repo: fromscratch). This module wires the
+contract and the on-disk write / blocked-handling; the executor supplies the real
+GPU execution behind an injectable seam.
 
 executor(claim, artifact, claim_dir) -> dict with keys:
-  stdout_path, actual_config, gpu, seed, minutes
+  command, stdout_path, actual_config, gpu, seed, minutes
 """
 from __future__ import annotations
 
