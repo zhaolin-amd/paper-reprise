@@ -21,7 +21,7 @@ from typing import Callable
 from paper_reprise.headless import run_headless
 from paper_reprise.models import Spec
 from paper_reprise.modelpaths import hf_env_overlay, resolved_command
-from paper_reprise.runexec import _reap_process_group
+from paper_reprise.runexec import _reap_session
 from paper_reprise.rundir import RunDir
 from paper_reprise.setupstage import SetupResult
 
@@ -176,7 +176,7 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
         return 124, f"smoke command timed out after {_SMOKE_TIMEOUT_S}s\n{output[-2000:]}"
     finally:
         if proc is not None:
-            _reap_process_group(proc.pid)
+            _reap_session(proc.pid)     # proc is the new session leader (sid == pid)
             try:
                 proc.wait(timeout=10)
             except (subprocess.TimeoutExpired, ChildProcessError, OSError):
