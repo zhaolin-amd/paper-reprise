@@ -94,8 +94,9 @@ paper-reprise report <run_dir>          # re-render the report from an existing 
 A short alias `reprise` is also installed (e.g. `reprise run 2401.00001`).
 
 **By default `run` presents the extracted claims interactively** — after specextract it
-prints a numbered table (claim id / model / config / metric / expected / hardware) and asks
-which to reproduce (`"1 3"`, `"all"`, or `"q"` to abort). The spec is LLM-extracted from the
+prints each numbered claim as a block showing the full **model × config** (model, the whole
+quant config, eval protocol, target ± tolerance, hardware) and asks which to reproduce
+(`"1 3"`, `"all"`, or `"q"` to abort). The spec is LLM-extracted from the
 paper and may mis-pick or mis-read (e.g. required hardware), so this is your review gate; the
 chosen subset is kept (orphaned artifacts pruned) and the pipeline continues automatically.
 Pass `--yes` to skip selection and reproduce **all** claims end to end (non-interactive / CI).
