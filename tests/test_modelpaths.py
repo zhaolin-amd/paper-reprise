@@ -124,3 +124,11 @@ def test_activated_env_injects_hub_cache(tmp_path, monkeypatch):
     assert env["HF_HUB_CACHE"] == str(dl)            # download contract wired in
     assert env["VIRTUAL_ENV"] == str(env_dir)        # venv still activated
     assert str(env_dir / "bin") in env["PATH"]
+
+
+def test_with_tasks_prepends_export_or_noop():
+    from paper_reprise.modelpaths import with_tasks
+    assert with_tasks("bash run.sh", "arc_easy,piqa") == \
+        "export PAPER_REPRISE_TASKS=arc_easy,piqa; bash run.sh"
+    assert with_tasks("bash run.sh", None) == "bash run.sh"   # no override
+    assert with_tasks("bash run.sh", "") == "bash run.sh"     # empty → no-op

@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from paper_reprise.models import Artifact, Claim
-from paper_reprise.modelpaths import hf_env_overlay, resolved_command
+from paper_reprise.modelpaths import hf_env_overlay, resolved_command, with_tasks
 
 _SEED_PATTERNS = (
     r"--seed[=\s]+(\d+)",
@@ -276,6 +276,7 @@ class EvalFailed(RuntimeError):
 
 def make_run_executor(
     *,
+    tasks: str | None = None,
     run_eval: Callable[[str, Path, Path, Path], tuple[int, str]] | None = None,
     detect_gpu: Callable[[], str] | None = None,
     now: Callable[[], float] | None = None,
@@ -285,14 +286,18 @@ def make_run_executor(
     The executor runs the claim's eval command in the setup-built env, persists
     raw stdout + the resolved actual_config, and returns run metadata. A non-zero
     eval raises (run_claims turns that into a BLOCKED result — the eval did not
-    successfully run, which is not the same as 'failed to reproduce')."""
+    successfully run, which is not the same as 'failed to reproduce').
+
+    `tasks` (from `run/resume --tasks a,b,c`) exports PAPER_REPRISE_TASKS so eval
+    commands that read `${PAPER_REPRISE_TASKS:-…}` use the overridden lm-eval list."""
     run_eval = run_eval or _run_eval
     detect_gpu = detect_gpu or _detect_gpu
     now = now or time.monotonic
 
     def executor(claim: Claim, artifact: Artifact, claim_dir: Path) -> dict:
         _root, env_dir, repo_dir = _rundir_paths(claim_dir)
-        command = resolved_command(build_eval_command(claim), artifact.base_model)
+        command = with_tasks(
+            resolved_command(build_eval_command(claim), artifact.base_model), tasks)
         log_path = claim_dir / "stdout.log"
         gpu = detect_gpu()
         start = now()

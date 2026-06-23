@@ -85,6 +85,18 @@ def resolved_command(command: str, model_id: str) -> str:
     return f"export PAPER_REPRISE_MODEL={quoted}; {command}"
 
 
+def with_tasks(command: str, tasks: str | None) -> str:
+    """Prepend `export PAPER_REPRISE_TASKS=<tasks>` so an eval command can pick up a
+    user-overridden lm-eval task list (e.g. `run --tasks arc_easy,piqa`). Eval
+    commands reference it as `${PAPER_REPRISE_TASKS:-<spec default tasks>}`, so the
+    override wins when set and the spec's own tasks apply otherwise. Same
+    export-not-prefix rationale as resolved_command (compound commands must see it).
+    No-op when tasks is empty/None."""
+    if not tasks:
+        return command
+    return f"export PAPER_REPRISE_TASKS={shlex.quote(tasks)}; {command}"
+
+
 def hf_env_overlay() -> dict:
     """Env vars to merge into an eval/smoke subprocess so HF model downloads land in
     the scratch dir (created here), not $HOME (small quota) or the read-only shared
