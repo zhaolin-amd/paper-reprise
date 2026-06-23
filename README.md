@@ -129,9 +129,11 @@ Pass `--yes` to skip selection and reproduce **all** claims end to end (non-inte
 For finer control you can still hand-edit `spec.yaml` in the run dir and `resume <run_dir>`
 — `resume` runs whatever claims the file contains, without re-prompting.
 
-`run`/`resume` also accept `--tasks a,b,c` to override the eval task list: it exports
-`PAPER_REPRISE_TASKS`, which eval commands read as `${PAPER_REPRISE_TASKS:-<spec default>}`,
-so your list wins when given and the paper's tasks apply otherwise.
+`run`/`resume` also accept `--tasks a,b,c` to override the eval task list and `--gpus N` to
+override the GPU count: they export `PAPER_REPRISE_TASKS` / `PAPER_REPRISE_GPUS`, which eval
+commands read as `${PAPER_REPRISE_TASKS:-<spec default>}` / `${PAPER_REPRISE_GPUS:-<default>}`,
+so your value wins when given and the paper's default applies otherwise. (`--gpus` sets how
+many GPUs; *which* ones is still `CUDA_VISIBLE_DEVICES`/`ROCR_VISIBLE_DEVICES`.)
 
 **Reproducing efficiency/accuracy at scale needs a GPU** — quantization papers run on real
 models. Without a GPU the pipeline still runs through setup and reports the run stage as

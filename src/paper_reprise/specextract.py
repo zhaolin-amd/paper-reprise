@@ -31,8 +31,11 @@ paper explicitly cites a standard impl; "custom" only as last resort.
 - command: when it runs an lm-eval-style task suite, write the task list as \
 `${{PAPER_REPRISE_TASKS:-<the paper's tasks>}}` (e.g. \
 `EVAL_TASKS=${{PAPER_REPRISE_TASKS:-arc_easy,hellaswag}}`) so a `--tasks` override can \
-replace it while the paper's tasks stay the default. Reference the model as \
-`$PAPER_REPRISE_MODEL` (it is exported into the command).
+replace it while the paper's tasks stay the default. Likewise, when the command takes a \
+GPU/process count, write it as `${{PAPER_REPRISE_GPUS:-<default>}}` (e.g. \
+`NPROC=${{PAPER_REPRISE_GPUS:-1}}` or `torchrun --nproc-per-node=${{PAPER_REPRISE_GPUS:-1}}`) \
+so a `--gpus` override applies. Reference the model as `$PAPER_REPRISE_MODEL` (it is \
+exported into the command).
 - calib_status: use exactly `known` (lowercase) when the calibration config is determinable, or `UNKNOWN` (uppercase) when it cannot be determined.
 - quant_config: use the key `wbits` (not `bits`) for the weight bit-width.
 - Default tolerance: perplexity 0.05, accuracy 0.5. If the paper states one, use it.

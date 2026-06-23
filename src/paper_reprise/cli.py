@@ -38,12 +38,13 @@ def _setup_executor():
         fromscratch=make_fromscratch_setup_executor())
 
 
-def _run_executor(tasks: str | None = None):
+def _run_executor(tasks: str | None = None, gpus: int | None = None):
     """The run executor the pipeline injects: the same repo-presence dispatch.
-    `tasks` (from --tasks) overrides the lm-eval task list via PAPER_REPRISE_TASKS."""
+    `tasks`/`gpus` (from --tasks/--gpus) override the lm-eval task list and GPU
+    count via PAPER_REPRISE_TASKS / PAPER_REPRISE_GPUS."""
     return make_run_dispatcher(
-        official=make_run_executor(tasks=tasks),
-        fromscratch=make_fromscratch_run_executor(tasks=tasks))
+        official=make_run_executor(tasks=tasks, gpus=gpus),
+        fromscratch=make_fromscratch_run_executor(tasks=tasks, gpus=gpus))
 
 
 def _claim_block(i: int, claim, artifacts: dict) -> str:
@@ -130,7 +131,9 @@ def cli() -> None:
               help="skip interactive claim selection and reproduce all claims end to end")
 @click.option("--tasks", default=None,
               help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
-def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None) -> None:
+@click.option("--gpus", type=int, default=None,
+              help="override the GPU count via PAPER_REPRISE_GPUS (how many, not which)")
+def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int | None) -> None:
     """Run the reproduction pipeline for a paper (arxiv id, url, or title).
 
     By default presents the extracted claims interactively so you can choose which
@@ -173,7 +176,7 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None) -> None:
         available_hardware=detect_available_hardware(),
         approve_spec=approve_spec, approve_plan=approve_plan,
         fetch_sources=make_fetch_sources(), setup_executor=_setup_executor(),
-        run_executor=_run_executor(tasks),
+        run_executor=_run_executor(tasks, gpus),
     )
     if result.aborted_at == "spec-approval":
         click.echo(f"\nAborted at claim selection. Run dir: {result.root}")
@@ -189,7 +192,9 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None) -> None:
 @click.option("--yes", is_flag=True, help="auto-approve gates (non-interactive)")
 @click.option("--tasks", default=None,
               help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
-def resume(run_dir: str, yes: bool, tasks: str | None) -> None:
+@click.option("--gpus", type=int, default=None,
+              help="override the GPU count via PAPER_REPRISE_GPUS (how many, not which)")
+def resume(run_dir: str, yes: bool, tasks: str | None, gpus: int | None) -> None:
     """Continue an existing run from its (possibly edited) spec.yaml."""
     from paper_reprise.pipeline import resume_pipeline
 
@@ -202,7 +207,7 @@ def resume(run_dir: str, yes: bool, tasks: str | None) -> None:
     result = resume_pipeline(
         Path(run_dir), available_hardware=detect_available_hardware(),
         approve_plan=approve_plan,
-        setup_executor=_setup_executor(), run_executor=_run_executor(tasks),
+        setup_executor=_setup_executor(), run_executor=_run_executor(tasks, gpus),
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
