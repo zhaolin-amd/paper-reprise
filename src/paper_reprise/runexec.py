@@ -199,17 +199,42 @@ def _detect_amd() -> str:
                 return f"AMD Instinct {m.group(0).upper()}"
     smi = _resolve_tool("rocm-smi", _ROCM_SMI_CANDIDATES)
     if smi:
-        m = _AMD_MODEL_RE.search(_run_tool([smi, "--showproductname"]))
-        if m:
-            return f"AMD Instinct {m.group(0).upper()}"
+        # rocm-smi is the common case (amd-smi isn't always installed). Try a couple
+        # of product-name forms; scan each for the MI… token.
+        for args in (["--showproductname"], ["--showproductname", "--csv"]):
+            m = _AMD_MODEL_RE.search(_run_tool([smi, *args]))
+            if m:
+                return f"AMD Instinct {m.group(0).upper()}"
+    return ""
+
+
+def _detect_via_nvitop() -> str:
+    """Unified fallback via the nvitop library, which sees BOTH NVIDIA (NVML) and AMD
+    (amdsmi) GPUs. Optional: a guarded import, so it's a no-op unless nvitop is
+    installed in the runtime env. Used only when the CLIs above didn't resolve."""
+    try:
+        from nvitop import Device
+        devices = Device.all()
+    except Exception:
+        return ""
+    for dev in devices:
+        try:
+            name = (dev.name() or "").strip()
+        except Exception:
+            name = ""
+        if name:
+            # normalize an AMD market name ('Instinct MI300X') to our label form;
+            # leave NVIDIA names ('NVIDIA H200') as-is.
+            m = _AMD_MODEL_RE.search(name)
+            return f"AMD Instinct {m.group(0).upper()}" if m and "MI" in name.upper() else name
     return ""
 
 
 def _detect_gpu() -> str:
     """Best-effort GPU label across vendors: NVIDIA (H100/H200/A100/…) via nvidia-smi,
-    AMD Instinct (MI300/MI350/MI355/…) via amd-smi/rocm-smi, else a *_VISIBLE_DEVICES
-    hint, else 'unknown'. Never raises."""
-    for detect in (_detect_nvidia, _detect_amd):
+    AMD Instinct (MI300/MI350/MI355/…) via amd-smi/rocm-smi, then nvitop (NVML+amdsmi)
+    if installed, else a *_VISIBLE_DEVICES hint, else 'unknown'. Never raises."""
+    for detect in (_detect_nvidia, _detect_amd, _detect_via_nvitop):
         try:
             name = detect()
         except Exception:
