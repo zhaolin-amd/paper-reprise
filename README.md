@@ -83,6 +83,28 @@ Notes:
   and rendered straight into the two reports; `paper-reprise report <run_dir>` re-renders
   them from `spec.yaml` + the per-claim `stdout.log` / `actual_config.json`.
 
+## Install
+
+Prerequisites: **Python ≥ 3.11**, **git**, **uv** (or conda), and the **`claude` CLI** on
+PATH — specextract and the setup loop run headless Claude (`claude -p`). Reproducing real
+accuracy/efficiency numbers also needs a **GPU + CUDA** (without one the run still proceeds
+through setup and reports the run stage as BLOCKED rather than fabricating numbers).
+
+From a clone (local / dev):
+
+```
+git clone https://github.com/zhaolin-amd/paper-reprise && cd paper-reprise
+uv sync                                  # builds ./.venv from uv.lock
+uv run paper-reprise run 2401.00001      # or: uv run reprise run 2401.00001
+```
+
+Or put the `paper-reprise` / `reprise` commands on your PATH:
+
+```
+uv tool install .                        # or: pipx install .   |   pip install -e .
+paper-reprise run 2401.00001
+```
+
 ## Usage
 
 ```
