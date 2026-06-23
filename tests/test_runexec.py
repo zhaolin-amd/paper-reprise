@@ -102,14 +102,50 @@ def test_run_eval_reaps_orphaned_background_process(tmp_path):
     assert found.returncode != 0, f"orphan leaked: {found.stdout!r}"
 
 
-def test_detect_gpu_returns_string_or_unknown(monkeypatch, tmp_path):
-    # with no nvidia-smi anywhere and no CUDA_VISIBLE_DEVICES, falls back to "unknown"
+def test_detect_gpu_returns_unknown_when_no_tools(monkeypatch):
+    # no nvidia-smi / amd-smi / rocm-smi anywhere and no *_VISIBLE_DEVICES → "unknown"
     import paper_reprise.runexec as runexec
-    monkeypatch.setattr(runexec.shutil, "which", lambda name: None)
-    # patch the absolute-path fallback candidates to a path that doesn't exist
-    monkeypatch.setattr(runexec, "_NVIDIA_SMI_CANDIDATES", ("/nonexistent/nvidia-smi",))
-    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    monkeypatch.setattr(runexec, "_resolve_tool", lambda name, cands: None)
+    for var in ("CUDA_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES"):
+        monkeypatch.delenv(var, raising=False)
     assert _detect_gpu() == "unknown"
+
+
+def test_detect_gpu_nvidia(monkeypatch):
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_resolve_tool",
+                        lambda name, cands: "/usr/bin/nvidia-smi" if name == "nvidia-smi" else None)
+    monkeypatch.setattr(runexec, "_run_tool", lambda cmd: "NVIDIA H200\nNVIDIA H200\n")
+    assert _detect_gpu() == "NVIDIA H200"
+
+
+def test_detect_gpu_amd_instinct_via_amd_smi(monkeypatch):
+    # AMD box: no nvidia-smi, amd-smi reports an Instinct MI300X
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_resolve_tool",
+                        lambda name, cands: "/opt/rocm/bin/amd-smi" if name == "amd-smi" else None)
+    monkeypatch.setattr(runexec, "_run_tool",
+                        lambda cmd: "ASIC:\n    market_name: Instinct MI300X\n")
+    assert _detect_gpu() == "AMD Instinct MI300X"
+
+
+def test_detect_gpu_amd_via_rocm_smi(monkeypatch):
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_resolve_tool",
+                        lambda name, cands: "/opt/rocm/bin/rocm-smi" if name == "rocm-smi" else None)
+    monkeypatch.setattr(runexec, "_run_tool", lambda cmd: "Card series: AMD INSTINCT MI355X\n")
+    assert _detect_gpu() == "AMD Instinct MI355X"
+
+
+def test_detect_available_hardware(monkeypatch):
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_detect_gpu", lambda: "AMD Instinct MI350X")
+    assert runexec.detect_available_hardware() == ["AMD Instinct MI350X"]
+    monkeypatch.setattr(runexec, "_detect_gpu", lambda: "unknown")
+    assert runexec.detect_available_hardware() == []
+    # a bare visible-devices hint has no family → treated as unknown
+    monkeypatch.setattr(runexec, "_detect_gpu", lambda: "HIP_VISIBLE_DEVICES=0,1")
+    assert runexec.detect_available_hardware() == []
 
 
 def test_executor_runs_persists_and_returns_metadata(tmp_path):

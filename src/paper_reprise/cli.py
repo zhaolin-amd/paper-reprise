@@ -26,7 +26,7 @@ from paper_reprise.fromscratch import (
 )
 from paper_reprise.ingest import normalize_input
 from paper_reprise.provider import make_run_dispatcher, make_setup_dispatcher
-from paper_reprise.runexec import make_run_executor
+from paper_reprise.runexec import detect_available_hardware, make_run_executor
 from paper_reprise.setupstage import make_setup_executor
 
 
@@ -159,7 +159,8 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
     result = run_pipeline(
         input_arg=input_arg, base_dir=Path(base_dir), timestamp=_timestamp(),
         paper_name=paper_name,
-        available_hardware=[], approve_spec=approve_spec, approve_plan=approve_plan,
+        available_hardware=detect_available_hardware(),
+        approve_spec=approve_spec, approve_plan=approve_plan,
         fetch_sources=make_fetch_sources(), setup_executor=_setup_executor(),
         run_executor=_run_executor(),
     )
@@ -186,7 +187,8 @@ def resume(run_dir: str, yes: bool) -> None:
         return click.confirm("Proceed anyway?", default=False)
 
     result = resume_pipeline(
-        Path(run_dir), available_hardware=[], approve_plan=approve_plan,
+        Path(run_dir), available_hardware=detect_available_hardware(),
+        approve_plan=approve_plan,
         setup_executor=_setup_executor(), run_executor=_run_executor(),
     )
     if result.aborted_at:

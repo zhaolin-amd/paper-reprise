@@ -37,9 +37,11 @@ taken from the official repo's README/docs (look for a per-model hardware table 
 requirements section) — NOT the larger setup the paper happened to report its runs on. \
 Set it PER CLAIM and per model size: a small model usually needs far less than the \
 paper's headline run (e.g. a repo table may list 1x H100/A100 for an 8B model even \
-when the paper ran everything on 8x H200). When the repo gives a choice or range \
-(e.g. "H100/H200"), pick the smaller / more widely available option. Use null only \
-when neither the repo nor the paper indicates any specific hardware.
+when the paper ran everything on 8x H200). Record whatever accelerator the source \
+names — NVIDIA (e.g. H100, H200, A100) or AMD Instinct (e.g. MI300X, MI325X, MI350X, \
+MI355X) — as written. When the repo gives a choice or range (e.g. "H100/H200"), pick \
+the smaller / more widely available option. Use null only when neither the repo nor \
+the paper indicates any specific hardware.
 
 Write ONLY the YAML file. Report 'Saved: {out}' when done."""
 

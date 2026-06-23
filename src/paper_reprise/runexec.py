@@ -145,32 +145,92 @@ def _run_eval(command: str, cwd: Path, env_dir: Path, log_path: Path) -> tuple[i
 
 
 _NVIDIA_SMI_CANDIDATES = ("/usr/bin/nvidia-smi", "/usr/local/bin/nvidia-smi")
+# AMD ROCm tooling: amd-smi (ROCm 6+) preferred, rocm-smi as the older fallback.
+_AMD_SMI_CANDIDATES = ("/usr/bin/amd-smi", "/opt/rocm/bin/amd-smi")
+_ROCM_SMI_CANDIDATES = ("/usr/bin/rocm-smi", "/opt/rocm/bin/rocm-smi")
+# AMD Instinct data-center models: MI300/MI300X, MI325X, MI350/MI350X, MI355X, …
+_AMD_MODEL_RE = re.compile(r"\bMI\d{2,3}[A-Z]?\b", re.IGNORECASE)
+# GPU family token inside a free-form hardware string ("1x H200" -> H200,
+# "8x MI300X" -> MI300X). Covers AMD Instinct (MI…) and NVIDIA (H/A/B/V/L…).
+_GPU_FAMILY_RE = re.compile(
+    r"\b(?:MI\d{2,3}[A-Z]?|[HABV]\d{2,3}|L\d{1,2}[A-Z]?|RTX\s?\d+)\b", re.IGNORECASE)
+
+
+def _resolve_tool(name: str, candidates: tuple[str, ...]) -> Optional[str]:
+    """Find an executable on PATH, else at known absolute paths (HPC images often
+    don't have nvidia-smi/amd-smi on PATH)."""
+    found = shutil.which(name)
+    if found:
+        return found
+    for candidate in candidates:
+        if shutil.which(candidate) or Path(candidate).is_file():
+            return candidate
+    return None
+
+
+def _run_tool(cmd: list[str]) -> str:
+    """Run a query tool, return stdout (empty string on any failure)."""
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        return proc.stdout or ""
+    except (subprocess.SubprocessError, OSError):
+        return ""
+
+
+def _detect_nvidia() -> str:
+    smi = _resolve_tool("nvidia-smi", _NVIDIA_SMI_CANDIDATES)
+    if not smi:
+        return ""
+    lines = [ln.strip() for ln in
+             _run_tool([smi, "--query-gpu=name", "--format=csv,noheader"]).splitlines()
+             if ln.strip()]
+    return lines[0] if lines else ""
+
+
+def _detect_amd() -> str:
+    """AMD Instinct model via amd-smi (ROCm 6+) or rocm-smi. The market name carries
+    the model token (e.g. 'Instinct MI300X'); we scan output for the MI… token so we
+    don't depend on a specific tool version's exact JSON/text schema."""
+    smi = _resolve_tool("amd-smi", _AMD_SMI_CANDIDATES)
+    if smi:
+        for args in (["static", "--asic"], ["list"]):
+            m = _AMD_MODEL_RE.search(_run_tool([smi, *args]))
+            if m:
+                return f"AMD Instinct {m.group(0).upper()}"
+    smi = _resolve_tool("rocm-smi", _ROCM_SMI_CANDIDATES)
+    if smi:
+        m = _AMD_MODEL_RE.search(_run_tool([smi, "--showproductname"]))
+        if m:
+            return f"AMD Instinct {m.group(0).upper()}"
+    return ""
 
 
 def _detect_gpu() -> str:
-    """Best-effort GPU label: nvidia-smi name, else CUDA_VISIBLE_DEVICES, else 'unknown'.
-    Checks shutil.which first, then falls back to known absolute paths so it works even
-    when nvidia-smi is not on PATH (common in some HPC environments)."""
-    smi = shutil.which("nvidia-smi")
-    if not smi:
-        for candidate in _NVIDIA_SMI_CANDIDATES:
-            if shutil.which(candidate) or __import__("pathlib").Path(candidate).is_file():
-                smi = candidate
-                break
-    if smi:
+    """Best-effort GPU label across vendors: NVIDIA (H100/H200/A100/…) via nvidia-smi,
+    AMD Instinct (MI300/MI350/MI355/…) via amd-smi/rocm-smi, else a *_VISIBLE_DEVICES
+    hint, else 'unknown'. Never raises."""
+    for detect in (_detect_nvidia, _detect_amd):
         try:
-            proc = subprocess.run(
-                [smi, "--query-gpu=name", "--format=csv,noheader"],
-                capture_output=True, text=True, timeout=30)
-            name = proc.stdout.strip().splitlines()[0].strip() if proc.stdout.strip() else ""
-            if name:
-                return name
-        except (subprocess.SubprocessError, OSError):
-            pass
-    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
-    if visible:
-        return f"CUDA_VISIBLE_DEVICES={visible}"
+            name = detect()
+        except Exception:
+            name = ""
+        if name:
+            return name
+    for var in ("CUDA_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES"):
+        visible = os.environ.get(var)
+        if visible:
+            return f"{var}={visible}"
     return "unknown"
+
+
+def detect_available_hardware() -> list[str]:
+    """The detected accelerator as a one-entry list for plan feasibility, or [] when
+    no GPU model can be named (a bare *_VISIBLE_DEVICES hint has no family, so it is
+    treated as unknown — the plan then flags GPU claims, the prior behaviour)."""
+    name = _detect_gpu()
+    if name == "unknown" or "VISIBLE_DEVICES=" in name:
+        return []
+    return [name]
 
 
 def _rundir_paths(claim_dir: Path) -> tuple[Path, Path, Path]:
