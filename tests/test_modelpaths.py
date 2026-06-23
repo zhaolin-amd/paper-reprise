@@ -132,3 +132,10 @@ def test_with_tasks_prepends_export_or_noop():
         "export PAPER_REPRISE_TASKS=arc_easy,piqa; bash run.sh"
     assert with_tasks("bash run.sh", None) == "bash run.sh"   # no override
     assert with_tasks("bash run.sh", "") == "bash run.sh"     # empty → no-op
+
+
+def test_with_gpus_prepends_export_or_noop():
+    from paper_reprise.modelpaths import with_gpus
+    assert with_gpus("bash run.sh", 4) == "export PAPER_REPRISE_GPUS=4; bash run.sh"
+    assert with_gpus("bash run.sh", None) == "bash run.sh"   # no override
+    assert with_gpus("bash run.sh", 0) == "bash run.sh"      # 0 → no-op

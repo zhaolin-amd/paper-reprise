@@ -97,6 +97,17 @@ def with_tasks(command: str, tasks: str | None) -> str:
     return f"export PAPER_REPRISE_TASKS={shlex.quote(tasks)}; {command}"
 
 
+def with_gpus(command: str, gpus: int | None) -> str:
+    """Prepend `export PAPER_REPRISE_GPUS=<n>` so an eval command can pick up a
+    user-chosen GPU count, read as `${PAPER_REPRISE_GPUS:-<default>}` (e.g.
+    `NPROC=${PAPER_REPRISE_GPUS:-1}` or `torchrun --nproc-per-node=...`). Controls
+    HOW MANY GPUs; which ones is still CUDA_/ROCR_VISIBLE_DEVICES. No-op when gpus
+    is None/0. Same export-not-prefix rationale as with_tasks."""
+    if not gpus:
+        return command
+    return f"export PAPER_REPRISE_GPUS={int(gpus)}; {command}"
+
+
 def hf_env_overlay() -> dict:
     """Env vars to merge into an eval/smoke subprocess so HF model downloads land in
     the scratch dir (created here), not $HOME (small quota) or the read-only shared

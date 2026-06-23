@@ -283,6 +283,23 @@ def test_executor_injects_tasks_override(tmp_path):
     assert out["command"].startswith("export PAPER_REPRISE_TASKS=arc_easy,piqa;")
 
 
+def test_executor_injects_gpus_override(tmp_path):
+    # run/resume --gpus N exports PAPER_REPRISE_GPUS ahead of the eval command
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    claim_dir = rd.claim_dir("c1")
+    seen = {}
+
+    def fake_run_eval(command, cwd, env_dir, log_path):
+        seen["command"] = command
+        Path(log_path).write_text("perplexity: 5.8")
+        return 0, ""
+
+    executor = make_run_executor(gpus=4, run_eval=fake_run_eval,
+                                 detect_gpu=lambda: "X", now=iter([0.0, 1.0]).__next__)
+    executor(_claim("python eval.py"), _artifact(), claim_dir)
+    assert "export PAPER_REPRISE_GPUS=4;" in seen["command"]
+
+
 def test_nonzero_eval_becomes_blocked_via_run_claims(tmp_path):
     rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
 

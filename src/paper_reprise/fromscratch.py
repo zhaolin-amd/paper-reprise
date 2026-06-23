@@ -22,7 +22,7 @@ from typing import Callable
 
 from paper_reprise.headless import run_headless
 from paper_reprise.models import Artifact, Claim, Spec
-from paper_reprise.modelpaths import resolved_command, with_tasks
+from paper_reprise.modelpaths import resolved_command, with_gpus, with_tasks
 from paper_reprise.rundir import RunDir
 from paper_reprise.runexec import (
     EvalFailed,
@@ -333,6 +333,7 @@ def make_fromscratch_setup_executor(*, manager: str = "uv", max_retries: int = 6
 def make_fromscratch_run_executor(
     *,
     tasks: str | None = None,
+    gpus: int | None = None,
     run_eval: Callable[[str, Path, Path, Path], tuple[int, str]] | None = None,
     detect_gpu: Callable[[], str] | None = None,
     now: Callable[[], float] | None = None,
@@ -344,16 +345,16 @@ def make_fromscratch_run_executor(
     run_claims marks the claim BLOCKED (the eval did not run — not 'failed to
     reproduce'). Mirrors runexec.make_run_executor, reusing its seams.
 
-    `tasks` (from `run/resume --tasks`) exports PAPER_REPRISE_TASKS for the impl
-    entrypoint, same as the official path."""
+    `tasks`/`gpus` (from `run/resume --tasks --gpus`) export PAPER_REPRISE_TASKS /
+    PAPER_REPRISE_GPUS for the impl entrypoint, same as the official path."""
     run_eval = run_eval or _run_eval
     detect_gpu = detect_gpu or _detect_gpu
     now = now or time.monotonic
 
     def executor(claim: Claim, artifact: Artifact, claim_dir: Path) -> dict:
         root, env_dir, _repo_dir = _rundir_paths(claim_dir)
-        command = with_tasks(
-            resolved_command(fromscratch_eval_command(claim), artifact.base_model), tasks)
+        command = with_gpus(with_tasks(
+            resolved_command(fromscratch_eval_command(claim), artifact.base_model), tasks), gpus)
         log_path = claim_dir / "stdout.log"
         gpu = detect_gpu()
         start = now()
