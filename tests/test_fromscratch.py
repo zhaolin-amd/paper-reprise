@@ -46,6 +46,10 @@ def test_scaffold_prompt_instructs_impl_entrypoint_and_forbids_fabrication(tmp_p
     assert "redact" in prompt.lower()
     # the single runnable entrypoint contract
     assert "impl/run_eval.sh" in prompt
+    # the impl must honor the --tasks/--gpus overrides (env vars), so they work on
+    # the from-scratch path too
+    assert "${PAPER_REPRISE_TASKS:-" in prompt
+    assert "${PAPER_REPRISE_GPUS:-" in prompt
     # the method to implement is surfaced from the spec
     assert "AWQ" in prompt
     # honesty rule: must NOT fabricate numbers
