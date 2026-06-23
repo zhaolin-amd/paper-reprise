@@ -1,7 +1,18 @@
+import pytest
 from click.testing import CliRunner
 
 import paper_reprise.cli as cli_mod
+import paper_reprise.runexec as runexec_mod
 from paper_reprise.cli import cli
+
+
+@pytest.fixture(autouse=True)
+def _no_real_gpu_probe(monkeypatch):
+    # CLI run/resume auto-detect hardware, and the real run executor labels each
+    # claim with the GPU; keep tests hermetic + fast by not shelling out to
+    # nvidia-smi/amd-smi (which can take seconds, or hit the timeout, under load).
+    monkeypatch.setattr(cli_mod, "detect_available_hardware", lambda: [])
+    monkeypatch.setattr(runexec_mod, "_detect_gpu", lambda: "test-gpu")
 
 
 def test_cli_help():
