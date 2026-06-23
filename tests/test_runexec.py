@@ -137,6 +137,56 @@ def test_detect_gpu_amd_via_rocm_smi(monkeypatch):
     assert _detect_gpu() == "AMD Instinct MI355X"
 
 
+def test_detect_gpu_amd_via_rocm_smi_csv_form(monkeypatch):
+    # --showproductname returns nothing parseable; the --csv form carries the token
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_resolve_tool",
+                        lambda name, cands: "/opt/rocm/bin/rocm-smi" if name == "rocm-smi" else None)
+
+    def fake_run(cmd):
+        return "name\nAMD Instinct MI355X\n" if "--csv" in cmd else "unsupported\n"
+
+    monkeypatch.setattr(runexec, "_run_tool", fake_run)
+    assert _detect_gpu() == "AMD Instinct MI355X"
+
+
+def test_detect_gpu_nvitop_fallback_normalizes_amd(monkeypatch):
+    # no CLI tools resolve → fall through to the optional nvitop backend (NVML+amdsmi)
+    import sys
+    import types
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_resolve_tool", lambda name, cands: None)
+    for var in ("CUDA_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES"):
+        monkeypatch.delenv(var, raising=False)
+
+    class _Dev:
+        def name(self):
+            return "Instinct MI300X"   # amdsmi market name (no 'AMD' prefix)
+
+    fake = types.ModuleType("nvitop")
+    fake.Device = type("Device", (), {"all": staticmethod(lambda: [_Dev()])})
+    monkeypatch.setitem(sys.modules, "nvitop", fake)
+    assert _detect_gpu() == "AMD Instinct MI300X"
+
+
+def test_detect_gpu_nvitop_passes_through_nvidia(monkeypatch):
+    import sys
+    import types
+    import paper_reprise.runexec as runexec
+    monkeypatch.setattr(runexec, "_resolve_tool", lambda name, cands: None)
+    for var in ("CUDA_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES"):
+        monkeypatch.delenv(var, raising=False)
+
+    class _Dev:
+        def name(self):
+            return "NVIDIA H200"
+
+    fake = types.ModuleType("nvitop")
+    fake.Device = type("Device", (), {"all": staticmethod(lambda: [_Dev()])})
+    monkeypatch.setitem(sys.modules, "nvitop", fake)
+    assert _detect_gpu() == "NVIDIA H200"
+
+
 def test_detect_available_hardware(monkeypatch):
     import paper_reprise.runexec as runexec
     monkeypatch.setattr(runexec, "_detect_gpu", lambda: "AMD Instinct MI350X")
