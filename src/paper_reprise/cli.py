@@ -38,11 +38,12 @@ def _setup_executor():
         fromscratch=make_fromscratch_setup_executor())
 
 
-def _run_executor():
-    """The run executor the pipeline injects: the same repo-presence dispatch."""
+def _run_executor(tasks: str | None = None):
+    """The run executor the pipeline injects: the same repo-presence dispatch.
+    `tasks` (from --tasks) overrides the lm-eval task list via PAPER_REPRISE_TASKS."""
     return make_run_dispatcher(
-        official=make_run_executor(),
-        fromscratch=make_fromscratch_run_executor())
+        official=make_run_executor(tasks=tasks),
+        fromscratch=make_fromscratch_run_executor(tasks=tasks))
 
 
 def _claim_block(i: int, claim, artifacts: dict) -> str:
@@ -127,7 +128,9 @@ def cli() -> None:
 @click.option("--base-dir", default="runs", help="where run dirs are created")
 @click.option("--yes", is_flag=True,
               help="skip interactive claim selection and reproduce all claims end to end")
-def run(input_arg: str, base_dir: str, yes: bool) -> None:
+@click.option("--tasks", default=None,
+              help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
+def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None) -> None:
     """Run the reproduction pipeline for a paper (arxiv id, url, or title).
 
     By default presents the extracted claims interactively so you can choose which
@@ -170,7 +173,7 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
         available_hardware=detect_available_hardware(),
         approve_spec=approve_spec, approve_plan=approve_plan,
         fetch_sources=make_fetch_sources(), setup_executor=_setup_executor(),
-        run_executor=_run_executor(),
+        run_executor=_run_executor(tasks),
     )
     if result.aborted_at == "spec-approval":
         click.echo(f"\nAborted at claim selection. Run dir: {result.root}")
@@ -184,7 +187,9 @@ def run(input_arg: str, base_dir: str, yes: bool) -> None:
 @cli.command()
 @click.argument("run_dir")
 @click.option("--yes", is_flag=True, help="auto-approve gates (non-interactive)")
-def resume(run_dir: str, yes: bool) -> None:
+@click.option("--tasks", default=None,
+              help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
+def resume(run_dir: str, yes: bool, tasks: str | None) -> None:
     """Continue an existing run from its (possibly edited) spec.yaml."""
     from paper_reprise.pipeline import resume_pipeline
 
@@ -197,7 +202,7 @@ def resume(run_dir: str, yes: bool) -> None:
     result = resume_pipeline(
         Path(run_dir), available_hardware=detect_available_hardware(),
         approve_plan=approve_plan,
-        setup_executor=_setup_executor(), run_executor=_run_executor(),
+        setup_executor=_setup_executor(), run_executor=_run_executor(tasks),
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
