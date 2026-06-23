@@ -4,6 +4,7 @@ This module depends on nothing else in paper_reprise — it is the pure schema.
 """
 from __future__ import annotations
 
+import json
 from typing import Literal, Optional
 
 from pydantic import BaseModel, field_validator, model_validator
@@ -23,6 +24,25 @@ class EvalProtocol(BaseModel):
     stride: Optional[int] = None
     few_shot: int = 0
     extra_args: Optional[str] = None
+
+    @field_validator("few_shot", mode="before")
+    @classmethod
+    def _few_shot_default(cls, v):
+        # specextract (LLM) sometimes emits `few_shot: null`; treat as the 0 default.
+        return 0 if v is None else v
+
+    @field_validator("extra_args", mode="before")
+    @classmethod
+    def _extra_args_to_str(cls, v):
+        # extra_args is a free-form string, but specextract sometimes emits a dict
+        # (e.g. {"temperature": 1.0, "num_repeats": 10}); JSON-encode it rather than
+        # aborting the whole run on a type mismatch.
+        if v is None or isinstance(v, str):
+            return v
+        try:
+            return json.dumps(v, ensure_ascii=False, sort_keys=True)
+        except (TypeError, ValueError):
+            return str(v)
 
 
 class Artifact(BaseModel):
