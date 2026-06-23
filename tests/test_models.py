@@ -24,6 +24,22 @@ def test_runner_must_be_enum():
         EvalProtocol(runner="bogus", command="x", metric="ppl", dataset="d")
 
 
+def test_eval_protocol_coerces_llm_extraction_quirks():
+    # specextract (LLM) sometimes emits few_shot: null and extra_args as a dict;
+    # coerce instead of aborting the whole pipeline on a type mismatch.
+    ep = EvalProtocol(
+        runner="official", command="c", metric="avg_acc", dataset="arc_easy",
+        few_shot=None,
+        extra_args={"temperature": 1.0, "num_repeats": 10},
+    )
+    assert ep.few_shot == 0
+    assert ep.extra_args == '{"num_repeats": 10, "temperature": 1.0}'  # json, sorted keys
+    # a plain string passes through unchanged
+    ep2 = EvalProtocol(runner="official", command="c", metric="acc", dataset="d",
+                       extra_args="--limit 8")
+    assert ep2.extra_args == "--limit 8"
+
+
 def test_artifact_calib_status_default_known():
     a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={"wbits": 4})
     assert a.calib_status == "known"
