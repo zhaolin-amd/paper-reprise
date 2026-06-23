@@ -91,7 +91,12 @@ Expose EXACTLY ONE runnable entrypoint `{entrypoint}` that:
 self-test (a few samples, batch 1) used only to prove the code runs;
   - quantizes per the claim's artifact config and runs its eval protocol;
   - prints the resulting metric value to stdout in a parseable form \
-(e.g. `perplexity: 5.80`).
+(e.g. `perplexity: 5.80`);
+  - reads these OVERRIDE env vars (so the operator can steer a run without editing \
+code): use `${{PAPER_REPRISE_TASKS:-<the claim's eval tasks>}}` for the eval task \
+list, `${{PAPER_REPRISE_GPUS:-1}}` for the GPU/process count, and \
+`$PAPER_REPRISE_MODEL` (exported) for the base-model path — each falling back to the \
+spec's value when unset.
 
 HONESTY RULES (mandatory):
   - Do NOT fabricate, invent, or hard-code any result number. The entrypoint must \
