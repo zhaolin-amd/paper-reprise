@@ -45,32 +45,40 @@ def _run_executor():
         fromscratch=make_fromscratch_run_executor())
 
 
-def _claim_row(i: int, claim, artifacts: dict) -> str:
-    """One display row for the claim table."""
+def _claim_block(i: int, claim, artifacts: dict) -> str:
+    """A multi-line display block for one claim — the COMPLETE chain the user is
+    choosing: model + full quant config + eval protocol + target + hardware. A claim
+    is reproduced as model×config, so the config is shown explicitly (not abbreviated),
+    and paper-agnostically (the whole quant_config dict is dumped)."""
     art = artifacts.get(claim.artifact)
-    model = art.base_model.split("/")[-1] if art else "?"
-    wbits = art.quant_config.get("wbits", "?") if art else "?"
-    group = art.quant_config.get("group_size", "") if art else ""
-    config = f"W{wbits}G{group}" if group else f"W{wbits}"
+    model = art.base_model if art else "?"
+    method = art.method if art else "?"
+    qc = ", ".join(f"{k}: {v}" for k, v in art.quant_config.items()) if art else "?"
+    ep = claim.eval_protocol
+    fewshot = f", few_shot={ep.few_shot}" if ep.few_shot else ""
+    seqlen = f", seqlen={ep.seqlen}" if ep.seqlen else ""
     hw = claim.hardware or "—"
-    return (f"  {i:>2}  {claim.id:<30} {model:<24} {config:<9} "
-            f"{claim.eval_protocol.metric:<11} {claim.expected:<9.2f} {hw}")
+    return (
+        f"  [{i}] {claim.id}   ({method})\n"
+        f"        model:  {model}\n"
+        f"        quant:  {qc}\n"
+        f"        eval:   {ep.metric} on {ep.dataset}{fewshot}{seqlen}\n"
+        f"        target: {claim.expected:g} ±{claim.tolerance:g}   hw: {hw}"
+    )
 
 
 def spec_selection_prompt(spec: "Spec", label: str) -> bool:
-    """Print the extracted claims as a numbered table and ask the user to select
+    """Print the extracted claims (model + full config) and ask the user to select
     which to reproduce. Mutates spec.claims and spec.artifacts in-place to keep
     only the chosen subset and prune orphaned artifacts. Returns False to abort."""
     claims = spec.claims
     artifacts = {a.id: a for a in spec.artifacts}
 
-    header = (f"  {'#':>2}  {'claim-id':<30} {'model':<24} {'config':<9} "
-              f"{'metric':<11} {'expected':<9} {'hardware'}")
-    click.echo(f"\nExtracted {len(claims)} claims from {label} — pick which to reproduce:\n")
-    click.echo(header)
-    click.echo("  " + "-" * (len(header) - 2))
+    click.echo(f"\nExtracted {len(claims)} claims from {label} — "
+               f"pick which to reproduce (model × config is the unit):\n")
     for i, c in enumerate(claims, 1):
-        click.echo(_claim_row(i, c, artifacts))
+        click.echo(_claim_block(i, c, artifacts))
+        click.echo("")
 
     raw = click.prompt(
         '\nEnter numbers (e.g. "1 3"), "all", or "q" to abort',
