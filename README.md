@@ -87,8 +87,11 @@ Notes:
 
 Prerequisites: **Python ≥ 3.11**, **git**, **uv** (or conda), and the **`claude` CLI** on
 PATH — specextract and the setup loop run headless Claude (`claude -p`). Reproducing real
-accuracy/efficiency numbers also needs a **GPU + CUDA** (without one the run still proceeds
-through setup and reports the run stage as BLOCKED rather than fabricating numbers).
+accuracy/efficiency numbers also needs a **GPU** — NVIDIA (CUDA) or AMD Instinct (ROCm);
+the agent detects both. paper-reprise is vendor-agnostic (it builds an env and runs the
+paper's own scripts), so whether a *given* paper reproduces on a given vendor depends on
+that paper's repo, not on the tool. Without a GPU the run still proceeds through setup and
+reports the run stage as BLOCKED rather than fabricating numbers.
 
 From a clone (local / dev):
 
