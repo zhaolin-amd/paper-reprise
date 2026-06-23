@@ -27,6 +27,11 @@ ingest → specextract → plan → setup → run → grade → report
 - **report** — bilingual `report.zh.md` / `report.en.md`, always the measured number,
   never the paper's, with full replay info.
 
+Papers **without** an official repo take a *from-scratch* path: instead of running a cloned
+repo, headless Claude implements the paper's method as a self-contained `impl/` (from a
+redacted spec, so it never sees the target number), which then flows through the same setup →
+run → grade → report stages and guardrails.
+
 ### One isolated reproduction path per paper
 
 Every paper gets its own self-contained run directory under `runs/`, and the whole
