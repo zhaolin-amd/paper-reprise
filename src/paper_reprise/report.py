@@ -25,27 +25,42 @@ def _env_line(ingest: IngestInfo, env: dict) -> str:
             f"transformers {env.get('transformers','?')} / CUDA {env.get('cuda','?')}")
 
 
-def _artifact_label(spec: Spec, artifact_id: str) -> str:
-    a = next((a for a in spec.artifacts if a.id == artifact_id), None)
+def _artifact(spec: Spec, artifact_id: str):
+    return next((a for a in spec.artifacts if a.id == artifact_id), None)
+
+
+def _config_label(a) -> str:
+    """Compact precision/config tag: 16-bit -> BF16, else INT<bits> (+ group size)."""
     if not a:
-        return artifact_id
-    cfg = a.quant_config
-    bits = cfg.get("wbits", "?")
-    gs = cfg.get("group_size")
-    return f"{a.base_model} W{bits}" + (f"G{gs}" if gs else "")
+        return "?"
+    bits = a.quant_config.get("wbits", "?")
+    if bits == 16:
+        return "BF16"
+    gs = a.quant_config.get("group_size")
+    return f"INT{bits}" + (f" G{gs}" if gs else "")
+
+
+def _algorithm_label(a) -> str:
+    """The quantization algorithm; an uncompressed artifact (method none) is the baseline."""
+    if not a:
+        return "?"
+    m = (a.method or "").strip()
+    return "baseline" if m.lower() in ("none", "", "fp16", "bf16", "fp", "full") else m
 
 
 def _table(spec, grades, header):
     runs_by = {g.claim_id: g for g in grades}
-    lines = [header, "|---|---|---|---|---|---|---|"]
+    lines = [header, "|---|---|---|---|---|---|---|---|"]
     for c in spec.claims:
         g = runs_by.get(c.id)
         measured = "—" if not g or g.measured is None else f"{g.measured:.2f}"
         verdict = g.verdict if g else "BLOCKED"
         reason = g.reason if g else "no grade"
-        label = _artifact_label(spec, c.artifact)
-        lines.append(f"| {c.id} | {label} | {c.eval_protocol.metric} | "
-                     f"{c.expected:g} | {measured} | {verdict} | {reason} |")
+        a = _artifact(spec, c.artifact)
+        model = a.base_model if a else c.artifact
+        lines.append(f"| {model} | {_config_label(a)} | {_algorithm_label(a)} | "
+                     f"{c.eval_protocol.metric} | {c.expected:g} | {measured} | "
+                     f"{verdict} | {reason} |")
     return "\n".join(lines)
 
 
@@ -101,7 +116,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {envl}
 判定汇总: {summ}
 
-{_table(spec, grades, "| claim | 模型/配置 | 指标 | paper | 实测 | 判定 | 原因 |")}
+{_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |")}
 
 ## 各任务原始分数
 {_raw_scores(runs)}
@@ -117,7 +132,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {envl}
 Verdict summary: {summ}
 
-{_table(spec, grades, "| claim | model/config | metric | paper | measured | verdict | reason |")}
+{_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |")}
 
 ## Per-task raw scores
 {_raw_scores(runs)}
