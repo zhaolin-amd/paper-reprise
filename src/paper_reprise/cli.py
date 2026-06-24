@@ -270,26 +270,46 @@ def report(run_dir: str) -> None:
     click.echo(f"Re-rendered: {rd.root}/report.zh.md")
 
 
-@cli.command()
-@click.argument("run_dir")
-@click.option("--env/--no-env", default=True,
-              help="also remove the per-run environment (env/ and repo/.venv) [default: yes]")
-def clean(run_dir: str, env: bool) -> None:
-    """Free a finished run's regenerable artifacts (exported model weights, and by
-    default the env), keeping all records. Run this once you're done with the run —
-    `run`/`resume` no longer auto-delete, so repeated runs don't re-quantize."""
-    rd = RunDir.open(Path(run_dir))
+def _clean_one(rd: "RunDir", env: bool) -> list:
     removed = rd.clean_model_artifacts()        # any weights written under runs/
     removed += rd.clean_scratch_models()        # the scratch export dir (symlinked)
     if env:
         removed += rd.clean_env()
-    if not removed:
+    return removed
+
+
+@cli.command()
+@click.argument("run_dir", required=False)
+@click.option("--base-dir", default="runs",
+              help="when no run_dir is given, clean every run under here [default: runs]")
+@click.option("--env/--no-env", default=True,
+              help="also remove the per-run environment (env/ and repo/.venv) [default: yes]")
+def clean(run_dir: str | None, base_dir: str, env: bool) -> None:
+    """Free finished runs' regenerable artifacts (exported model weights, and by
+    default the env), keeping all records. With a run_dir, clean that one; with no
+    argument, clean EVERY run under --base-dir. `run`/`resume` don't auto-delete, so
+    repeated runs don't re-quantize — clean when you're done."""
+    if run_dir:
+        targets = [Path(run_dir)]
+    else:
+        base = Path(base_dir)
+        targets = sorted(d for d in base.iterdir() if d.is_dir()) if base.is_dir() else []
+        if not targets:
+            click.echo(f"No runs found under {base}/.")
+            return
+
+    total: list = []
+    for t in targets:
+        removed = _clean_one(RunDir.open(t), env)
+        total += removed
+        if removed:
+            gb = sum(sz for _, sz in removed) / 1e9
+            click.echo(f"{t.name}: freed ~{gb:.1f} GB")
+    if not total:
         click.echo("Nothing to clean (no model weights or env found).")
         return
-    gb = sum(sz for _, sz in removed) / 1e9
-    for rel, sz in removed:
-        click.echo(f"  removed {rel}  ({sz/1e9:.2f} GB)")
-    click.echo(f"Freed ~{gb:.1f} GB from {rd.root} (records kept).")
+    click.echo(f"Total freed ~{sum(sz for _, sz in total) / 1e9:.1f} GB "
+               f"across {len(targets)} run(s); records kept.")
 
 
 if __name__ == "__main__":

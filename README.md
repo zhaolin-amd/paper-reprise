@@ -119,7 +119,7 @@ paper-reprise run 2401.00001
 paper-reprise run <arxiv_id | arxiv_url | "paper title">   # full reproduction: select → setup → quantize → eval → grade → report (does NOT clean; that's separate)
 paper-reprise resume <run_dir>          # continue an existing run from its spec.yaml
 paper-reprise report <run_dir>          # re-render the report from an existing run
-paper-reprise clean  <run_dir>          # free a finished run's model weights + env (keep records)
+paper-reprise clean  [<run_dir>]        # free model weights + env (keep records); no arg → all runs under runs/
 ```
 
 A short alias `reprise` is also installed (e.g. `reprise run 2401.00001`).
@@ -150,8 +150,9 @@ dir. (Skipped if `repo/runtime` already exists as a real directory, to avoid clo
 
 **Freeing disk.** `run`/`resume` **keep** the exported model and env by default, so you can run
 a dir many times (resume more claims, re-eval) without re-quantizing. When you're done with a
-run, `paper-reprise clean <run_dir>` deletes the regenerable artifacts — the exported model
-weights and (unless `--no-env`) the per-run env — while keeping **all records** (logs, env
+run, `paper-reprise clean <run_dir>` (or just `paper-reprise clean` to sweep every run under
+`runs/`) deletes the regenerable artifacts — the exported model weights (including the
+symlinked scratch copy) and (unless `--no-env`) the per-run env — while keeping **all records** (logs, env
 snapshot, setup patches, per-claim `stdout.log` / `actual_config`, reports). For a one-shot
 run you can instead pass `run/resume --clean-models` to delete the model right after that run
 (skipped if nothing verified, so a failed run's model stays for debugging).

@@ -497,4 +497,21 @@ def test_cli_clean_frees_model_and_env_keeps_records(tmp_path):
     assert not (ck / "model.safetensors").exists()        # model freed
     assert not (rd.root / "env").exists()                 # env freed
     assert (rd.root / "report.zh.md").exists()            # record kept
-    assert "Freed" in res.output
+    assert "freed" in res.output.lower()
+
+
+def test_cli_clean_no_arg_cleans_all_runs_under_base(tmp_path):
+    from paper_reprise.rundir import RunDir
+    base = tmp_path / "runs"
+    for name in ("paperA", "paperB"):
+        rd = RunDir.create(base, arxiv_id=name, timestamp="t")
+        ck = rd.repo_dir / "runtime" / "checkpoints"
+        ck.mkdir(parents=True)
+        (ck / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
+        (rd.root / "report.zh.md").write_text("r")        # record, kept
+
+    res = CliRunner().invoke(cli, ["clean", "--base-dir", str(base)])
+    assert res.exit_code == 0
+    assert not list(base.rglob("model.safetensors"))      # all runs' models gone
+    assert len(list(base.rglob("report.zh.md"))) == 2     # all records kept
+    assert "Total freed" in res.output
