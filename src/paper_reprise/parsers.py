@@ -49,9 +49,13 @@ def parse_metric(metric: str, text: str) -> Optional[float]:
         if val is None:
             return None
         return val * 100 if val <= 1.0 else val
-    if metric in ("avg_acc", "average_accuracy", "avg_accuracy"):
-        # benchmark-suite average (GSQ et al.); commands print e.g. "avg_acc: 0.665"
-        val = _first_match(_AVG_ACC_PATTERNS, text)
+    if metric.startswith(("avg_", "average")) or metric.endswith(("_avg", "_average")):
+        # benchmark-suite average accuracy under any label the spec uses
+        # (avg_acc, acc_norm_avg, average_accuracy, …). Match a line named exactly
+        # like the metric first, then the generic avg/average forms.
+        pats = [rf"{re.escape(metric)}[:\s=]+([0-9]+\.?[0-9]*)\s*%",
+                rf"{re.escape(metric)}[:\s=]+([0-9]*\.?[0-9]+)"] + _AVG_ACC_PATTERNS
+        val = _first_match(pats, text)
         if val is None:
             return None
         return val * 100 if val <= 1.0 else val
