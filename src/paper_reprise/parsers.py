@@ -87,3 +87,20 @@ def parse_per_task(text: str) -> dict:
             continue
         out[name] = float(m.group(2))
     return out
+
+
+def extract_results_table(text: str) -> str:
+    """Return the largest contiguous block of markdown table rows (`|...|` lines)
+    from an eval log — the harness's raw results table — verbatim. "" if none."""
+    best: list = []
+    cur: list = []
+    for ln in (text or "").splitlines():
+        if ln.strip().startswith("|") and ln.count("|") >= 2:
+            cur.append(ln.rstrip())
+        else:
+            if len(cur) > len(best):
+                best = cur
+            cur = []
+    if len(cur) > len(best):
+        best = cur
+    return "\n".join(best)
