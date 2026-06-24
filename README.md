@@ -16,8 +16,10 @@ ingest → specextract → plan → setup → run → grade → report
 
 - **ingest** — fetch the arxiv LaTeX source, locate and clone the official repo.
 - **specextract** — read the paper + repo (headless Claude) into a machine-checkable spec
-  of claims (model × config × eval protocol × expected number); then presents the claims
-  for you to pick which to reproduce.
+  of claims (model × config × eval protocol × expected number) — including each model's
+  uncompressed **FP baseline**, so the measured baseline can be checked against the paper's
+  (a baseline that matches confirms the eval protocol; one that doesn't flags a mismatch
+  before trusting any quantized gap); then presents the claims for you to pick.
 - **plan** — feasibility check; flags claims whose required hardware isn't available.
 - **setup** — the one agentic stage: build a conda/uv env and let Claude fix dependencies
   until the repo's own eval command passes a smoke test, under retry/timeout guardrails.
