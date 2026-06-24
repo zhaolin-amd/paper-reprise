@@ -50,11 +50,23 @@ def _table(spec, grades, header):
 
 
 def _replay(runs: list[RunResult]) -> str:
-    out = []
+    if not runs:
+        return "(none)"
+    blocks = []
     for r in runs:
-        out.append(f"- {r.claim_id}: `{r.command}` | seed {r.seed} | {r.gpu} | "
-                   f"{r.minutes}min | {r.stdout_path}")
-    return "\n".join(out) if out else "(none)"
+        meta = []
+        if r.seed is not None:
+            meta.append(f"seed {r.seed}")
+        if r.gpu:
+            meta.append(str(r.gpu))
+        if r.minutes is not None:
+            meta.append(f"{r.minutes:.1f} min")
+        meta.append(f"`{r.stdout_path}`")
+        # command in a fenced block (eval commands are multi-line shell — inline
+        # backticks render as a broken blob)
+        blocks.append(f"**{r.claim_id}** — " + " · ".join(meta)
+                      + f"\n\n```bash\n{r.command.strip()}\n```")
+    return "\n\n".join(blocks)
 
 
 def _raw_scores(runs: list[RunResult]) -> str:
