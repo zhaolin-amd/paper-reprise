@@ -100,6 +100,31 @@ def test_patches_section_omitted_when_empty_shown_when_present():
     assert "Setup patches" in en and "bumped numpy pin to build" in en
 
 
+def test_replay_grouped_per_config_dedupes_shared_command():
+    art = Artifact(id="a1", base_model="Llama-8B", method="GSQ",
+                   quant_config={"wbits": 2, "group_size": 128})
+    def ep(metric):
+        return EvalProtocol(runner="official", command="serve && eval", metric=metric,
+                            dataset="d")
+    spec = Spec(paper="p", repo=None, artifacts=[art], claims=[
+        Claim(id="c_mmlu", artifact="a1", eval_protocol=ep("mmlu"),
+              expected=60.0, tolerance=0.5, source="T"),
+        Claim(id="c_gsm", artifact="a1", eval_protocol=ep("gsm8k"),
+              expected=44.1, tolerance=0.5, source="T"),
+    ])
+    runs = [RunResult(claim_id="c_mmlu", command="serve && eval", stdout_path="a/x.log"),
+            RunResult(claim_id="c_gsm", command="serve && eval", stdout_path="b/y.log")]
+    zh, en = render_reports(spec, IngestInfo(arxiv_id="p", source_url="u"),
+                            [], runs, env={}, patches=[])
+    for doc in (zh, en):
+        assert "Replay script (per config)" in en
+        assert "复算脚本(每个 config)" in zh
+        # one config heading, shared command shown once (deduped), both stdouts listed
+        assert "**Llama-8B · INT2 G128 · GSQ**" in doc
+        assert doc.count("serve && eval") == 1
+        assert "a/x.log" in doc and "b/y.log" in doc
+
+
 def test_summary_counts_verdicts():
     spec, ingest, grades, runs, env = _ctx()
     zh, _ = render_reports(spec, ingest, grades, runs, env, patches=[])
