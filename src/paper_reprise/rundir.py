@@ -5,6 +5,7 @@ One RunDir == one paper reproduction run. All stage artifacts live under root.
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -168,4 +169,23 @@ class RunDir:
                     pass
             except OSError:
                 pass
+        return removed
+
+    def clean_env(self) -> list[tuple[str, int]]:
+        """Remove the per-run environment(s) — paper-reprise's `env/` and the cloned
+        repo's `.venv` — while keeping `env_snapshot.json` and all records. The env
+        is regenerable: a later `resume` rebuilds it in the setup stage. Returns
+        [(reldir, bytes)] removed. (Bytes are the dir's own file sizes; actual freed
+        space can be less when a uv venv hardlinks packages from the shared uv cache.)"""
+        removed: list[tuple[str, int]] = []
+        for d in (self.root / "env", self.repo_dir / ".venv"):
+            if not d.is_dir():
+                continue
+            size = sum(p.stat().st_size for p in d.rglob("*")
+                       if p.is_file() and not p.is_symlink())
+            try:
+                shutil.rmtree(d)
+            except OSError:
+                continue
+            removed.append((str(d.relative_to(self.root)), size))
         return removed

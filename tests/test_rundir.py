@@ -92,3 +92,19 @@ def test_clean_model_artifacts_removes_weights_keeps_records(tmp_path):
     assert (ck / "config.json").exists()
     assert (rd.root / "spec.yaml").read_text() == "paper: p"
     assert (sd / "stdout.log").exists()
+
+
+def test_clean_env_removes_envs_keeps_records(tmp_path):
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    (rd.root / "env" / "bin").mkdir(parents=True)
+    (rd.root / "env" / "bin" / "python").write_bytes(b"\0" * 2048)
+    (rd.repo_dir / ".venv" / "lib").mkdir(parents=True)
+    (rd.repo_dir / ".venv" / "lib" / "pkg.so").write_bytes(b"\0" * 4096)
+    (rd.root / "env_snapshot.json").write_text("{}")       # record, kept
+
+    removed = {r for r, _ in rd.clean_env()}
+    assert "env" in removed and "repo/.venv" in removed
+    assert not (rd.root / "env").exists()
+    assert not (rd.repo_dir / ".venv").exists()
+    assert (rd.root / "env_snapshot.json").exists()

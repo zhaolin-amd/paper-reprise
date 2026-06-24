@@ -480,3 +480,21 @@ def test_cli_run_interactive_selection_filters_spec_and_continues(tmp_path, monk
     assert captured_spec["artifacts"] == ["a1"]
     # Second artifact was pruned (no claim references it)
     assert "a2" not in captured_spec["artifacts"]
+
+
+def test_cli_clean_frees_model_and_env_keeps_records(tmp_path):
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    ck = rd.repo_dir / "runtime" / "checkpoints" / "a"
+    ck.mkdir(parents=True)
+    (ck / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
+    (rd.root / "env" / "bin").mkdir(parents=True)
+    (rd.root / "env" / "bin" / "python").write_bytes(b"\0" * 4096)
+    (rd.root / "report.zh.md").write_text("report")       # record, kept
+
+    res = CliRunner().invoke(cli, ["clean", str(rd.root)])
+    assert res.exit_code == 0
+    assert not (ck / "model.safetensors").exists()        # model freed
+    assert not (rd.root / "env").exists()                 # env freed
+    assert (rd.root / "report.zh.md").exists()            # record kept
+    assert "Freed" in res.output
