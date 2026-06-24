@@ -40,6 +40,13 @@ def test_uses_measured_not_expected_for_actual_column():
     assert "MATCH" in zh
 
 
+def test_measured_column_annotates_diff_vs_paper():
+    spec, ingest, grades, runs, env = _ctx()  # measured 5.80, expected 5.78
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    for doc in (zh, en):
+        assert "5.80(+0.02)" in doc
+
+
 def test_summary_table_columns_model_config_algorithm():
     spec, ingest, grades, runs, env = _ctx()
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])

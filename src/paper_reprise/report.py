@@ -53,7 +53,10 @@ def _table(spec, grades, header):
     lines = [header, "|---|---|---|---|---|---|---|---|"]
     for c in spec.claims:
         g = runs_by.get(c.id)
-        measured = "—" if not g or g.measured is None else f"{g.measured:.2f}"
+        if not g or g.measured is None:
+            measured = "—"
+        else:
+            measured = f"{g.measured:.2f}({g.measured - c.expected:+.2f})"
         verdict = g.verdict if g else "BLOCKED"
         reason = g.reason if g else "no grade"
         a = _artifact(spec, c.artifact)
