@@ -140,6 +140,12 @@ commands read as `${PAPER_REPRISE_TASKS:-<spec default>}` / `${PAPER_REPRISE_GPU
 so your value wins when given and the paper's default applies otherwise. (`--gpus` sets how
 many GPUs; *which* ones is still `CUDA_VISIBLE_DEVICES`/`ROCR_VISIBLE_DEVICES`.)
 
+After a verified run, the exported quantized model weights are deleted to save disk (they're
+regenerable), while every record is kept — logs, env snapshot, setup patches, per-claim
+`stdout.log` / `actual_config`, and the reports. Pass `--keep-models` to keep the weights
+(e.g. to re-serve without re-quantizing). Cleanup is skipped when nothing verified (all
+claims BLOCKED), so a failed run's model stays for debugging.
+
 **Reproducing efficiency/accuracy at scale needs a GPU** — quantization papers run on real
 models. Without a GPU the pipeline still runs through setup and reports the run stage as
 BLOCKED rather than fabricating numbers.

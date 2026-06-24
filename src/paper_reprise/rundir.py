@@ -13,6 +13,11 @@ import yaml
 from paper_reprise.models import IngestInfo, PlanReport, Spec
 
 
+# Exported model-weight file extensions cleaned up after a verified run (the
+# quantized model is regenerable; records are kept).
+_MODEL_WEIGHT_EXTS = (".safetensors", ".bin", ".pt", ".pth", ".ckpt", ".gguf", ".onnx")
+
+
 def _slug(text: str, max_len: int = 40) -> str:
     s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return s[:max_len].strip("-")
@@ -125,3 +130,42 @@ class RunDir:
         if not p.exists():
             return None
         return PlanReport.model_validate_json(p.read_text())
+
+    def clean_model_artifacts(self, *, min_bytes: int = 10 * 1024 * 1024
+                              ) -> list[tuple[str, int]]:
+        """Delete exported model-weight files under the run dir — the quantized model
+        the eval produced (e.g. a repo's `runtime/checkpoints/.../*.safetensors`) —
+        while KEEPING every other record (logs, ingest/spec/plan json, env snapshot,
+        setup_patches, per-claim stdout.log / actual_config, the reports).
+
+        Weights are matched by extension AND a size floor, so configs/tokenizers and
+        small fixtures are left alone; base models live in the shared cache (outside
+        the run dir) and are never under here. Returns [(relpath, bytes)] removed.
+        Best-effort: unreadable/locked files are skipped, then emptied dirs pruned."""
+        removed: list[tuple[str, int]] = []
+        for p in self.root.rglob("*"):
+            if not p.is_file() or p.is_symlink():
+                continue
+            if p.suffix.lower() not in _MODEL_WEIGHT_EXTS:
+                continue
+            try:
+                size = p.stat().st_size
+                if size < min_bytes:
+                    continue
+                p.unlink()
+            except OSError:
+                continue
+            removed.append((str(p.relative_to(self.root)), size))
+        # prune now-empty directories left behind (deepest first), never the root
+        for d in sorted((q for q in self.root.rglob("*") if q.is_dir()),
+                        key=lambda q: len(q.parts), reverse=True):
+            try:
+                next(d.iterdir())
+            except StopIteration:
+                try:
+                    d.rmdir()
+                except OSError:
+                    pass
+            except OSError:
+                pass
+        return removed

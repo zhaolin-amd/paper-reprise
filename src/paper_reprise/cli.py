@@ -38,6 +38,15 @@ def _setup_executor():
         fromscratch=make_fromscratch_setup_executor())
 
 
+def _echo_cleaned(cleaned: list) -> None:
+    """Report freed space from post-run model cleanup (records were kept)."""
+    if not cleaned:
+        return
+    gb = sum(sz for _, sz in cleaned) / 1e9
+    click.echo(f"Cleaned {len(cleaned)} exported model file(s), freed {gb:.1f} GB "
+               f"(records kept; pass --keep-models to keep the model).")
+
+
 def _run_executor(tasks: str | None = None, gpus: int | None = None):
     """The run executor the pipeline injects: the same repo-presence dispatch.
     `tasks`/`gpus` (from --tasks/--gpus) override the lm-eval task list and GPU
@@ -133,7 +142,11 @@ def cli() -> None:
               help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
 @click.option("--gpus", type=int, default=None,
               help="override the GPU count via PAPER_REPRISE_GPUS (how many, not which)")
-def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int | None) -> None:
+@click.option("--clean-models/--keep-models", default=True,
+              help="after a verified run, delete the exported quantized model weights "
+                   "(regenerable) but keep all records [default: clean]")
+def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int | None,
+        clean_models: bool) -> None:
     """Run the reproduction pipeline for a paper (arxiv id, url, or title).
 
     By default presents the extracted claims interactively so you can choose which
@@ -176,7 +189,7 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int |
         available_hardware=detect_available_hardware(),
         approve_spec=approve_spec, approve_plan=approve_plan,
         fetch_sources=make_fetch_sources(), setup_executor=_setup_executor(),
-        run_executor=_run_executor(tasks, gpus),
+        run_executor=_run_executor(tasks, gpus), clean_models=clean_models,
     )
     if result.aborted_at == "spec-approval":
         click.echo(f"\nAborted at claim selection. Run dir: {result.root}")
@@ -184,6 +197,7 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int |
     elif result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
+        _echo_cleaned(result.cleaned)
         click.echo(f"Done. Report: {result.root}/report.zh.md")
 
 
@@ -194,7 +208,11 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int |
               help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
 @click.option("--gpus", type=int, default=None,
               help="override the GPU count via PAPER_REPRISE_GPUS (how many, not which)")
-def resume(run_dir: str, yes: bool, tasks: str | None, gpus: int | None) -> None:
+@click.option("--clean-models/--keep-models", default=True,
+              help="after a verified run, delete the exported quantized model weights "
+                   "(regenerable) but keep all records [default: clean]")
+def resume(run_dir: str, yes: bool, tasks: str | None, gpus: int | None,
+           clean_models: bool) -> None:
     """Continue an existing run from its (possibly edited) spec.yaml."""
     from paper_reprise.pipeline import resume_pipeline
 
@@ -208,10 +226,12 @@ def resume(run_dir: str, yes: bool, tasks: str | None, gpus: int | None) -> None
         Path(run_dir), available_hardware=detect_available_hardware(),
         approve_plan=approve_plan,
         setup_executor=_setup_executor(), run_executor=_run_executor(tasks, gpus),
+        clean_models=clean_models,
     )
     if result.aborted_at:
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
+        _echo_cleaned(result.cleaned)
         click.echo(f"Done. Report: {result.root}/report.zh.md")
 
 
