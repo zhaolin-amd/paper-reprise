@@ -118,8 +118,13 @@ def _raw_scores(runs: list[RunResult]) -> str:
     return "\n\n".join(out) if out else "(none)"
 
 
-def _patches(patches: list[str]) -> str:
-    return "\n".join(f"- {p}" for p in patches) if patches else "(none)"
+def _patches_section(patches: list[str], heading: str) -> str:
+    # Provenance of any edits made to get the repo running — valuable when present,
+    # noise when empty, so the section is omitted entirely if there were no patches.
+    if not patches:
+        return ""
+    body = "\n".join(f"- {p}" for p in patches)
+    return f"\n## {heading}\n{body}\n"
 
 
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
@@ -139,10 +144,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## 复算信息(每条 claim)
 {_replay(runs)}
-
-## Setup 改动留痕
-{_patches(patches)}
-"""
+{_patches_section(patches, "Setup 改动留痕")}"""
 
     en = f"""# Reproduction Report: {title} ({ingest.arxiv_id})
 {envl}
@@ -155,8 +157,5 @@ Verdict summary: {summ}
 
 ## Replay info (per claim)
 {_replay(runs)}
-
-## Setup patches
-{_patches(patches)}
-"""
+{_patches_section(patches, "Setup patches")}"""
     return zh, en

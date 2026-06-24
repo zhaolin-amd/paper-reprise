@@ -90,6 +90,16 @@ def test_single_table_only_no_separate_summary_and_detail():
     assert "明细" not in zh and "Details" not in en
 
 
+def test_patches_section_omitted_when_empty_shown_when_present():
+    spec, ingest, grades, runs, env = _ctx()
+    zh_empty, en_empty = render_reports(spec, ingest, grades, runs, env, patches=[])
+    assert "改动留痕" not in zh_empty and "Setup patches" not in en_empty
+    zh, en = render_reports(spec, ingest, grades, runs, env,
+                            patches=["bumped numpy pin to build"])
+    assert "改动留痕" in zh and "bumped numpy pin to build" in zh
+    assert "Setup patches" in en and "bumped numpy pin to build" in en
+
+
 def test_summary_counts_verdicts():
     spec, ingest, grades, runs, env = _ctx()
     zh, _ = render_reports(spec, ingest, grades, runs, env, patches=[])
