@@ -39,3 +39,10 @@ def test_unparseable_returns_none():
 
 def test_unknown_metric_returns_none():
     assert parse_metric("bleu", "bleu: 30") is None
+
+
+def test_parse_avg_acc_fraction_and_percent():
+    assert parse_metric("avg_acc", "avg_acc: 0.6651") == 66.51
+    assert parse_metric("avg_acc", "Average accuracy: 66.5%") == 66.5
+    # per-task acc lines alone (no avg/average) are not mistaken for the average
+    assert parse_metric("avg_acc", "arc_easy: 0.72\npiqa: 0.75") is None
