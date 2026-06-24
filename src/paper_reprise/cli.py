@@ -279,7 +279,8 @@ def clean(run_dir: str, env: bool) -> None:
     default the env), keeping all records. Run this once you're done with the run —
     `run`/`resume` no longer auto-delete, so repeated runs don't re-quantize."""
     rd = RunDir.open(Path(run_dir))
-    removed = rd.clean_model_artifacts()
+    removed = rd.clean_model_artifacts()        # any weights written under runs/
+    removed += rd.clean_scratch_models()        # the scratch export dir (symlinked)
     if env:
         removed += rd.clean_env()
     if not removed:
