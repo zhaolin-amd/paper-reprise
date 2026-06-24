@@ -264,7 +264,14 @@ def report(run_dir: str) -> None:
         actual_config = _json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
         grades.append(grade_claim(c, artifacts[c.artifact], rr, actual_config=actual_config))
 
-    zh, en = render_reports(spec, ingest, grades, runs, env={}, patches=[])
+    snap = rd.root / "env_snapshot.json"
+    env = {}
+    if snap.exists():
+        try:
+            env = _json.loads(snap.read_text())
+        except (OSError, ValueError):
+            env = {}
+    zh, en = render_reports(spec, ingest, grades, runs, env=env, patches=[])
     (rd.root / "report.zh.md").write_text(zh)
     (rd.root / "report.en.md").write_text(en)
     click.echo(f"Re-rendered: {rd.root}/report.zh.md")
