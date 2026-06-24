@@ -142,9 +142,10 @@ def cli() -> None:
               help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
 @click.option("--gpus", type=int, default=None,
               help="override the GPU count via PAPER_REPRISE_GPUS (how many, not which)")
-@click.option("--clean-models/--keep-models", default=True,
-              help="after a verified run, delete the exported quantized model weights "
-                   "(regenerable) but keep all records [default: clean]")
+@click.option("--clean-models/--keep-models", default=False,
+              help="delete the exported model weights right after THIS verified run "
+                   "[default: keep — use `paper-reprise clean <run_dir>` when you're "
+                   "done running, so multiple runs don't re-quantize]")
 def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int | None,
         clean_models: bool) -> None:
     """Run the reproduction pipeline for a paper (arxiv id, url, or title).
@@ -208,9 +209,10 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int |
               help="override the eval task list (comma-separated) via PAPER_REPRISE_TASKS")
 @click.option("--gpus", type=int, default=None,
               help="override the GPU count via PAPER_REPRISE_GPUS (how many, not which)")
-@click.option("--clean-models/--keep-models", default=True,
-              help="after a verified run, delete the exported quantized model weights "
-                   "(regenerable) but keep all records [default: clean]")
+@click.option("--clean-models/--keep-models", default=False,
+              help="delete the exported model weights right after THIS verified run "
+                   "[default: keep — use `paper-reprise clean <run_dir>` when you're "
+                   "done running, so multiple runs don't re-quantize]")
 def resume(run_dir: str, yes: bool, tasks: str | None, gpus: int | None,
            clean_models: bool) -> None:
     """Continue an existing run from its (possibly edited) spec.yaml."""
@@ -266,6 +268,27 @@ def report(run_dir: str) -> None:
     (rd.root / "report.zh.md").write_text(zh)
     (rd.root / "report.en.md").write_text(en)
     click.echo(f"Re-rendered: {rd.root}/report.zh.md")
+
+
+@cli.command()
+@click.argument("run_dir")
+@click.option("--env/--no-env", default=True,
+              help="also remove the per-run environment (env/ and repo/.venv) [default: yes]")
+def clean(run_dir: str, env: bool) -> None:
+    """Free a finished run's regenerable artifacts (exported model weights, and by
+    default the env), keeping all records. Run this once you're done with the run —
+    `run`/`resume` no longer auto-delete, so repeated runs don't re-quantize."""
+    rd = RunDir.open(Path(run_dir))
+    removed = rd.clean_model_artifacts()
+    if env:
+        removed += rd.clean_env()
+    if not removed:
+        click.echo("Nothing to clean (no model weights or env found).")
+        return
+    gb = sum(sz for _, sz in removed) / 1e9
+    for rel, sz in removed:
+        click.echo(f"  removed {rel}  ({sz/1e9:.2f} GB)")
+    click.echo(f"Freed ~{gb:.1f} GB from {rd.root} (records kept).")
 
 
 if __name__ == "__main__":
