@@ -40,6 +40,22 @@ def test_uses_measured_not_expected_for_actual_column():
     assert "MATCH" in zh
 
 
+def test_summary_table_columns_model_config_algorithm():
+    spec, ingest, grades, runs, env = _ctx()
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    for doc in (zh, en):
+        assert "| config | algorithm | metric |" in doc       # split columns present
+        assert "| Llama2-7B | INT4 G128 | AWQ |" in doc        # config + algorithm derived
+
+
+def test_baseline_artifact_rendered_as_baseline_bf16():
+    from paper_reprise.report import _config_label, _algorithm_label
+    from paper_reprise.models import Artifact
+    base = Artifact(id="b", base_model="m", method="none", quant_config={"wbits": 16})
+    assert _config_label(base) == "BF16"
+    assert _algorithm_label(base) == "baseline"
+
+
 def test_summary_counts_verdicts():
     spec, ingest, grades, runs, env = _ctx()
     zh, _ = render_reports(spec, ingest, grades, runs, env, patches=[])
