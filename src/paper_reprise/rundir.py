@@ -4,6 +4,7 @@ One RunDir == one paper reproduction run. All stage artifacts live under root.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 from pathlib import Path
@@ -12,6 +13,13 @@ from typing import Optional
 import yaml
 
 from paper_reprise.models import IngestInfo, PlanReport, Spec
+from paper_reprise.modelpaths import run_models_dir
+
+
+def _repo_output_subdir() -> str:
+    """Subdir under repo/ where the paper's repo writes large artifacts (checkpoints).
+    Default `runtime` (GSQ et al.); override with PAPER_REPRISE_REPO_OUTPUT_SUBDIR."""
+    return os.environ.get("PAPER_REPRISE_REPO_OUTPUT_SUBDIR", "runtime")
 
 
 # Exported model-weight file extensions cleaned up after a verified run (the
@@ -167,6 +175,50 @@ class RunDir:
                     d.rmdir()
                 except OSError:
                     pass
+            except OSError:
+                pass
+        return removed
+
+    def link_repo_output_to_scratch(self) -> Optional[Path]:
+        """Symlink `repo/<subdir>` (default `runtime`) → a per-run scratch dir, so the
+        paper's repo writes its quantized model to scratch (big) instead of under
+        runs/ (home, small quota), transparently — no command edits. paper-reprise's
+        own records stay in the run root. Idempotent; SKIPS if `repo/<subdir>` already
+        exists as a real dir (won't clobber data). Best-effort: returns the scratch
+        target, or None if skipped/failed (e.g. scratch unwritable → repo falls back
+        to its default home path)."""
+        src = self.repo_dir / _repo_output_subdir()
+        target = run_models_dir(self.root.name)
+        try:
+            if src.is_symlink():
+                target.mkdir(parents=True, exist_ok=True)
+                return target
+            if src.exists():
+                return None          # real dir already present — don't clobber
+            target.mkdir(parents=True, exist_ok=True)
+            src.parent.mkdir(parents=True, exist_ok=True)
+            src.symlink_to(target, target_is_directory=True)
+            return target
+        except OSError:
+            return None
+
+    def clean_scratch_models(self) -> list[tuple[str, int]]:
+        """Remove this run's scratch export dir (run_models_dir) and the dangling
+        repo symlink, if present. Returns [(abspath, bytes)] removed."""
+        removed: list[tuple[str, int]] = []
+        target = run_models_dir(self.root.name)
+        if target.exists() and not target.is_symlink():
+            size = sum(p.stat().st_size for p in target.rglob("*")
+                       if p.is_file() and not p.is_symlink())
+            try:
+                shutil.rmtree(target)
+                removed.append((str(target), size))
+            except OSError:
+                pass
+        link = self.repo_dir / _repo_output_subdir()
+        if link.is_symlink():
+            try:
+                link.unlink()
             except OSError:
                 pass
         return removed

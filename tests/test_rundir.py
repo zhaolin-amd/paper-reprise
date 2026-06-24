@@ -108,3 +108,42 @@ def test_clean_env_removes_envs_keeps_records(tmp_path):
     assert not (rd.root / "env").exists()
     assert not (rd.repo_dir / ".venv").exists()
     assert (rd.root / "env_snapshot.json").exists()
+
+
+def test_link_repo_output_to_scratch_symlinks_when_absent(tmp_path, monkeypatch):
+    from paper_reprise.rundir import RunDir
+    from paper_reprise import modelpaths
+    monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "scratch"))
+    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
+    target = rd.link_repo_output_to_scratch()
+    link = rd.repo_dir / "runtime"
+    assert link.is_symlink()
+    assert target == modelpaths.run_models_dir(rd.root.name)
+    assert link.resolve() == target.resolve()
+    # a write through the symlink lands on scratch, not under runs/
+    (link / "checkpoints").mkdir(parents=True)
+    (link / "checkpoints" / "model.safetensors").write_bytes(b"\0" * 16)
+    assert (target / "checkpoints" / "model.safetensors").exists()
+
+
+def test_link_repo_output_skips_existing_real_dir(tmp_path, monkeypatch):
+    from paper_reprise.rundir import RunDir
+    monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "scratch"))
+    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
+    real = rd.repo_dir / "runtime"
+    real.mkdir()
+    (real / "keep.log").write_text("x")           # pre-existing data
+    assert rd.link_repo_output_to_scratch() is None
+    assert not real.is_symlink()
+    assert (real / "keep.log").exists()           # not clobbered
+
+
+def test_clean_scratch_models_removes_target_and_link(tmp_path, monkeypatch):
+    from paper_reprise.rundir import RunDir
+    monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "scratch"))
+    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
+    target = rd.link_repo_output_to_scratch()
+    (target / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
+    removed = rd.clean_scratch_models()
+    assert removed and not target.exists()
+    assert not (rd.repo_dir / "runtime").is_symlink()   # dangling link removed

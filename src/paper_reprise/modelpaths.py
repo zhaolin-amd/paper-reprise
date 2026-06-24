@@ -108,6 +108,23 @@ def with_gpus(command: str, gpus: int | None) -> str:
     return f"export PAPER_REPRISE_GPUS={int(gpus)}; {command}"
 
 
+def models_base() -> Path:
+    """Where exported quantized models are written: env PAPER_REPRISE_MODELS_DIR, else
+    /scratch/$USER/paper-reprise-models. On scratch (big, writable), NOT under runs/
+    (home, small quota)."""
+    env = os.environ.get("PAPER_REPRISE_MODELS_DIR")
+    if env:
+        return Path(env)
+    user = os.environ.get("USER") or "shared"
+    return Path(f"/scratch/{user}/paper-reprise-models")
+
+
+def run_models_dir(run_name: str) -> Path:
+    """Per-run export dir under models_base(), so each run's model is isolated and
+    `clean <run_dir>` can drop exactly one run's exported model."""
+    return models_base() / run_name
+
+
 def hf_env_overlay() -> dict:
     """Env vars to merge into an eval/smoke subprocess so HF model downloads land in
     the scratch dir (created here), not $HOME (small quota) or the read-only shared

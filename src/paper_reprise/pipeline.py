@@ -62,6 +62,10 @@ def run_pipeline(
 
 def _finish_pipeline(rd, spec, ingest, *, available_hardware, approve_plan,
                      setup_executor, run_executor, clean_models=False) -> PipelineResult:
+    # Redirect the repo's bulky output (exported model checkpoints) to scratch via a
+    # symlink, before setup/run write anything — keeps runs/ (home) small. Best-effort.
+    rd.link_repo_output_to_scratch()
+
     # --- plan + sentinel ---
     plan = build_plan(spec, available_hardware)
     rd.write_plan(plan)
@@ -95,7 +99,7 @@ def _finish_pipeline(rd, spec, ingest, *, available_hardware, approve_plan,
     # run's model is left for debugging.
     cleaned: list = []
     if clean_models and any(g.verdict != "BLOCKED" for g in grades):
-        cleaned = rd.clean_model_artifacts()
+        cleaned = rd.clean_model_artifacts() + rd.clean_scratch_models()
     return PipelineResult(root=rd.root, aborted_at=None, cleaned=cleaned)
 
 

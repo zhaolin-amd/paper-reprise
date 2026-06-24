@@ -11,6 +11,13 @@ def fixtures_dir() -> Path:
 
 
 @pytest.fixture(autouse=True)
+def _models_dir_on_tmp(monkeypatch, tmp_path):
+    """Point the exported-models scratch base at a tmp dir so tests never create or
+    touch real /scratch/$USER/paper-reprise-models (the production default)."""
+    monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "models-scratch"))
+
+
+@pytest.fixture(autouse=True)
 def _block_real_network(monkeypatch):
     """Safety net: any test that reaches a real `claude` subprocess or a real HTTP
     fetch fails loudly. Tests that legitimately exercise those paths inject fakes

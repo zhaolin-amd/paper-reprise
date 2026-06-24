@@ -141,6 +141,13 @@ commands read as `${PAPER_REPRISE_TASKS:-<spec default>}` / `${PAPER_REPRISE_GPU
 so your value wins when given and the paper's default applies otherwise. (`--gpus` sets how
 many GPUs; *which* ones is still `CUDA_VISIBLE_DEVICES`/`ROCR_VISIBLE_DEVICES`.)
 
+**Where the model is written.** A paper's repo can emit a multi-GB quantized checkpoint. To
+keep `runs/` (home, small quota) light, setup symlinks `repo/runtime` (override:
+`PAPER_REPRISE_REPO_OUTPUT_SUBDIR`) to a per-run scratch dir under
+`/scratch/$USER/paper-reprise-models/` (override: `PAPER_REPRISE_MODELS_DIR`) — the repo
+writes there transparently, no command changes; paper-reprise's own records stay in the run
+dir. (Skipped if `repo/runtime` already exists as a real directory, to avoid clobbering.)
+
 **Freeing disk.** `run`/`resume` **keep** the exported model and env by default, so you can run
 a dir many times (resume more claims, re-eval) without re-quantizing. When you're done with a
 run, `paper-reprise clean <run_dir>` deletes the regenerable artifacts — the exported model
