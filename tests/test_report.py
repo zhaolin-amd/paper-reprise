@@ -63,6 +63,35 @@ def test_baseline_artifact_rendered_as_baseline_bf16():
     assert _algorithm_label(base) == "baseline"
 
 
+def test_multi_metric_pivots_to_one_row_with_metric_columns():
+    # two metrics on the SAME model x config -> one summary row, two metric columns
+    art = Artifact(id="a1", base_model="Llama-8B", method="GSQ",
+                   quant_config={"wbits": 2, "group_size": 128})
+    def ep(metric):
+        return EvalProtocol(runner="official", command="x", metric=metric, dataset="d")
+    spec = Spec(paper="p", repo=None, artifacts=[art], claims=[
+        Claim(id="c_mmlu", artifact="a1", eval_protocol=ep("mmlu"),
+              expected=60.0, tolerance=0.5, source="T"),
+        Claim(id="c_gsm", artifact="a1", eval_protocol=ep("gsm8k"),
+              expected=44.1, tolerance=0.5, source="T"),
+    ])
+    grades = [
+        ClaimGrade(claim_id="c_mmlu", verdict="PARTIAL", measured=58.0, expected=60.0,
+                   reason="off", checks={"value": False, "faithful": True}),
+        ClaimGrade(claim_id="c_gsm", verdict="FAIL", measured=41.0, expected=44.1,
+                   reason="off", checks={"value": False, "faithful": True}),
+    ]
+    zh, en = render_reports(spec, IngestInfo(arxiv_id="p", source_url="u"),
+                            grades, [], env={}, patches=[])
+    for doc in (zh, en):
+        # both metrics are columns in one header row
+        assert "| model | config | algorithm | mmlu | gsm8k |" in doc
+        # one pivoted data row carries both metric cells + overall verdict (worst = FAIL)
+        assert "| Llama-8B | INT2 G128 | GSQ | 58.00(-2.00) | 41.00(-3.10) | FAIL |" in doc
+    # detail table keeps per-metric verdict/reason
+    assert "明细" in zh and "Details" in en
+
+
 def test_summary_counts_verdicts():
     spec, ingest, grades, runs, env = _ctx()
     zh, _ = render_reports(spec, ingest, grades, runs, env, patches=[])
