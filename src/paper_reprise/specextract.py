@@ -36,6 +36,15 @@ GPU/process count, write it as `${{PAPER_REPRISE_GPUS:-<default>}}` (e.g. \
 `NPROC=${{PAPER_REPRISE_GPUS:-1}}` or `torchrun --nproc-per-node=${{PAPER_REPRISE_GPUS:-1}}`) \
 so a `--gpus` override applies. Reference the model as `$PAPER_REPRISE_MODEL` (it is \
 exported into the command).
+- baseline: for each model that has a quantized claim, ALSO add the paper's \
+UNCOMPRESSED (FP16/BF16) baseline as its own artifact + claim. The baseline artifact \
+uses method `none` and `quant_config: {{wbits: 16}}`; the claim id ends in `-baseline` \
+(or `-fp16`), reuses the SAME eval_protocol metric/dataset/tasks as the quantized claim, \
+and `expected` = the paper's reported baseline number for that metric. Its command \
+EVALUATES THE BASE MODEL DIRECTLY (serve `$PAPER_REPRISE_MODEL` + eval) with NO \
+quantization step. Rationale: a baseline that matches the paper's baseline confirms our \
+eval protocol matches theirs, so the quantized gap is trustworthy; a baseline that does \
+NOT match flags an eval-protocol mismatch before we trust any quantized number.
 - calib_status: use exactly `known` (lowercase) when the calibration config is determinable, or `UNKNOWN` (uppercase) when it cannot be determined.
 - quant_config: use the key `wbits` (not `bits`) for the weight bit-width.
 - Default tolerance: perplexity 0.05, accuracy 0.5. If the paper states one, use it.
