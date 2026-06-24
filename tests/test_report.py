@@ -55,16 +55,16 @@ def test_summary_table_columns_model_config_algorithm():
         assert "| Llama2-7B | INT4 G128 | AWQ |" in doc        # config + algorithm derived
 
 
-def test_baseline_artifact_rendered_as_baseline_bf16():
+def test_baseline_artifact_bf16_algorithm_is_dash():
     from paper_reprise.report import _config_label, _algorithm_label
     from paper_reprise.models import Artifact
     base = Artifact(id="b", base_model="m", method="none", quant_config={"wbits": 16})
     assert _config_label(base) == "BF16"
-    assert _algorithm_label(base) == "baseline"
+    assert _algorithm_label(base) == "-"  # uncompressed -> no algorithm
 
 
-def test_multi_metric_pivots_to_one_row_with_metric_columns():
-    # two metrics on the SAME model x config -> one summary row, two metric columns
+def test_single_table_only_no_separate_summary_and_detail():
+    # two metrics -> two rows in ONE table (no separate 汇总/明细 tables)
     art = Artifact(id="a1", base_model="Llama-8B", method="GSQ",
                    quant_config={"wbits": 2, "group_size": 128})
     def ep(metric):
@@ -84,12 +84,10 @@ def test_multi_metric_pivots_to_one_row_with_metric_columns():
     zh, en = render_reports(spec, IngestInfo(arxiv_id="p", source_url="u"),
                             grades, [], env={}, patches=[])
     for doc in (zh, en):
-        # both metrics are columns in one header row
-        assert "| model | config | algorithm | mmlu | gsm8k |" in doc
-        # one pivoted data row carries both metric cells + overall verdict (worst = FAIL)
-        assert "| Llama-8B | INT2 G128 | GSQ | 58.00(-2.00) | 41.00(-3.10) | FAIL |" in doc
-    # detail table keeps per-metric verdict/reason
-    assert "明细" in zh and "Details" in en
+        assert doc.count("| Llama-8B | INT2 G128 | GSQ |") == 2   # one row per metric
+        assert "mmlu" in doc and "gsm8k" in doc
+    # no second table section
+    assert "明细" not in zh and "Details" not in en
 
 
 def test_summary_counts_verdicts():

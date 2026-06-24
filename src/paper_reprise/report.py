@@ -48,15 +48,11 @@ def _config_label(a) -> str:
 
 
 def _algorithm_label(a) -> str:
-    """The quantization algorithm; an uncompressed artifact (method none) is the baseline."""
+    """The quantization algorithm; an uncompressed (BF16/none) artifact has none -> "-"."""
     if not a:
         return "?"
     m = (a.method or "").strip()
-    return "baseline" if m.lower() in ("none", "", "fp16", "bf16", "fp", "full") else m
-
-
-# Worst-wins ordering for collapsing a row's per-metric verdicts into one.
-_VERDICT_SEVERITY = {"MATCH": 0, "BLOCKED": 1, "PARTIAL": 2, "FAIL": 3}
+    return "-" if m.lower() in ("none", "", "fp16", "bf16", "fp", "full", "baseline") else m
 
 
 def _measured_cell(g, expected) -> str:
@@ -66,42 +62,9 @@ def _measured_cell(g, expected) -> str:
     return f"{g.measured:.2f}({g.measured - expected:+.2f})"
 
 
-def _summary_table(spec, grades, lang):
-    """Wide/pivot summary: one row per (model, config, algorithm), one column per
-    metric (cell = measured(diff)), plus an overall verdict (worst of its metrics).
-    Per-metric verdict/reason live in the detail table below."""
-    grades_by = {g.claim_id: g for g in grades}
-    groups: dict = {}
-    group_order: list = []
-    metric_order: list = []
-    for c in spec.claims:
-        a = _artifact(spec, c.artifact)
-        model = a.base_model if a else c.artifact
-        key = (model, _config_label(a), _algorithm_label(a))
-        if key not in groups:
-            groups[key] = {"cells": {}, "verdicts": []}
-            group_order.append(key)
-        m = c.eval_protocol.metric
-        if m not in metric_order:
-            metric_order.append(m)
-        g = grades_by.get(c.id)
-        groups[key]["cells"][m] = _measured_cell(g, c.expected)
-        groups[key]["verdicts"].append(g.verdict if g else "BLOCKED")
-
-    verdict_h = "判定" if lang == "zh" else "verdict"
-    head = ["model", "config", "algorithm", *metric_order, verdict_h]
-    lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
-    for key in group_order:
-        model, cfg, algo = key
-        cells = [groups[key]["cells"].get(m, "—") for m in metric_order]
-        vs = groups[key]["verdicts"]
-        verdict = max(vs, key=lambda v: _VERDICT_SEVERITY.get(v, 0)) if vs else "BLOCKED"
-        lines.append("| " + " | ".join([model, cfg, algo, *cells, verdict]) + " |")
-    return "\n".join(lines)
-
-
-def _detail_table(spec, grades, header):
-    """Long format: one row per claim (per metric), keeping paper, verdict, reason."""
+def _table(spec, grades, header):
+    """One row per claim (model × config × metric), with paper, measured(diff),
+    verdict and reason all in a single table."""
     runs_by = {g.claim_id: g for g in grades}
     lines = [header, "|---|---|---|---|---|---|---|---|"]
     for c in spec.claims:
@@ -169,10 +132,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {envl}
 判定汇总: {summ}
 
-{_summary_table(spec, grades, "zh")}
-
-## 明细(逐指标 verdict / reason)
-{_detail_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |")}
+{_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |")}
 
 ## 各任务原始分数
 {_raw_scores(runs)}
@@ -188,10 +148,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {envl}
 Verdict summary: {summ}
 
-{_summary_table(spec, grades, "en")}
-
-## Details (per-metric verdict / reason)
-{_detail_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |")}
+{_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |")}
 
 ## Per-task raw scores
 {_raw_scores(runs)}
