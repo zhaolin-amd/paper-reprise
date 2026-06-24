@@ -80,23 +80,50 @@ def _table(spec, grades, header):
     return "\n".join(lines)
 
 
-def _replay(runs: list[RunResult]) -> str:
+def _run_meta(r: RunResult) -> str:
+    meta = []
+    if r.seed is not None:
+        meta.append(f"seed {r.seed}")
+    if r.gpu:
+        meta.append(str(r.gpu))
+    if r.minutes is not None:
+        meta.append(f"{r.minutes:.1f} min")
+    meta.append(f"`{r.stdout_path}`")
+    return " · ".join(meta)
+
+
+def _replay(spec, runs: list[RunResult]) -> str:
+    """Replay script grouped per config (model × config × algorithm), not per claim:
+    a config's metrics share one serve+eval script, so identical commands are
+    deduped under a single config heading."""
     if not runs:
         return "(none)"
-    blocks = []
+    art_by_claim = {c.id: _artifact(spec, c.artifact) for c in spec.claims}
+    groups: dict = {}
+    order: list = []
     for r in runs:
-        meta = []
-        if r.seed is not None:
-            meta.append(f"seed {r.seed}")
-        if r.gpu:
-            meta.append(str(r.gpu))
-        if r.minutes is not None:
-            meta.append(f"{r.minutes:.1f} min")
-        meta.append(f"`{r.stdout_path}`")
-        # command in a fenced block (eval commands are multi-line shell — inline
-        # backticks render as a broken blob)
-        blocks.append(f"**{r.claim_id}** — " + " · ".join(meta)
-                      + f"\n\n```bash\n{r.command.strip()}\n```")
+        a = art_by_claim.get(r.claim_id)
+        model = a.base_model if a else r.claim_id
+        key = (model, _config_label(a), _algorithm_label(a))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+
+    blocks = []
+    for (model, cfg, algo) in order:
+        rs = groups[(model, cfg, algo)]
+        algo_s = "" if algo in ("-", "?") else f" · {algo}"
+        meta = "\n".join(_run_meta(r) for r in rs)
+        # dedupe commands (a config's metrics usually share one script); fenced
+        # block because eval commands are multi-line shell.
+        cmds: list = []
+        for r in rs:
+            cmd = r.command.strip()
+            if cmd not in cmds:
+                cmds.append(cmd)
+        cmd_s = "\n\n".join(f"```bash\n{cmd}\n```" for cmd in cmds)
+        blocks.append(f"**{model} · {cfg}{algo_s}**\n{meta}\n\n{cmd_s}")
     return "\n\n".join(blocks)
 
 
@@ -142,8 +169,8 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 ## 各任务原始分数
 {_raw_scores(runs)}
 
-## 复算信息(每条 claim)
-{_replay(runs)}
+## 复算脚本(每个 config)
+{_replay(spec, runs)}
 {_patches_section(patches, "Setup 改动留痕")}"""
 
     en = f"""# Reproduction Report: {title} ({ingest.arxiv_id})
@@ -155,7 +182,7 @@ Verdict summary: {summ}
 ## Per-task raw scores
 {_raw_scores(runs)}
 
-## Replay info (per claim)
-{_replay(runs)}
+## Replay script (per config)
+{_replay(spec, runs)}
 {_patches_section(patches, "Setup patches")}"""
     return zh, en
