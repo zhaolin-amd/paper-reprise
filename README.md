@@ -116,7 +116,7 @@ paper-reprise run 2401.00001
 ## Usage
 
 ```
-paper-reprise run <arxiv_id | arxiv_url | "paper title">
+paper-reprise run <arxiv_id | arxiv_url | "paper title">   # reproduce a paper (interactive claim selection by default)
 paper-reprise resume <run_dir>          # continue an existing run from its spec.yaml
 paper-reprise report <run_dir>          # re-render the report from an existing run
 paper-reprise clean  <run_dir>          # free a finished run's model weights + env (keep records)
