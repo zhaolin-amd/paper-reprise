@@ -64,3 +64,31 @@ def test_create_name_is_truncated(tmp_path):
                        name="a" * 100)
     # slug truncated to 40 chars before the id
     assert rd.root.name == ("a" * 40) + "-2401.00001-t"
+
+
+def test_clean_model_artifacts_removes_weights_keeps_records(tmp_path):
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path, arxiv_id="p", timestamp="t")
+    big = b"\0" * (11 * 1024 * 1024)
+    ck = rd.repo_dir / "runtime" / "checkpoints" / "m" / "assembled"
+    ck.mkdir(parents=True)
+    (ck / "model.safetensors").write_bytes(big)
+    (ck / "extra.bin").write_bytes(big)
+    (ck / "config.json").write_text("{}")        # non-weight → kept
+    tiny = ck / "tiny.pt"
+    tiny.write_bytes(b"\0" * 1024)               # weight ext but under floor → kept
+    (rd.root / "spec.yaml").write_text("paper: p")
+    sd = rd.claim_dir("c1")
+    (sd / "stdout.log").write_text("perplexity: 5.8")
+
+    removed = rd.clean_model_artifacts()
+    names = {n for n, _ in removed}
+    assert any(n.endswith("model.safetensors") for n in names)
+    assert any(n.endswith("extra.bin") for n in names)
+    assert not (ck / "model.safetensors").exists()
+    assert not (ck / "extra.bin").exists()
+    # kept: under-floor weight, non-weight, and all records
+    assert tiny.exists()
+    assert (ck / "config.json").exists()
+    assert (rd.root / "spec.yaml").read_text() == "paper: p"
+    assert (sd / "stdout.log").exists()

@@ -150,3 +150,41 @@ def test_pipeline_uses_paper_name_in_run_dir(tmp_path, monkeypatch):
         setup_executor=_fake_setup, run_executor=_fake_executor,
     )
     assert result.root.name == "awesome-quant-method-2401.00001-t"
+
+
+def _executor_with_model(claim, artifact, claim_dir):
+    cd = Path(claim_dir)
+    log = cd / "stdout.log"
+    log.write_text("perplexity: 5.80")
+    # drop a big "exported model" weight under the run dir (repo runtime)
+    mdir = cd.parent.parent / "repo" / "runtime" / "checkpoints" / "assembled"
+    mdir.mkdir(parents=True, exist_ok=True)
+    (mdir / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
+    return {"stdout_path": str(log), "actual_config": {"seqlen": 2048},
+            "gpu": "A100x1", "seed": 0, "minutes": 1.0}
+
+
+def _run(tmp_path, monkeypatch, *, clean_models):
+    monkeypatch.setattr(pipeline, "extract_spec", _fake_specextract)
+    return pipeline.run_pipeline(
+        input_arg="2401.00001", base_dir=tmp_path, timestamp="t",
+        available_hardware=["A100-80G"], approve_spec=lambda s: True,
+        approve_plan=lambda p: True, fetch_sources=lambda rd, a, u: None,
+        setup_executor=_fake_setup, run_executor=_executor_with_model,
+        clean_models=clean_models)
+
+
+def test_clean_models_removes_exported_weights_keeps_report(tmp_path, monkeypatch):
+    result = _run(tmp_path, monkeypatch, clean_models=True)
+    wt = result.root / "repo/runtime/checkpoints/assembled/model.safetensors"
+    assert not wt.exists()                       # exported model cleaned
+    assert result.cleaned                        # freed list reported
+    assert (result.root / "report.zh.md").exists()   # records kept
+    assert (result.root / "runs/c1/stdout.log").exists()
+
+
+def test_keep_models_leaves_exported_weights(tmp_path, monkeypatch):
+    result = _run(tmp_path, monkeypatch, clean_models=False)
+    wt = result.root / "repo/runtime/checkpoints/assembled/model.safetensors"
+    assert wt.exists()                           # kept
+    assert not result.cleaned
