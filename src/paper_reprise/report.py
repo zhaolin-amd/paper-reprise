@@ -18,11 +18,18 @@ def _summary(grades: list[ClaimGrade]) -> str:
     return f"MATCH {c['MATCH']} / PARTIAL {c['PARTIAL']} / FAIL {c['FAIL']} / BLOCKED {c['BLOCKED']}"
 
 
-def _env_line(ingest: IngestInfo, env: dict) -> str:
-    repo = ingest.repo
+def _env_line(ingest: IngestInfo, env: dict, spec: Spec | None = None) -> str:
+    # ingest often doesn't carry the repo even when specextract found one — fall
+    # back to spec.repo so a run against an official repo isn't mislabelled.
+    repo = ingest.repo or (spec.repo if spec else None)
     repo_s = f"{repo.url}@{repo.commit}" if repo else "(no official repo)"
-    return (f"repo: {repo_s} | torch {env.get('torch','?')} / "
-            f"transformers {env.get('transformers','?')} / CUDA {env.get('cuda','?')}")
+
+    def _v(key: str) -> str:
+        val = str(env.get(key) or "").strip()
+        return val if val and val.lower() != "unknown" else "?"
+
+    return (f"repo: {repo_s} | torch {_v('torch')} / "
+            f"transformers {_v('transformers')} / CUDA {_v('cuda')}")
 
 
 def _artifact(spec: Spec, artifact_id: str):
@@ -156,7 +163,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str]) -> tuple[str, str]:
     title = ingest.title or ingest.arxiv_id
     summ = _summary(grades)
-    envl = _env_line(ingest, env)
+    envl = _env_line(ingest, env, spec)
 
     zh = f"""# 复现报告:{title} ({ingest.arxiv_id})
 {envl}

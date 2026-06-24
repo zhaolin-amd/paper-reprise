@@ -105,6 +105,22 @@ def test_env_snapshot_in_report():
     assert "abc123" in zh
 
 
+def test_repo_falls_back_to_spec_when_ingest_repo_missing():
+    spec, ingest, grades, runs, env = _ctx()
+    ingest.repo = None  # ingest didn't capture it, but spec.repo did
+    zh, _ = render_reports(spec, ingest, grades, runs, env, patches=[])
+    assert "(no official repo)" not in zh
+    assert "github.com/x/y" in zh
+
+
+def test_unknown_env_values_render_as_question_mark():
+    spec, ingest, grades, runs, _ = _ctx()
+    zh, _ = render_reports(spec, ingest, grades, runs,
+                           env={"torch": "unknown", "transformers": "", "cuda": None},
+                           patches=[])
+    assert "torch ? / transformers ? / CUDA ?" in zh
+
+
 def test_report_includes_per_task_raw_scores(tmp_path):
     from paper_reprise.report import render_reports
     from paper_reprise.models import (Spec, Artifact, Claim, EvalProtocol,
