@@ -7,8 +7,10 @@ Iron rules (design §5.2):
 from __future__ import annotations
 
 from collections import Counter
+from pathlib import Path
 
 from paper_reprise.models import ClaimGrade, IngestInfo, RunResult, Spec
+from paper_reprise.parsers import parse_per_task
 
 
 def _summary(grades: list[ClaimGrade]) -> str:
@@ -55,6 +57,24 @@ def _replay(runs: list[RunResult]) -> str:
     return "\n".join(out) if out else "(none)"
 
 
+def _per_task(runs: list[RunResult]) -> str:
+    """Raw per-task scores behind each claim's averaged metric, read from its
+    stdout. Shown so a suite-average claim (e.g. acc_norm_avg) isn't a black box."""
+    out = []
+    for r in runs:
+        scores = {}
+        try:
+            p = Path(r.stdout_path)
+            if p.exists():
+                scores = parse_per_task(p.read_text(errors="replace"))
+        except OSError:
+            pass
+        if scores:
+            joined = " | ".join(f"{k} {v:g}" for k, v in scores.items())
+            out.append(f"- {r.claim_id}: {joined}")
+    return "\n".join(out) if out else "(none)"
+
+
 def _patches(patches: list[str]) -> str:
     return "\n".join(f"- {p}" for p in patches) if patches else "(none)"
 
@@ -71,6 +91,9 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 {_table(spec, grades, "| claim | 模型/配置 | 指标 | paper | 实测 | 判定 | 原因 |")}
 
+## 各任务原始分数
+{_per_task(runs)}
+
 ## 复算信息(每条 claim)
 {_replay(runs)}
 
@@ -83,6 +106,9 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 Verdict summary: {summ}
 
 {_table(spec, grades, "| claim | model/config | metric | paper | measured | verdict | reason |")}
+
+## Per-task raw scores
+{_per_task(runs)}
 
 ## Replay info (per claim)
 {_replay(runs)}

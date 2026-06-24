@@ -25,7 +25,8 @@ ingest → specextract → plan → setup → run → grade → report
 - **grade** — pure code, isolated from execution: a claim is MATCH only if the number is
   in tolerance AND the run was faithful; otherwise PARTIAL / FAIL / BLOCKED.
 - **report** — bilingual `report.zh.md` / `report.en.md`, always the measured number,
-  never the paper's, with full replay info.
+  never the paper's, with the per-task raw scores behind any averaged metric and full
+  replay info.
 
 Papers **without** an official repo take a *from-scratch* path: instead of running a cloned
 repo, headless Claude implements the paper's method as a self-contained `impl/` (from a
