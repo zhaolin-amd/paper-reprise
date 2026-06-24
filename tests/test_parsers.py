@@ -51,3 +51,11 @@ def test_parse_avg_acc_fraction_and_percent():
 def test_parse_acc_norm_avg_label():
     assert parse_metric("acc_norm_avg", "acc_norm_avg: 0.6651") == 66.51
     assert parse_metric("acc_norm_avg", "ACC_NORM_AVG: 66.5%") == 66.5
+
+
+def test_parse_per_task_extracts_tasks_skips_average():
+    from paper_reprise.parsers import parse_per_task
+    txt = ("# header line\narc_challenge acc_norm: 0.459\narc_easy: 0.7285\n"
+           "winogrande acc: 0.6922\nacc_norm_avg: 0.6651\n")
+    d = parse_per_task(txt)
+    assert d == {"arc_challenge": 0.459, "arc_easy": 0.7285, "winogrande": 0.6922}

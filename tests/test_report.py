@@ -51,3 +51,25 @@ def test_env_snapshot_in_report():
     zh, _ = render_reports(spec, ingest, grades, runs, env, patches=[])
     assert "4.36.0" in zh
     assert "abc123" in zh
+
+
+def test_report_includes_per_task_raw_scores(tmp_path):
+    from paper_reprise.report import render_reports
+    from paper_reprise.models import (Spec, Artifact, Claim, EvalProtocol,
+                                       IngestInfo, ClaimGrade, RunResult)
+    art = Artifact(id="a1", base_model="m", method="GSQ", quant_config={"wbits": 2})
+    claim = Claim(id="c1", artifact="a1",
+                  eval_protocol=EvalProtocol(runner="official", command="x",
+                                             metric="acc_norm_avg", dataset="arc_easy,piqa"),
+                  expected=68.55, tolerance=0.5, source="T")
+    spec = Spec(paper="p", repo=None, artifacts=[art], claims=[claim])
+    log = tmp_path / "stdout.log"
+    log.write_text("arc_easy acc_norm: 0.73\npiqa: 0.76\nacc_norm_avg: 0.745\n")
+    run = RunResult(claim_id="c1", command="x", stdout_path=str(log), status="ran")
+    grade = ClaimGrade(claim_id="c1", verdict="PARTIAL", measured=74.5, expected=68.55,
+                       reason="-", checks={"value": False, "faithful": True})
+    zh, en = render_reports(spec, IngestInfo(arxiv_id="p", source_url="u"),
+                            [grade], [run], env={}, patches=[])
+    for doc in (zh, en):
+        assert "arc_easy 0.73" in doc and "piqa 0.76" in doc      # raw per-task shown
+    assert "各任务原始分数" in zh and "Per-task raw scores" in en

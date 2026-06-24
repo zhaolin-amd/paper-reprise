@@ -62,3 +62,28 @@ def parse_metric(metric: str, text: str) -> Optional[float]:
     if metric == "speedup":
         return _first_match(_SPEEDUP_PATTERNS, text)
     return None
+
+
+# task -> primary score from an eval log's per-task summary lines, e.g.
+# "arc_challenge acc_norm: 0.459", "arc_easy: 0.7285", "winogrande acc: 0.692".
+_PER_TASK_RE = re.compile(
+    r"^[ \t]*([A-Za-z][\w\-]+?)"
+    r"(?:[ \t]+(?:acc_norm|acc|pass@1|exact_match|score|em))?"
+    r"[ \t]*[:=][ \t]*([-+]?[0-9]*\.?[0-9]+)[ \t]*%?[ \t]*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+_PER_TASK_SKIP = {"acc", "acc_norm", "metric", "value", "tasks", "seed", "gpu", "minutes"}
+
+
+def parse_per_task(text: str) -> dict:
+    """Per-task scores from an eval log's summary lines (the per-task primary the
+    harness prints, e.g. `arc_challenge: 0.459`). Skips the suite average and
+    non-task labels. Values returned as-written (not %-normalized)."""
+    out: dict = {}
+    for m in re.finditer(_PER_TASK_RE, text or ""):
+        name = m.group(1)
+        low = name.lower()
+        if low in _PER_TASK_SKIP or "avg" in low or "average" in low:
+            continue
+        out[name] = float(m.group(2))
+    return out
