@@ -1,0 +1,14 @@
+paper: "2401.00001"
+
+# "Sector Rotation by Factor Model and Fundamental Analysis"
+# This is a quantitative finance paper, not an LLM/quantization paper.
+# It presents trading strategies (momentum factors, short-term reversion,
+# neural-network-based sector classification) applied to S&P 500 GICS sector
+# indices. There are no language-model artifacts, no quantization, and no
+# standard ML eval benchmarks. The spec schema does not apply.
+
+repo: null
+
+artifacts: []
+
+claims: []
