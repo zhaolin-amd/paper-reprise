@@ -1,0 +1,60 @@
+paper: '2604.18556'
+repo:
+  url: https://github.com/IST-DASLab/GSQ
+  commit: 194281e25c93c6eb916784db049c536c6996451f
+artifacts:
+- id: gsq-llama3-8b-2bit
+  base_model: meta-llama/Llama-3.1-8B-Instruct
+  method: GSQ
+  quant_config:
+    wbits: 2
+    group_size: 128
+    symmetric: true
+    calib_dataset: FineWeb-Edu
+    calib_nsamples: 4096
+    calib_seqlen: 4096
+  calib_status: known
+- id: llama3-8b-fp16
+  base_model: meta-llama/Llama-3.1-8B-Instruct
+  method: none
+  quant_config:
+    wbits: 16
+  calib_status: known
+claims:
+- id: llama3-8b-baseline
+  artifact: llama3-8b-fp16
+  eval_protocol:
+    runner: official
+    command: "export SLURM_JOB_ID=local\nVLLM_USE_DEEP_GEMM=0 VLLM_MOE_USE_DEEP_GEMM=0 EVAL=1 KEEP_SERVING=0 \\\n\
+      \  MODEL_PATH=$PAPER_REPRISE_MODEL \\\n\
+      \  EVAL_TASKS=${PAPER_REPRISE_TASKS:-arc_challenge,arc_easy,hellaswag,winogrande,piqa} \\\n\
+      \  TP_SIZE=${PAPER_REPRISE_GPUS:-8} \\\n\
+      \  bash scripts/serve_model.sh\n"
+    metric: acc_norm_avg
+    dataset: arc_challenge,arc_easy,hellaswag,winogrande,piqa
+    split: test
+    seqlen: 4096
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 73.71
+  tolerance: 0.5
+  source: Table 1 (tab:llama_all), row FP16/BF16, col Avg, Llama-3.1-8B-Instruct
+  hardware: 1x A100 80GB
+- id: llama3-8b-2bit-avg-acc
+  artifact: gsq-llama3-8b-2bit
+  eval_protocol:
+    runner: official
+    command: "bash scripts/serve_model.sh && python eval_model.py --config configs/local/config.yaml\n\
+      \  --base-url http://localhost:8000/v1/completions\n  --tasks arc_challenge,arc_easy,hellaswag,winogrande,piqa\n"
+    metric: acc_norm_avg
+    dataset: arc_challenge,arc_easy,hellaswag,winogrande,piqa
+    split: test
+    seqlen: 4096
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 68.55
+  tolerance: 0.5
+  source: Table 1 (tab:llama_all), row GSQ (ours) 2.13 bpp, col Avg, Llama-3.1-8B-Instruct
+  hardware: 1x A100 80GB

@@ -1,0 +1,346 @@
+paper: "2604.18556"
+
+repo:
+  url: "https://github.com/IST-DASLab/GSQ"
+  commit: "194281e25c93c6eb916784db049c536c6996451f"
+
+artifacts:
+  - id: gsq-llama3-8b-2bit
+    base_model: meta-llama/Llama-3.1-8B-Instruct
+    method: GSQ
+    quant_config:
+      wbits: 2
+      group_size: 128
+      symmetric: true
+      calib_dataset: FineWeb-Edu
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+  - id: gsq-llama3-8b-3bit
+    base_model: meta-llama/Llama-3.1-8B-Instruct
+    method: GSQ
+    quant_config:
+      wbits: 3
+      group_size: 128
+      symmetric: true
+      calib_dataset: FineWeb-Edu
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+  - id: gsq-llama3-8b-ternary
+    base_model: meta-llama/Llama-3.1-8B-Instruct
+    method: GSQ
+    quant_config:
+      wbits: "ternary"
+      group_size: 128
+      symmetric: true
+      calib_dataset: FineWeb-Edu
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+  - id: gsq-llama3-70b-2bit
+    base_model: meta-llama/Llama-3.1-70B-Instruct
+    method: GSQ
+    quant_config:
+      wbits: 2
+      group_size: 128
+      symmetric: true
+      calib_dataset: FineWeb-Edu
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+  - id: gsq-llama3-70b-3bit
+    base_model: meta-llama/Llama-3.1-70B-Instruct
+    method: GSQ
+    quant_config:
+      wbits: 3
+      group_size: 128
+      symmetric: true
+      calib_dataset: FineWeb-Edu
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+  - id: gsq-kimi-k2.5-2bit
+    base_model: moonshotai/Kimi-K2.5
+    method: GSQ
+    quant_config:
+      wbits: 2
+      group_size: 128
+      symmetric: true
+      calib_dataset: OpenThoughts
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+      scope: non-shared experts only
+    calib_status: known
+
+  - id: gsq-qwen3-8b-q2k
+    base_model: Qwen/Qwen3-8B
+    method: GSQ-GGUF
+    quant_config:
+      wbits: 2
+      gguf_format: Q2_K
+      init: unsloth-Q2_K
+      calib_dataset: "OpenThoughts+OpenPlatypus+FineWeb-Edu"
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+  - id: gsq-qwen3-8b-q3km
+    base_model: Qwen/Qwen3-8B
+    method: GSQ-GGUF
+    quant_config:
+      wbits: 3
+      gguf_format: Q3_K_M
+      init: unsloth-Q3_K_M
+      calib_dataset: "OpenThoughts+OpenPlatypus+FineWeb-Edu"
+      calib_nsamples: 4096
+      calib_seqlen: 4096
+    calib_status: known
+
+claims:
+  # ── Llama-3.1-8B-Instruct 2-bit (headline claim from abstract) ──────────
+  - id: llama3-8b-2bit-avg-acc
+    artifact: gsq-llama3-8b-2bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks arc_challenge,arc_easy,hellaswag,winogrande,piqa
+      metric: acc_norm_avg
+      dataset: "arc_challenge,arc_easy,hellaswag,winogrande,piqa"
+      split: test
+      seqlen: 4096
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 68.55
+    tolerance: 0.5
+    source: "Table 1 (tab:llama_all), row GSQ (ours) 2.13 bpp, col Avg, Llama-3.1-8B-Instruct"
+    hardware: "1x A100 80GB"
+
+  # ── Llama-3.1-70B-Instruct 2-bit (headline claim from abstract) ─────────
+  - id: llama3-70b-2bit-avg-acc
+    artifact: gsq-llama3-70b-2bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks arc_challenge,arc_easy,hellaswag,winogrande,piqa
+      metric: acc_norm_avg
+      dataset: "arc_challenge,arc_easy,hellaswag,winogrande,piqa"
+      split: test
+      seqlen: 4096
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 75.57
+    tolerance: 0.5
+    source: "Table 1 (tab:llama_all), row GSQ (ours) 2.13 bpp, col Avg, Llama-3.1-70B-Instruct"
+    hardware: "4x H100 80GB"
+
+  # ── Llama-3.1-8B-Instruct 3-bit ─────────────────────────────────────────
+  - id: llama3-8b-3bit-avg-acc
+    artifact: gsq-llama3-8b-3bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks arc_challenge,arc_easy,hellaswag,winogrande,piqa
+      metric: acc_norm_avg
+      dataset: "arc_challenge,arc_easy,hellaswag,winogrande,piqa"
+      split: test
+      seqlen: 4096
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 72.32
+    tolerance: 0.5
+    source: "Table 1 (tab:llama_all), row GSQ (ours) 3.13 bpp, col Avg, Llama-3.1-8B-Instruct"
+    hardware: "1x A100 80GB"
+
+  # ── Llama-3.1-70B-Instruct 3-bit ────────────────────────────────────────
+  - id: llama3-70b-3bit-avg-acc
+    artifact: gsq-llama3-70b-3bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks arc_challenge,arc_easy,hellaswag,winogrande,piqa
+      metric: acc_norm_avg
+      dataset: "arc_challenge,arc_easy,hellaswag,winogrande,piqa"
+      split: test
+      seqlen: 4096
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 77.99
+    tolerance: 0.5
+    source: "Table 1 (tab:llama_all), row GSQ (ours) 3.13 bpp, col Avg, Llama-3.1-70B-Instruct"
+    hardware: "4x H100 80GB"
+
+  # ── Llama-3.1-8B-Instruct ternary (1.71 bpp) ────────────────────────────
+  - id: llama3-8b-ternary-avg-acc
+    artifact: gsq-llama3-8b-ternary
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks arc_challenge,arc_easy,hellaswag,winogrande,piqa
+      metric: acc_norm_avg
+      dataset: "arc_challenge,arc_easy,hellaswag,winogrande,piqa"
+      split: test
+      seqlen: 4096
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 63.44
+    tolerance: 0.5
+    source: "Table 1 (tab:llama_all), row GSQ (ours) 1.71 bpp, col Avg, Llama-3.1-8B-Instruct"
+    hardware: "1x A100 80GB"
+
+  # ── Kimi-K2.5 2-bit — AIME25 ────────────────────────────────────────────
+  - id: kimi-k2.5-2bit-aime25
+    artifact: gsq-kimi-k2.5-2bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks aime25
+      metric: pass@1
+      dataset: aime25
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: "temperature=1.0, top_p=0.95, n_repeats=10"
+    expected: 93.00
+    tolerance: 0.5
+    source: "Table 2 (tab:kimi_combined), row GSQ (Ours) 2.13 bpp, col AIME 25 (n=10)"
+    hardware: "8x H100 80GB"
+
+  # ── Kimi-K2.5 2-bit — GPQA Diamond ──────────────────────────────────────
+  - id: kimi-k2.5-2bit-gpqa-diamond
+    artifact: gsq-kimi-k2.5-2bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks gpqa_diamond
+      metric: pass@1
+      dataset: gpqa_diamond
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: "temperature=1.0, top_p=0.95, n_repeats=5"
+    expected: 76.57
+    tolerance: 0.5
+    source: "Table 2 (tab:kimi_combined), row GSQ (Ours) 2.13 bpp, col GPQA Diamond (n=5)"
+    hardware: "8x H100 80GB"
+
+  # ── Kimi-K2.5 2-bit — MATH500 ───────────────────────────────────────────
+  - id: kimi-k2.5-2bit-math500
+    artifact: gsq-kimi-k2.5-2bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks math500
+      metric: pass@1
+      dataset: math500
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: "temperature=1.0, top_p=0.95, n_repeats=5"
+    expected: 97.32
+    tolerance: 0.5
+    source: "Table 2 (tab:kimi_combined), row GSQ (Ours) 2.13 bpp, col MATH 500 (n=5)"
+    hardware: "8x H100 80GB"
+
+  # ── Kimi-K2.5 2-bit — LiveCodeBench-v6 ──────────────────────────────────
+  - id: kimi-k2.5-2bit-livecodebench
+    artifact: gsq-kimi-k2.5-2bit
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks livecodebench
+      metric: pass@1
+      dataset: livecodebench_v6
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: "temperature=1.0, top_p=0.95, n_repeats=10"
+    expected: 69.37
+    tolerance: 0.5
+    source: "Table 2 (tab:kimi_combined), row GSQ (Ours) 2.13 bpp, col LiveCodeBench (n=10)"
+    hardware: "8x H100 80GB"
+
+  # ── Qwen3-8B GGUF Q2_K average score ────────────────────────────────────
+  - id: qwen3-8b-q2k-avg
+    artifact: gsq-qwen3-8b-q2k
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks aime25,gpqa_diamond,mmlu_pro
+      metric: avg_pass@1
+      dataset: "aime25,gpqa_diamond,mmlu_pro"
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: "temperature=1.0, top_p=0.95, aime25_n_repeats=10, gpqa_n_repeats=5"
+    expected: 56.28
+    tolerance: 0.5
+    source: "Table 3 (tab:qwen3_8b_gguf), row GSQ-Q2_K, col Avg"
+    hardware: "1x A100 80GB"
+
+  # ── Qwen3-8B GGUF Q3_K_M average score ──────────────────────────────────
+  - id: qwen3-8b-q3km-avg
+    artifact: gsq-qwen3-8b-q3km
+    eval_protocol:
+      runner: official
+      command: >
+        bash scripts/serve_model.sh &&
+        python eval_model.py --config configs/local/config.yaml
+          --base-url http://localhost:8000/v1/completions
+          --tasks aime25,gpqa_diamond,mmlu_pro
+      metric: avg_pass@1
+      dataset: "aime25,gpqa_diamond,mmlu_pro"
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: "temperature=1.0, top_p=0.95, aime25_n_repeats=10, gpqa_n_repeats=5"
+    expected: 61.61
+    tolerance: 0.5
+    source: "Table 3 (tab:qwen3_8b_gguf), row GSQ-Q3_K_M, col Avg"
+    hardware: "1x A100 80GB"

@@ -1,0 +1,6 @@
+{
+  "seqlen": 4096,
+  "few_shot": 0,
+  "wbits": 2,
+  "group_size": 128
+}

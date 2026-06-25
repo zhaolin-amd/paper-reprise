@@ -1,0 +1,52 @@
+paper: "2604.18556"
+
+repo:
+  url: "https://github.com/IST-DASLab/GSQ"
+  commit: "194281e25c93c6eb916784db049c536c6996451f"
+
+# PLUMBING SMOKE spec: one reduced claim to validate the full pipeline end to end
+# on the real repo + real GPU. Llama-3.2-1B, 2 layers, tiny eval — the measured
+# number is NOT expected to match the paper (see source note). Full spec in
+# spec.full.yaml.
+artifacts:
+  - id: gsq-llama32-1b-2bit-smoke
+    base_model: meta-llama/Llama-3.2-1B
+    method: GSQ
+    quant_config:
+      wbits: 2
+      group_size: 128
+      symmetric: true
+      calib_dataset: c4
+      calib_nsamples: 16
+      calib_seqlen: 512
+    calib_status: known
+
+claims:
+  - id: llama32-1b-2bit-smoke
+    artifact: gsq-llama32-1b-2bit-smoke
+    eval_protocol:
+      runner: official
+      command: >
+        set -euo pipefail;
+        export SLURM_JOB_ID="${SLURM_JOB_ID:-local}";
+        export GSQ_MODEL_NAME="$PAPER_REPRISE_MODEL";
+        CONFIG_FILE=configs/config_smoke.yaml NPROC=${PAPER_REPRISE_GPUS:-1} bash scripts/run.sh --max-layers 2;
+        CONFIG_FILE=configs/config_smoke.yaml bash scripts/save_model.sh;
+        MP=$(ls -dt runtime/checkpoints/*/*/assembled 2>/dev/null | head -1);
+        echo "[reprise] serving MODEL_PATH=$MP";
+        if timeout 600 env VLLM_USE_DEEP_GEMM=0 VLLM_MOE_USE_DEEP_GEMM=0
+        CONFIG_FILE=configs/config_smoke.yaml EVAL=1 MODEL_PATH="$MP" EVAL_TASKS="${PAPER_REPRISE_TASKS:-arc_easy}"
+        EVAL_LIMIT=8 EVAL_NUM_CONCURRENT=4 TP_SIZE=1 bash scripts/serve_model.sh;
+        then echo "[reprise] vLLM eval OK";
+        else echo "[reprise] VLLM_SKIPPED: serve/eval failed or timed out (deep_gemm FP8 kernel gap); see serve_vllm.log"; fi
+      metric: acc
+      dataset: arc_easy
+      split: test
+      seqlen: 512
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 68.55
+    tolerance: 0.5
+    source: "PLUMBING SMOKE (Llama-3.2-1B, 2 layers, tiny eval); expected is the paper's 8B Table-1 number and will NOT match — validates the pipeline, not the result"
+    hardware: "1x H200"

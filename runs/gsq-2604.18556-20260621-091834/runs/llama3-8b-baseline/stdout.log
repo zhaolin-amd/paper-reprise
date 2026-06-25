@@ -1,0 +1,15 @@
+GSQ FP16/BF16 baseline — Llama-3.1-8B-Instruct (vLLM TP=8, lm-eval 0-shot)
+
+|    Tasks    |Version|Filter|n-shot| Metric |   |Value |   |Stderr|
+|-------------|------:|------|-----:|--------|---|-----:|---|-----:|
+|arc_challenge|      1|none  |     0|acc     |↑  |0.5179|±  |0.0146|
+|             |       |none  |     0|acc_norm|↑  |0.5512|±  |0.0145|
+|arc_easy     |      1|none  |     0|acc     |↑  |0.8178|±  |0.0079|
+|             |       |none  |     0|acc_norm|↑  |0.7980|±  |0.0082|
+|hellaswag    |      1|none  |     0|acc     |↑  |0.5910|±  |0.0049|
+|             |       |none  |     0|acc_norm|↑  |0.7924|±  |0.0040|
+|piqa         |      1|none  |     0|acc     |↑  |0.8003|±  |0.0093|
+|             |       |none  |     0|acc_norm|↑  |0.8085|±  |0.0092|
+|winogrande   |      1|none  |     0|acc     |↑  |0.7395|±  |0.0123|
+
+acc_norm_avg: 0.7379

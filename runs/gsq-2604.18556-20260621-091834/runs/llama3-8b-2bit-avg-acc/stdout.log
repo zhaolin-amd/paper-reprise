@@ -1,0 +1,15 @@
+# GSQ Llama-3.1-8B-Instruct 2-bit — lm-eval (manual faithful run: 8xH200, 20-epoch block-wise, FineWeb-Edu). Primary metric per task = acc_norm (else acc).
+
+|    Tasks    |Version|Filter|n-shot| Metric |   |Value |   |Stderr|
+|-------------|------:|------|-----:|--------|---|-----:|---|-----:|
+|arc_challenge|      1|none  |     0|acc     |↑  |0.4241|±  |0.0144|
+|             |       |none  |     0|acc_norm|↑  |0.4590|±  |0.0146|
+|arc_easy     |      1|none  |     0|acc     |↑  |0.7593|±  |0.0088|
+|             |       |none  |     0|acc_norm|↑  |0.7285|±  |0.0091|
+|hellaswag    |      1|none  |     0|acc     |↑  |0.5077|±  |0.0050|
+|             |       |none  |     0|acc_norm|↑  |0.6884|±  |0.0046|
+|piqa         |      1|none  |     0|acc     |↑  |0.7584|±  |0.0100|
+|             |       |none  |     0|acc_norm|↑  |0.7573|±  |0.0100|
+|winogrande   |      1|none  |     0|acc     |↑  |0.6922|±  |0.0130|
+
+acc_norm_avg: 0.6651
