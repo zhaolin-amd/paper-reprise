@@ -106,14 +106,14 @@ From a clone (local / dev):
 ```
 git clone https://github.com/zhaolin-amd/paper-reprise && cd paper-reprise
 uv sync                                  # builds ./.venv from uv.lock
-uv run paper-reprise run 2401.00001      # or: uv run reprise run 2401.00001
+uv run paper-reprise run 2604.18556      # or: uv run reprise run 2604.18556
 ```
 
 Or put the `paper-reprise` / `reprise` commands on your PATH:
 
 ```
 uv tool install .                        # or: pipx install .   |   pip install -e .
-paper-reprise run 2401.00001
+paper-reprise run 2604.18556
 ```
 
 ## Usage
@@ -125,7 +125,7 @@ paper-reprise report <run_dir>          # re-render the report from an existing 
 paper-reprise clean  [<run_dir>]        # free model weights + env (keep records); no arg → all runs under runs/
 ```
 
-A short alias `reprise` is also installed (e.g. `reprise run 2401.00001`).
+A short alias `reprise` is also installed (e.g. `reprise run 2604.18556`).
 
 **By default `run` presents the extracted claims interactively** — after specextract it
 prints each numbered claim as a block showing the full **model × config** (model, the whole
