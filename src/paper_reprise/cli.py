@@ -85,14 +85,24 @@ def spec_selection_prompt(spec: "Spec", label: str) -> bool:
     claims = spec.claims
     artifacts = {a.id: a for a in spec.artifacts}
 
-    click.echo(f"\nExtracted {len(claims)} claims from {label} — "
+    if not claims:
+        click.echo(f"\nNo claims were extracted from {label} — nothing to select.")
+        return False
+
+    click.echo(f"\nExtracted {len(claims)} claim(s) from {label} — "
                f"pick which to reproduce (model × config is the unit):\n")
     for i, c in enumerate(claims, 1):
         click.echo(_claim_block(i, c, artifacts))
         click.echo("")
 
+    # Compact recap right next to the prompt, so the number→claim mapping stays
+    # visible even when the detailed blocks above have scrolled off, and an
+    # example that uses real claim numbers (not a hard-coded "1 3").
+    recap = "   ".join(f"[{i}] {c.id}" for i, c in enumerate(claims, 1))
+    example = "1" if len(claims) == 1 else "1 2"
+    click.echo(f"Candidates:  {recap}")
     raw = click.prompt(
-        '\nEnter numbers (e.g. "1 3"), "all", or "q" to abort',
+        f'Reproduce which? numbers (e.g. "{example}"), "all", or "q" to abort',
         default="all",
     )
     raw = raw.strip().lower()

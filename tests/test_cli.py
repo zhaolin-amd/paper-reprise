@@ -377,6 +377,29 @@ def test_selection_single_claim():
     assert spec.artifacts[0].id == "art-1"
 
 
+def test_selection_lists_candidates_and_real_example(capsys):
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(2)
+    with patch("paper_reprise.cli.click.prompt", return_value="all") as p:
+        spec_selection_prompt(spec, "test-paper")
+    out = capsys.readouterr().out
+    # the number->claim mapping is shown right by the prompt
+    assert "Candidates:" in out
+    assert "[1] c0" in out and "[2] c1" in out
+    # example uses real claim numbers, not a hard-coded "1 3"
+    assert 'e.g. "1 2"' in p.call_args.args[0]
+
+
+def test_selection_single_claim_example_is_just_one(capsys):
+    from paper_reprise.cli import spec_selection_prompt
+    from unittest.mock import patch
+    spec = _make_spec(1)
+    with patch("paper_reprise.cli.click.prompt", return_value="all") as p:
+        spec_selection_prompt(spec, "test-paper")
+    assert 'e.g. "1"' in p.call_args.args[0]
+
+
 def test_cli_run_injects_dispatching_executors(tmp_path, monkeypatch):
     # the CLI must inject executors that route by repo presence: with an empty
     # repo dir they pick the from-scratch executor. We assert the injected setup
