@@ -1,0 +1,15 @@
+{
+  "claims": [
+    {
+      "claim_id": "llama32-1b-2bit-smoke",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "1x H200",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 1x H200,可用 []"
+    }
+  ],
+  "needs_user_decision": true,
+  "decision_reason": "llama32-1b-2bit-smoke: 硬件不可行: 需要 1x H200,可用 []"
+}
