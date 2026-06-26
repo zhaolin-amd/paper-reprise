@@ -27,7 +27,10 @@ def _env_line(ingest: IngestInfo, env: dict, spec: Spec | None = None) -> str:
     # Only show env components we actually know — an unknown one is dropped rather than
     # rendered as "?" (e.g. a pure-numpy from-scratch run has no torch/transformers/CUDA).
     parts = []
-    for label, key in (("torch", "torch"), ("transformers", "transformers"), ("CUDA", "cuda")):
+    # CUDA (NVIDIA) and ROCm (AMD) are mutually exclusive per torch build; whichever the
+    # snapshot captured is shown, the absent one is simply dropped.
+    for label, key in (("torch", "torch"), ("transformers", "transformers"),
+                       ("CUDA", "cuda"), ("ROCm", "rocm")):
         val = str(env.get(key) or "").strip()
         if val and val.lower() != "unknown":
             parts.append(f"{label} {val}")

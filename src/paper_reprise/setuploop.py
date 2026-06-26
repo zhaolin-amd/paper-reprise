@@ -68,6 +68,7 @@ def assemble_snapshot(freeze: dict) -> dict:
         "torch": freeze.get("torch") or "unknown",
         "transformers": freeze.get("transformers") or "unknown",
         "cuda": freeze.get("cuda") or "unknown",
+        "rocm": freeze.get("rocm") or "unknown",
         "pip_freeze": freeze.get("pip_freeze", ""),
     }
 
@@ -188,7 +189,8 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
 
 
 def _freeze_env(env_dir: Path) -> dict:
-    """Capture pip freeze + torch/transformers/CUDA versions from env_dir.
+    """Capture pip freeze + torch/transformers and the accelerator runtime (CUDA or
+    ROCm) versions from env_dir.
 
     Best-effort: a hung/missing python binary must not break a passing smoke run,
     so any failure degrades to an empty freeze (→ assemble_snapshot fills 'unknown').
@@ -204,15 +206,23 @@ def _freeze_env(env_dir: Path) -> dict:
         for pkg in ("torch", "transformers"):
             if line.lower().startswith(f"{pkg}=="):
                 versions[pkg] = line.split("==", 1)[1].strip()
+    # Accelerator runtime: a torch build is CUDA (NVIDIA) XOR ROCm/HIP (AMD). cuda is in
+    # torch.version.cuda, ROCm in torch.version.hip; probe both in one call.
     try:
-        cuda = subprocess.run(
+        probe = subprocess.run(
             [str(env_dir / "bin" / "python"), "-c",
-             "import torch; print(torch.version.cuda)"],
+             "import torch;print(torch.version.cuda);print(getattr(torch.version,'hip',None))"],
             capture_output=True, text=True, timeout=_FREEZE_TIMEOUT_S)
-        if cuda.returncode == 0 and cuda.stdout.strip() not in ("", "None"):
-            versions["cuda"] = cuda.stdout.strip()
+        if probe.returncode == 0:
+            out = probe.stdout.splitlines()
+            cuda_v = out[0].strip() if len(out) > 0 else ""
+            hip_v = out[1].strip() if len(out) > 1 else ""
+            if cuda_v not in ("", "None"):
+                versions["cuda"] = cuda_v
+            if hip_v not in ("", "None"):
+                versions["rocm"] = hip_v
     except Exception:
-        pass  # cuda probe is best-effort
+        pass  # accelerator probe is best-effort
     return versions
 
 
