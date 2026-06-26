@@ -47,6 +47,21 @@ def test_measured_column_annotates_diff_vs_paper():
         assert "5.80(+0.02)" in doc
 
 
+def test_sub_one_metric_keeps_significant_figures():
+    # A distortion-style metric (e.g. TurboQuant) is genuinely sub-1; the measured cell
+    # must keep significant figures, not collapse to 0.00 the way `.2f` would.
+    spec, ingest, grades, runs, env = _ctx()
+    spec.artifacts[0].method = "TurboQuant_prod"
+    spec.claims[0].eval_protocol.metric = "ip_distortion"
+    spec.claims[0].expected = 3.0599e-5
+    grades[0].measured = 3.5449e-5
+    grades[0].expected = 3.0599e-5
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    for doc in (zh, en):
+        assert "3.54e-05" in doc           # measured shown with sig figs
+        assert "0.00(+0.00)" not in doc    # NOT crushed by .2f
+
+
 def test_summary_table_columns_model_config_algorithm():
     spec, ingest, grades, runs, env = _ctx()
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])

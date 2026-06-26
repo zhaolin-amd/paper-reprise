@@ -55,11 +55,31 @@ def _algorithm_label(a) -> str:
     return "-" if m.lower() in ("none", "", "fp16", "bf16", "fp", "full", "baseline") else m
 
 
+def _fmt_num(v: float) -> str:
+    """Magnitude-adaptive number format. Accuracy/perplexity-scale values (|v|>=1) keep
+    two decimals (73.79, 5.80); sub-1 metrics like quantization distortion keep
+    significant figures instead of being crushed to 0.00 (0.3633, 0.001033, 3.54e-05)."""
+    av = abs(v)
+    if av == 0:
+        return "0.00"
+    if av >= 1:
+        return f"{v:.2f}"
+    if av >= 1e-3:
+        return f"{v:.4g}"
+    return f"{v:.3g}"
+
+
+def _fmt_signed(d: float) -> str:
+    """Signed gap with the same magnitude-adaptive precision (e.g. +0.02, -0.01,
+    +8.3e-06)."""
+    return ("+" if d >= 0 else "-") + _fmt_num(abs(d))
+
+
 def _measured_cell(g, expected) -> str:
     """measured value annotated with its signed gap vs paper, e.g. 73.79(+0.08)."""
     if not g or g.measured is None:
         return "—"
-    return f"{g.measured:.2f}({g.measured - expected:+.2f})"
+    return f"{_fmt_num(g.measured)}({_fmt_signed(g.measured - expected)})"
 
 
 def _table(spec, grades, header):
