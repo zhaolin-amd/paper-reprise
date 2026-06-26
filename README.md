@@ -19,7 +19,9 @@ ingest → specextract → plan → setup → run → grade → report
   of claims (model × config × eval protocol × expected number) — including each model's
   uncompressed **FP baseline**, so the measured baseline can be checked against the paper's
   (a baseline that matches confirms the eval protocol; one that doesn't flags a mismatch
-  before trusting any quantized gap); then presents the claims for you to pick.
+  before trusting any quantized gap), plus any **prerequisite-method repos** the paper builds
+  on (recorded as read-only references for the from-scratch path); then presents the claims
+  for you to pick.
 - **plan** — feasibility check; flags claims whose required hardware isn't available.
 - **setup** — the one agentic stage: build a conda/uv env and let Claude fix dependencies
   until the repo's own eval command passes a smoke test, under retry/timeout guardrails.
@@ -33,7 +35,10 @@ ingest → specextract → plan → setup → run → grade → report
 Papers **without** an official repo take a *from-scratch* path: instead of running a cloned
 repo, headless Claude implements the paper's method as a self-contained `impl/` (from a
 redacted spec, so it never sees the target number), which then flows through the same setup →
-run → grade → report stages and guardrails.
+run → grade → report stages and guardrails. When the spec records prerequisite-method repos
+(a paper that builds on a prior method with its own repo), they are offered to the
+implementer as **read-only references** — the paper stays the source of truth and they are
+never a way to back into a number.
 
 ### One isolated reproduction path per paper
 
@@ -43,7 +48,7 @@ papers:
 
 - the official repo is **cloned into that run dir** (`repo/`), not shared;
 - a **dedicated virtualenv** is built for that paper (`env/`), so each paper pins its own
-  (often mutually incompatible) torch / transformers / CUDA stack;
+  (often mutually incompatible) torch / transformers / CUDA-or-ROCm stack;
 - the eval scripts that actually run are the **paper's own** scripts shipped in its repo
   (e.g. `repo/scripts/eval_model.sh`) — paper-reprise invokes them, it does not reimplement
   them;
@@ -55,7 +60,9 @@ that run touched. The entire `runs/` tree is gitignored.
 ## Run directory layout
 
 One run = one directory `runs/<paper-name>-<arxiv_id>-<timestamp>/` (the `<paper-name>`
-slug is best-effort from the arxiv title; omitted when it can't be fetched):
+slug is best-effort from the arxiv title — the authors' short name before a colon when the
+title has one, e.g. `turboquant` from "TurboQuant: …"; omitted when the title can't be
+fetched):
 
 ```
 runs/<paper-name>-<arxiv_id>-<timestamp>/
@@ -69,7 +76,7 @@ runs/<paper-name>-<arxiv_id>-<timestamp>/
 │                        #   (expected/tolerance/source stripped so it can't target the number)
 ├── plan.json            # per-claim feasibility estimate (hardware required vs available)
 ├── env/                 # the dedicated conda/uv virtualenv built for this paper
-├── env_snapshot.json    # frozen torch/transformers/CUDA + pip freeze (on a successful setup)
+├── env_snapshot.json    # frozen torch/transformers + CUDA or ROCm + pip freeze (on a successful setup)
 ├── setup_log/           # logs from the setup loop: create_env.log, smoke_<n>.log per attempt
 ├── setup_patches/       # patch_<n>.txt — one line per change the setup agent made to the env/repo
 ├── runs/                # per-claim execution outputs (one subdir per claim id):
