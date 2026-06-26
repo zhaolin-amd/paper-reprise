@@ -57,11 +57,18 @@ def test_assemble_snapshot_normalizes_keys():
     assert "torch==2.3.0" in snap["pip_freeze"]
 
 
+def test_assemble_snapshot_keeps_rocm_for_amd_builds():
+    snap = assemble_snapshot({"torch": "2.3.0", "rocm": "6.1", "pip_freeze": ""})
+    assert snap["rocm"] == "6.1"
+    assert snap["cuda"] == "unknown"   # an AMD build has no CUDA
+
+
 def test_assemble_snapshot_fills_unknown_for_missing():
     snap = assemble_snapshot({"pip_freeze": ""})
     assert snap["torch"] == "unknown"
     assert snap["transformers"] == "unknown"
     assert snap["cuda"] == "unknown"
+    assert snap["rocm"] == "unknown"
 
 
 def test_collect_new_patches_returns_only_unseen(tmp_path):

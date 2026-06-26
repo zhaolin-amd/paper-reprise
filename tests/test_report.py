@@ -180,6 +180,17 @@ def test_known_env_values_are_kept_unknown_ones_dropped():
     assert "transformers" not in line and "CUDA" not in line
 
 
+def test_rocm_version_is_printed_for_amd_builds():
+    spec, ingest, grades, runs, _ = _ctx()
+    zh, _ = render_reports(spec, ingest, grades, runs,
+                           env={"torch": "2.3.0", "transformers": "4.40.0",
+                                "cuda": "unknown", "rocm": "6.1"},
+                           patches=[])
+    line = zh.splitlines()[1]
+    assert "ROCm 6.1" in line
+    assert "CUDA" not in line          # AMD build: CUDA omitted, ROCm shown
+
+
 def test_report_includes_per_task_raw_scores(tmp_path):
     from paper_reprise.report import render_reports
     from paper_reprise.models import (Spec, Artifact, Claim, EvalProtocol,
