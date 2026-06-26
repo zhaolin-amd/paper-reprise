@@ -1,0 +1,6 @@
+{
+  "torch": "unknown",
+  "transformers": "unknown",
+  "cuda": "unknown",
+  "pip_freeze": ""
+}
