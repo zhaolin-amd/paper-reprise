@@ -86,11 +86,23 @@ class RepoInfo(BaseModel):
     commit: Optional[str] = None
 
 
+class ReferenceRepo(BaseModel):
+    """A prerequisite method THIS paper's algorithm builds on, plus its official repo.
+
+    Surfaced to the from-scratch implementer as a READ-ONLY reference to disambiguate
+    details the current paper leaves underspecified — the paper stays the source of truth,
+    and these never carry the target numbers (so they survive into the redacted spec)."""
+    method: str                      # e.g. "QJL"
+    repo_url: str
+    note: Optional[str] = None       # what to look at / caveat
+
+
 class Spec(BaseModel):
     paper: str
     repo: Optional[RepoInfo] = None
     artifacts: list[Artifact]
     claims: list[Claim]
+    references: list[ReferenceRepo] = []
 
     @model_validator(mode="after")
     def _claims_reference_known_artifacts(self) -> "Spec":

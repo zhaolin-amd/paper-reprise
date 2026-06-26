@@ -2,9 +2,38 @@ import pytest
 from pydantic import ValidationError
 
 from paper_reprise.models import (
-    EvalProtocol, Artifact, Claim, Spec, RepoInfo,
+    EvalProtocol, Artifact, Claim, Spec, RepoInfo, ReferenceRepo,
     ClaimGrade, Verdict,
 )
+
+
+def _min_spec(**kw):
+    return Spec(
+        paper="2401.00001",
+        artifacts=[Artifact(id="a1", base_model="m", method="X", quant_config={"wbits": 4})],
+        claims=[Claim(id="c1", artifact="a1",
+                      eval_protocol=EvalProtocol(runner="custom", command="c",
+                                                 metric="perplexity", dataset="w"),
+                      expected=5.0, tolerance=0.05, source="T")],
+        **kw,
+    )
+
+
+def test_spec_references_default_empty():
+    assert _min_spec().references == []
+
+
+def test_spec_references_roundtrip_and_survives_public_redaction():
+    from paper_reprise.rundir import public_spec_dict
+    spec = _min_spec(references=[ReferenceRepo(method="QJL",
+                                               repo_url="https://github.com/x/qjl",
+                                               note="see Definition 1")])
+    again = Spec.model_validate(spec.model_dump())
+    assert again.references[0].method == "QJL"
+    assert again.references[0].repo_url == "https://github.com/x/qjl"
+    # references carry no target numbers, so they remain in the redacted (public) spec
+    pub = public_spec_dict(spec)
+    assert pub["references"][0]["repo_url"] == "https://github.com/x/qjl"
 
 
 def test_eval_protocol_minimal():
