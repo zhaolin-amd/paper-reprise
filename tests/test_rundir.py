@@ -48,10 +48,23 @@ def test_read_missing_spec_returns_none(tmp_path):
     assert rd.read_spec() is None
 
 
-def test_create_with_name_prepends_slug(tmp_path):
+def test_create_with_name_uses_short_name_before_colon(tmp_path):
+    # "ShortName: subtitle" -> just the authors' short name, not the whole title.
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t",
                        name="GSQ: Gumbel-Softmax Quantization!")
-    assert rd.root.name == "gsq-gumbel-softmax-quantization-2401.00001-t"
+    assert rd.root.name == "gsq-2401.00001-t"
+
+
+def test_create_name_without_colon_uses_full_title(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t",
+                       name="Attention Is All You Need")
+    assert rd.root.name == "attention-is-all-you-need-2401.00001-t"
+
+
+def test_create_name_colon_led_falls_back_to_full_title(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t",
+                       name=": only a subtitle")
+    assert rd.root.name == "only-a-subtitle-2401.00001-t"
 
 
 def test_create_with_empty_name_falls_back(tmp_path):
