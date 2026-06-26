@@ -161,12 +161,23 @@ def test_repo_falls_back_to_spec_when_ingest_repo_missing():
     assert "github.com/x/y" in zh
 
 
-def test_unknown_env_values_render_as_question_mark():
+def test_unknown_env_values_are_dropped_not_question_marked():
     spec, ingest, grades, runs, _ = _ctx()
     zh, _ = render_reports(spec, ingest, grades, runs,
                            env={"torch": "unknown", "transformers": "", "cuda": None},
                            patches=[])
-    assert "torch ? / transformers ? / CUDA ?" in zh
+    assert "?" not in zh.splitlines()[1]          # the env line carries no "?"
+    assert "torch" not in zh.splitlines()[1]       # unknown components are omitted entirely
+
+
+def test_known_env_values_are_kept_unknown_ones_dropped():
+    spec, ingest, grades, runs, _ = _ctx()
+    zh, _ = render_reports(spec, ingest, grades, runs,
+                           env={"torch": "2.3.0", "transformers": "", "cuda": None},
+                           patches=[])
+    line = zh.splitlines()[1]
+    assert "torch 2.3.0" in line
+    assert "transformers" not in line and "CUDA" not in line
 
 
 def test_report_includes_per_task_raw_scores(tmp_path):
