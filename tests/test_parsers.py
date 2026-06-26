@@ -37,8 +37,27 @@ def test_unparseable_returns_none():
     assert parse_metric("perplexity", "garbage with no number relevant") is None
 
 
-def test_unknown_metric_returns_none():
-    assert parse_metric("bleu", "bleu: 30") is None
+def test_unknown_metric_falls_back_to_generic_scalar_line():
+    # A metric outside the known families (ppl/acc/avg/speedup) is read verbatim from a
+    # standalone `<metric>: <number>` line — the from-scratch path's scalar metrics.
+    assert parse_metric("bleu", "bleu: 30") == 30.0
+
+
+def test_generic_scalar_not_percent_normalized():
+    # Distortion is genuinely sub-1; it must NOT be x100'd the way acc/avg fractions are.
+    assert parse_metric("mse_distortion", "mse_distortion: 0.36") == 0.36
+    assert parse_metric("ip_distortion", "ip_distortion: 3.06e-5") == 3.06e-5
+
+
+def test_generic_scalar_requires_standalone_line():
+    # Anchored to a whole line: prose / tracebacks mentioning the name don't count.
+    assert parse_metric("ip_bias", "computing ip_bias: takes 0 retries here") is None
+    assert parse_metric("recall", "see recall at file.py:200 for details") is None
+    assert parse_metric("recall", "nothing relevant") is None
+
+
+def test_generic_scalar_signed_value():
+    assert parse_metric("ip_bias", "ip_bias: -0.0004") == -0.0004
 
 
 def test_parse_avg_acc_fraction_and_percent():

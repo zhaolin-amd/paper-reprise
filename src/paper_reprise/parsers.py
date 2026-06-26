@@ -31,6 +31,22 @@ _SPEEDUP_PATTERNS = [
     r"([0-9]+\.?[0-9]*)\s*x\b",
 ]
 
+# A signed/decimal/scientific number, e.g. 0.36, -1.5, 3.06e-5 — the value a generic
+# scalar metric prints (distortion, recall, bpp, …).
+_NUMBER = r"[-+]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?"
+
+
+def _parse_generic_scalar(metric: str, text: str) -> Optional[float]:
+    """Fallback for from-scratch papers whose metric isn't one of the known families
+    (ppl/acc/avg/speedup): match a STANDALONE `<metric>: <number>` line and return the
+    number VERBATIM (no %-normalization — a distortion of 0.36 must stay 0.36).
+
+    Anchored to a whole line (like the from-scratch smoke gate) so prose like
+    `exit code: 0` or a `foo.py:123` traceback can't be mistaken for the metric."""
+    pat = rf"^[ \t]*{re.escape(metric)}[ \t]*:[ \t]*({_NUMBER})[ \t]*$"
+    m = re.search(pat, text, flags=re.IGNORECASE | re.MULTILINE)
+    return float(m.group(1)) if m else None
+
 
 def _first_match(patterns: list[str], text: str) -> Optional[float]:
     for pat in patterns:
@@ -61,7 +77,8 @@ def parse_metric(metric: str, text: str) -> Optional[float]:
         return val * 100 if val <= 1.0 else val
     if metric == "speedup":
         return _first_match(_SPEEDUP_PATTERNS, text)
-    return None
+    # Unknown family: treat it as a generic scalar metric named exactly `metric`.
+    return _parse_generic_scalar(metric, text)
 
 
 # task -> primary score from an eval log's per-task summary lines, e.g.
