@@ -1,0 +1,144 @@
+# TurboQuant (arXiv 2504.19874) — Section 4.1 Empirical Validation.
+# Scope: reproduce the CORE algorithm (TurboQuant_mse + TurboQuant_prod) and grade the
+# measured distortion rates / (un)biasedness against the paper's numbers. No official
+# repo -> from-scratch path; impl/ is hand-written. Data: real DBpedia OpenAI3 1536-d
+# embeddings (100k train + 1k query), unit-normalized, as in the paper.
+# The algorithm is data-OBLIVIOUS (random rotation + fixed codebook), hence calib known.
+paper: '2504.19874'
+repo: null
+artifacts:
+- id: tq-mse-b1
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_mse
+  quant_config: {wbits: 1}
+  calib_status: known
+- id: tq-mse-b2
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_mse
+  quant_config: {wbits: 2}
+  calib_status: known
+- id: tq-mse-b3
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_mse
+  quant_config: {wbits: 3}
+  calib_status: known
+- id: tq-mse-b4
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_mse
+  quant_config: {wbits: 4}
+  calib_status: known
+- id: tq-prod-b1
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_prod
+  quant_config: {wbits: 1}
+  calib_status: known
+- id: tq-prod-b2
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_prod
+  quant_config: {wbits: 2}
+  calib_status: known
+- id: tq-prod-b3
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_prod
+  quant_config: {wbits: 3}
+  calib_status: known
+- id: tq-prod-b4
+  base_model: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+  method: TurboQuant_prod
+  quant_config: {wbits: 4}
+  calib_status: known
+claims:
+# --- MSE distortion D_mse = E[||x - x_hat||^2] vs Theorem 1 (== Lloyd-Max Gaussian MSE) ---
+- id: mse-distortion-b1
+  artifact: tq-mse-b1
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh mse-distortion-b1,
+    metric: mse_distortion, dataset: DBpedia-OpenAI3-1536, split: train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.36
+  tolerance: 0.02
+  source: Theorem 1 (thrm_mse), D_mse for b=1
+  hardware: 1x GPU or CPU
+- id: mse-distortion-b2
+  artifact: tq-mse-b2
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh mse-distortion-b2,
+    metric: mse_distortion, dataset: DBpedia-OpenAI3-1536, split: train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.117
+  tolerance: 0.01
+  source: Theorem 1 (thrm_mse), D_mse for b=2
+  hardware: 1x GPU or CPU
+- id: mse-distortion-b3
+  artifact: tq-mse-b3
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh mse-distortion-b3,
+    metric: mse_distortion, dataset: DBpedia-OpenAI3-1536, split: train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.03
+  tolerance: 0.008
+  source: Theorem 1 (thrm_mse), D_mse for b=3 (paper rounds 0.0345 to 0.03)
+  hardware: 1x GPU or CPU
+- id: mse-distortion-b4
+  artifact: tq-mse-b4
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh mse-distortion-b4,
+    metric: mse_distortion, dataset: DBpedia-OpenAI3-1536, split: train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.009
+  tolerance: 0.003
+  source: Theorem 1 (thrm_mse), D_mse for b=4
+  hardware: 1x GPU or CPU
+# --- Inner-product distortion D_prod = E[|<y,x> - <y,x_hat>|^2] vs Theorem 2 (d=1536) ---
+- id: prod-distortion-b1
+  artifact: tq-prod-b1
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh prod-distortion-b1,
+    metric: ip_distortion, dataset: DBpedia-OpenAI3-1536, split: query-x-train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.0010221
+  tolerance: 0.00025
+  source: Theorem 2 (thrm_prod), D_prod=1.57/d for b=1, d=1536
+  hardware: 1x GPU or CPU
+- id: prod-distortion-b2
+  artifact: tq-prod-b2
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh prod-distortion-b2,
+    metric: ip_distortion, dataset: DBpedia-OpenAI3-1536, split: query-x-train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.00036458
+  tolerance: 0.0001
+  source: Theorem 2 (thrm_prod), D_prod=0.56/d for b=2, d=1536
+  hardware: 1x GPU or CPU
+- id: prod-distortion-b3
+  artifact: tq-prod-b3
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh prod-distortion-b3,
+    metric: ip_distortion, dataset: DBpedia-OpenAI3-1536, split: query-x-train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.00011719
+  tolerance: 0.00004
+  source: Theorem 2 (thrm_prod), D_prod=0.18/d for b=3, d=1536
+  hardware: 1x GPU or CPU
+- id: prod-distortion-b4
+  artifact: tq-prod-b4
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh prod-distortion-b4,
+    metric: ip_distortion, dataset: DBpedia-OpenAI3-1536, split: query-x-train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 3.0599e-5
+  tolerance: 1.5e-5
+  source: Theorem 2 (thrm_prod), D_prod=0.047/d for b=4, d=1536
+  hardware: 1x GPU or CPU
+# --- Bias: TurboQuant_mse at b=1 has the 2/pi multiplicative bias (motivates prod) ---
+- id: mse-bias-b1
+  artifact: tq-mse-b1
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh mse-bias-b1,
+    metric: ip_ratio, dataset: DBpedia-OpenAI3-1536, split: query-x-train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 0.6366
+  tolerance: 0.05
+  source: "Section 4 (sec:prod_turbo_alg): TurboQuant_mse b=1 inner-product estimate has multiplicative bias 2/pi"
+  hardware: 1x GPU or CPU
+# --- Unbiasedness: TurboQuant_prod inner-product estimator is unbiased (slope == 1) ---
+- id: prod-unbiased-b2
+  artifact: tq-prod-b2
+  eval_protocol: {runner: custom, command: bash impl/run_eval.sh prod-unbiased-b2,
+    metric: ip_ratio, dataset: DBpedia-OpenAI3-1536, split: query-x-train, seqlen: null,
+    stride: null, few_shot: null, extra_args: '{}'}
+  expected: 1.0
+  tolerance: 0.03
+  source: Theorem 2 (thrm_prod), E[<y,x_hat>]=<y,x> (unbiased inner product)
+  hardware: 1x GPU or CPU
