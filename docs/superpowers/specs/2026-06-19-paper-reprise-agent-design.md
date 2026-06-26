@@ -177,7 +177,7 @@ build env (conda/uv) → install deps → smoke-run the eval command
 
 **Guardrails:**
 - **Retry cap + total timeout**: on exceeding them, don't silently give up — stop, mark `setup: FAILED`, hand the full setup_log to the user.
-- **Env snapshot recorded**: on success, write `pip freeze` + CUDA/torch/transformers versions into `env_snapshot.json`. This is the #1 false-negative source on the official-repo path (dependency drift); the report must record it.
+- **Env snapshot recorded**: on success, write `pip freeze` + torch/transformers and the accelerator runtime (CUDA on NVIDIA, ROCm on AMD) versions into `env_snapshot.json`. This is the #1 false-negative source on the official-repo path (dependency drift); the report must record it.
 - **Agent change trail**: each patch (which API line changed, which version pinned) is recorded into `setup_patches/`; it may be the very cause of a reproduction failure, so grade and the report must see it.
 
 **Why setup and run are separate:** setup only ensures "the environment can run", never touching real experiment parameters. The agent's nondeterminism is confined to "make it runnable" and doesn't leak into "what numbers come out".
@@ -249,7 +249,7 @@ Each paper produces `report.zh.md` and `report.en.md`; the core is a traceable, 
 
 ```markdown
 # Reproduction Report: <title> (<arxiv_id>)
-repo: <url>@<commit> | env: torch X / transformers Y / CUDA Z
+repo: <url>@<commit> | env: torch X / transformers Y / CUDA Z   (ROCm Z on AMD; unknown components dropped)
 Verdict summary: MATCH 3 / PARTIAL 1 / FAIL 0 / BLOCKED 1
 
 | claim | model | config | metric | paper | measured | verdict | reason |
@@ -295,6 +295,11 @@ paper's method from its description instead of running a repo's scripts.
 - **From-scratch run**: execute the scaffolded entrypoint per claim, persist raw output +
   `actual_config`, BLOCKED on failure — mirroring the official run executor; converges on
   the same grade/report.
+- **Reference repos**: when the spec records prerequisite-method repos (`references`: a
+  method the paper builds on that has its own repo), the scaffold prompt offers them as
+  **read-only** references to disambiguate details the paper underspecifies — the paper is
+  the source of truth (implement its explicit definitions even where a reference repo
+  differs) and they are never a way to back into a number.
 - **Honesty**: from-scratch claims use `runner: custom` (flagged unofficial); the system
   trusts the agent's implementation (no cross-check against an official impl), the same
   faithfulness limitation §5.1 already documents.
@@ -321,7 +326,7 @@ runs/<paper_name>-<arxiv_id>-<timestamp>/
   report.en.md
 ```
 
-`<paper_name>` is a best-effort slug of the paper title; it is omitted (just `<arxiv_id>-<timestamp>`) when the title can't be fetched.
+`<paper_name>` is a best-effort slug of the paper title — the authors' short name before a colon when the title has one (e.g. `turboquant`), else the truncated title; it is omitted (just `<arxiv_id>-<timestamp>`) when the title can't be fetched.
 
 ## 8. What We Don't Do (YAGNI)
 
