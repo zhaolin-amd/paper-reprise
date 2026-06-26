@@ -28,7 +28,14 @@ _MODEL_WEIGHT_EXTS = (".safetensors", ".bin", ".pt", ".pth", ".ckpt", ".gguf", "
 
 
 def _slug(text: str, max_len: int = 40) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    """Filesystem-safe slug from a paper title. Titles are usually "ShortName: subtitle",
+    so use the part BEFORE the first colon (the authors' short name — e.g. "TurboQuant",
+    "GSQ") when it yields a non-empty slug; otherwise fall back to the whole title.
+    Truncated to max_len."""
+    head = text.split(":", 1)[0]
+    s = re.sub(r"[^a-z0-9]+", "-", head.lower()).strip("-")
+    if not s:                       # colon-led / punctuation-only head -> use full title
+        s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return s[:max_len].strip("-")
 
 
