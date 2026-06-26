@@ -1,5 +1,5 @@
 # 复现报告:2504.19874 (2504.19874)
-repo: (no official repo) | torch ? / transformers ? / CUDA ?
+repo: (no official repo)
 判定汇总: MATCH 10 / PARTIAL 0 / FAIL 0 / BLOCKED 0
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
