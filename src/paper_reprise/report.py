@@ -24,12 +24,15 @@ def _env_line(ingest: IngestInfo, env: dict, spec: Spec | None = None) -> str:
     repo = ingest.repo or (spec.repo if spec else None)
     repo_s = f"{repo.url}@{repo.commit}" if repo else "(no official repo)"
 
-    def _v(key: str) -> str:
+    # Only show env components we actually know — an unknown one is dropped rather than
+    # rendered as "?" (e.g. a pure-numpy from-scratch run has no torch/transformers/CUDA).
+    parts = []
+    for label, key in (("torch", "torch"), ("transformers", "transformers"), ("CUDA", "cuda")):
         val = str(env.get(key) or "").strip()
-        return val if val and val.lower() != "unknown" else "?"
-
-    return (f"repo: {repo_s} | torch {_v('torch')} / "
-            f"transformers {_v('transformers')} / CUDA {_v('cuda')}")
+        if val and val.lower() != "unknown":
+            parts.append(f"{label} {val}")
+    env_s = " / ".join(parts)
+    return f"repo: {repo_s} | {env_s}" if env_s else f"repo: {repo_s}"
 
 
 def _artifact(spec: Spec, artifact_id: str):
