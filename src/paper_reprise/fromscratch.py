@@ -110,6 +110,37 @@ For EACH file you create under `impl/`, append ONE line describing what it \
 implements to `{patch_note}` (create the file; one line per file). When `impl/` \
 and `{entrypoint}` exist and `--smoke` runs, you are done."""
 
+# Appended when the spec lists prerequisite-method repos: the current paper builds on
+# them, so they are offered as READ-ONLY references to disambiguate details the paper
+# leaves underspecified — paper stays source of truth, never a way to back into a number.
+_SCAFFOLD_REFERENCES_TEMPLATE = """
+
+REFERENCE REPOS (read-only) — this paper's method builds on the prior method(s) below. \
+You MAY `git clone` and read them (e.g. into a `refs/` dir; you have Bash) to disambiguate \
+details this paper leaves underspecified:
+{refs}
+Rules for using them:
+  - The PAPER is the source of truth. Where the paper gives an explicit definition or \
+formula, implement EXACTLY that — even if the reference repo does it differently (the \
+reference may use a different convention than this paper restates). Note in {patch_note} \
+any place you followed the paper over a reference repo.
+  - Use them ONLY to clarify HOW to implement; NEVER to obtain or back into a result \
+number. The honesty rules above still hold.
+  - They are optional aids, not required reading."""
+
+
+def _references_block(spec: Spec, patch_note_path: str) -> str:
+    """The read-only reference-repo section, or "" when the spec lists none."""
+    if not spec.references:
+        return ""
+    lines = []
+    for r in spec.references:
+        note = f" — {r.note}" if r.note else ""
+        lines.append(f"  - {r.method}: {r.repo_url}{note}")
+    return _SCAFFOLD_REFERENCES_TEMPLATE.format(refs="\n".join(lines),
+                                                patch_note=patch_note_path)
+
+
 # Appended only on retry turns: the prior smoke run failed, so hand the agent the
 # failing command + its captured output (the traceback) to debug — mirrors
 # setuploop.build_fixer_prompt. The initial scaffold turn has no failure context.
@@ -144,6 +175,7 @@ def build_scaffold_prompt(
         methods=methods, entrypoint=_ENTRYPOINT, patch_note=patch_note_path,
         public_spec=_PUBLIC_SPEC,
     )
+    prompt += _references_block(spec, patch_note_path)
     if failure is not None:
         command, output = failure
         prompt += _SCAFFOLD_FAILURE_TEMPLATE.format(command=command, output=output)

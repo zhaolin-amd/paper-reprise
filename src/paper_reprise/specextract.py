@@ -24,6 +24,7 @@ Write a YAML file to `{out}` with this exact schema:
 - claims: list of {{id, artifact, eval_protocol, expected, tolerance, source, hardware}}
   where eval_protocol = {{runner, command, metric, dataset, split, seqlen, stride, \
 few_shot, extra_args}}
+- references: list of {{method, repo_url, note}} or [] (optional)
 
 Rules:
 - runner: prefer "official" (the repo's own eval script). Use "cited-standard" if the \
@@ -45,7 +46,14 @@ EVALUATES THE BASE MODEL DIRECTLY (serve `$PAPER_REPRISE_MODEL` + eval) with NO 
 quantization step. Rationale: a baseline that matches the paper's baseline confirms our \
 eval protocol matches theirs, so the quantized gap is trustworthy; a baseline that does \
 NOT match flags an eval-protocol mismatch before we trust any quantized number.
-- calib_status: use exactly `known` (lowercase) when the calibration config is determinable, or `UNKNOWN` (uppercase) when it cannot be determined.
+- references: the PREREQUISITE method(s) THIS paper's algorithm directly builds on / \
+extends (e.g. a paper proposing "X + a 1-bit QJL residual" depends on QJL), each with \
+its official repo_url when the paper states it OR you are reasonably confident it exists, \
+and a short `note` on what part to look at. Include ONLY methods the current algorithm \
+depends on for IMPLEMENTATION — not every citation. Omit a repo_url you are unsure of \
+(better empty than a guessed URL). These are READ-ONLY disambiguation aids for a \
+from-scratch reimplementation; the paper remains the source of truth and they must NOT \
+be used to obtain any reported number. Use [] if none apply.
 - quant_config: use the key `wbits` (not `bits`) for the weight bit-width.
 - Default tolerance: perplexity 0.05, accuracy 0.5. If the paper states one, use it.
 - source: pin each claim to its location, e.g. "Table 3, row 2, col W4".

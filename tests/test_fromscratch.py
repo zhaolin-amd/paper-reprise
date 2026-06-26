@@ -349,3 +349,30 @@ def test_setup_rejects_smoke_that_exits_zero_without_metric(tmp_path):
     assert res.ok is False
     # the augmented failure message was logged for the next turn / the operator
     assert "no parseable metric" in (rd.setup_log_dir / "smoke_0.log").read_text()
+
+
+def _spec_with_refs():
+    from paper_reprise.models import ReferenceRepo
+    s = _spec()
+    s.references = [ReferenceRepo(method="QJL", repo_url="https://github.com/x/qjl",
+                                  note="see Definition 1")]
+    return s
+
+
+def test_scaffold_prompt_lists_reference_repos_with_paper_first_caveats(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    prompt = build_scaffold_prompt(rd, _spec_with_refs(), "setup_patches/scaffold_0.txt")
+    assert "QJL" in prompt
+    assert "https://github.com/x/qjl" in prompt
+    assert "see Definition 1" in prompt
+    low = prompt.lower()
+    assert "read-only" in low or "read only" in low
+    assert "source of truth" in low              # paper wins over the reference repo
+    # must NOT be a way to obtain a result number (honesty)
+    assert "back into" in low or "never to obtain" in low
+
+
+def test_scaffold_prompt_has_no_reference_section_when_none(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    prompt = build_scaffold_prompt(rd, _spec(), "setup_patches/scaffold_0.txt")
+    assert "REFERENCE REPOS" not in prompt

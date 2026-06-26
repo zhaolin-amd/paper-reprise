@@ -39,3 +39,13 @@ def test_specextract_returns_none_on_invalid_yaml(tmp_path, monkeypatch):
 
     monkeypatch.setattr(specextract, "run_headless", fake_headless)
     assert specextract.extract_spec(rd) is None
+
+
+def test_prompt_asks_for_prerequisite_reference_repos(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    prompt = specextract.build_prompt(rd)
+    assert "references" in prompt
+    low = prompt.lower()
+    # source-of-truth + honesty framing must accompany the reference-repo ask
+    assert "source of truth" in low
+    assert "read-only" in low or "read only" in low
