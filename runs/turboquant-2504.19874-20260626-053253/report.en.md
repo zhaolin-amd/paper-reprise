@@ -1,6 +1,7 @@
-# Reproduction Report: 2504.19874 (2504.19874)
-repo: (no official repo)
-Verdict summary: MATCH 10 / PARTIAL 0 / FAIL 0 / BLOCKED 0
+# Reproduction Report: 2504.19874
+
+- **Repo:** (no official repo)
+- **Verdict:** MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|

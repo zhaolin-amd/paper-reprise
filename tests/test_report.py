@@ -166,8 +166,8 @@ def test_unknown_env_values_are_dropped_not_question_marked():
     zh, _ = render_reports(spec, ingest, grades, runs,
                            env={"torch": "unknown", "transformers": "", "cuda": None},
                            patches=[])
-    assert "?" not in zh.splitlines()[1]          # the env line carries no "?"
-    assert "torch" not in zh.splitlines()[1]       # unknown components are omitted entirely
+    assert "?" not in zh                # no "?" anywhere from unknown env
+    assert "环境" not in zh              # the env bullet is omitted entirely when nothing known
 
 
 def test_known_env_values_are_kept_unknown_ones_dropped():
@@ -175,9 +175,8 @@ def test_known_env_values_are_kept_unknown_ones_dropped():
     zh, _ = render_reports(spec, ingest, grades, runs,
                            env={"torch": "2.3.0", "transformers": "", "cuda": None},
                            patches=[])
-    line = zh.splitlines()[1]
-    assert "torch 2.3.0" in line
-    assert "transformers" not in line and "CUDA" not in line
+    assert "**环境:** torch 2.3.0" in zh
+    assert "transformers" not in zh and "CUDA" not in zh
 
 
 def test_rocm_version_is_printed_for_amd_builds():
@@ -186,9 +185,26 @@ def test_rocm_version_is_printed_for_amd_builds():
                            env={"torch": "2.3.0", "transformers": "4.40.0",
                                 "cuda": "unknown", "rocm": "6.1"},
                            patches=[])
-    line = zh.splitlines()[1]
-    assert "ROCm 6.1" in line
-    assert "CUDA" not in line          # AMD build: CUDA omitted, ROCm shown
+    assert "ROCm 6.1" in zh
+    assert "CUDA" not in zh             # AMD build: CUDA omitted, ROCm shown
+
+
+def test_header_is_a_markdown_meta_block_not_glued_lines():
+    spec, ingest, grades, runs, env = _ctx()
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    # repo / env / verdict are separate bullet lines, not one run-on paragraph
+    assert "- **Repo:** https://github.com/x/y@abc123" in en
+    assert "- **Verdict:** MATCH 1 · PARTIAL 0 · FAIL 0 · BLOCKED 0" in en
+    assert "- **仓库:**" in zh and "- **判定:**" in zh
+    # blank line after the H1 so Markdown doesn't fold the metadata into the title
+    assert en.splitlines()[1] == ""
+
+
+def test_title_not_duplicated_when_no_distinct_title():
+    spec, ingest, grades, runs, env = _ctx()
+    ingest.title = None                 # no title fetched -> show the id once, not "(id id)"
+    _, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    assert en.splitlines()[0] == "# Reproduction Report: 2401.00001"
 
 
 def test_report_includes_per_task_raw_scores(tmp_path):
