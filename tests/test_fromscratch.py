@@ -376,3 +376,15 @@ def test_scaffold_prompt_has_no_reference_section_when_none(tmp_path):
     rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
     prompt = build_scaffold_prompt(rd, _spec(), "setup_patches/scaffold_0.txt")
     assert "REFERENCE REPOS" not in prompt
+
+
+def test_scaffold_prompt_asks_for_independent_cross_check(tmp_path):
+    rd = RunDir.create(tmp_path, arxiv_id="2401.00001", timestamp="t")
+    prompt = build_scaffold_prompt(rd, _spec(), "setup_patches/scaffold_0.txt")
+    low = prompt.lower()
+    # ask for an independent closed-form/textbook cross-check test, not vs the paper number
+    assert "cross-check" in low or "cross check" in low
+    assert "closed-form" in low or "closed form" in low or "textbook" in low
+    assert "independent" in low
+    # it must be validated against the independent result, never the withheld target
+    assert "never against the paper" in low or "not the paper's reported number" in low
