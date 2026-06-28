@@ -1,6 +1,7 @@
-# 复现报告:2504.19874 (2504.19874)
-repo: (no official repo)
-判定汇总: MATCH 10 / PARTIAL 0 / FAIL 0 / BLOCKED 0
+# 复现报告: 2504.19874
+
+- **仓库:** (no official repo)
+- **判定:** MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|

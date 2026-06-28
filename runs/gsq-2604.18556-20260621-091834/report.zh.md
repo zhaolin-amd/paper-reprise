@@ -1,6 +1,8 @@
-# 复现报告:2604.18556 (2604.18556)
-repo: https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f | torch 2.11.0+cu130 / transformers 5.8.1 / CUDA 13.0
-判定汇总: MATCH 1 / PARTIAL 1 / FAIL 0 / BLOCKED 0
+# 复现报告: 2604.18556
+
+- **仓库:** https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
+- **环境:** torch 2.11.0+cu130 / transformers 5.8.1 / CUDA 13.0
+- **判定:** MATCH 1 · PARTIAL 1 · FAIL 0 · BLOCKED 0
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|

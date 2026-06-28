@@ -15,27 +15,49 @@ from paper_reprise.parsers import extract_results_table
 
 def _summary(grades: list[ClaimGrade]) -> str:
     c = Counter(g.verdict for g in grades)
-    return f"MATCH {c['MATCH']} / PARTIAL {c['PARTIAL']} / FAIL {c['FAIL']} / BLOCKED {c['BLOCKED']}"
+    return (f"MATCH {c['MATCH']} · PARTIAL {c['PARTIAL']} · "
+            f"FAIL {c['FAIL']} · BLOCKED {c['BLOCKED']}")
 
 
-def _env_line(ingest: IngestInfo, env: dict, spec: Spec | None = None) -> str:
+def _repo_str(ingest: IngestInfo, spec: Spec | None = None) -> str:
     # ingest often doesn't carry the repo even when specextract found one — fall
     # back to spec.repo so a run against an official repo isn't mislabelled.
     repo = ingest.repo or (spec.repo if spec else None)
-    repo_s = f"{repo.url}@{repo.commit}" if repo else "(no official repo)"
+    return f"{repo.url}@{repo.commit}" if repo else "(no official repo)"
 
+
+def _env_str(env: dict) -> str:
     # Only show env components we actually know — an unknown one is dropped rather than
     # rendered as "?" (e.g. a pure-numpy from-scratch run has no torch/transformers/CUDA).
-    parts = []
     # CUDA (NVIDIA) and ROCm (AMD) are mutually exclusive per torch build; whichever the
     # snapshot captured is shown, the absent one is simply dropped.
+    parts = []
     for label, key in (("torch", "torch"), ("transformers", "transformers"),
                        ("CUDA", "cuda"), ("ROCm", "rocm")):
         val = str(env.get(key) or "").strip()
         if val and val.lower() != "unknown":
             parts.append(f"{label} {val}")
-    env_s = " / ".join(parts)
-    return f"repo: {repo_s} | {env_s}" if env_s else f"repo: {repo_s}"
+    return " / ".join(parts)
+
+
+def _title_line(prefix: str, title: str | None, arxiv_id: str) -> str:
+    """`# <prefix>: <title> (<arxiv_id>)`, collapsed to just the id when there is no
+    distinct title (avoids the ugly `2504.19874 (2504.19874)`)."""
+    if title and title != arxiv_id:
+        return f"# {prefix}: {title} ({arxiv_id})"
+    return f"# {prefix}: {arxiv_id}"
+
+
+def _meta_block(repo_str: str, env_str: str, summ: str,
+                labels: tuple[str, str, str]) -> str:
+    """The header metadata as a Markdown bullet list (repo / env / verdict), each on its
+    own line. The env bullet is omitted entirely when nothing is known."""
+    repo_l, env_l, verdict_l = labels
+    lines = [f"- **{repo_l}:** {repo_str}"]
+    if env_str:
+        lines.append(f"- **{env_l}:** {env_str}")
+    lines.append(f"- **{verdict_l}:** {summ}")
+    return "\n".join(lines)
 
 
 def _artifact(spec: Spec, artifact_id: str):
@@ -182,13 +204,13 @@ def _patches_section(patches: list[str], heading: str) -> str:
 
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str]) -> tuple[str, str]:
-    title = ingest.title or ingest.arxiv_id
     summ = _summary(grades)
-    envl = _env_line(ingest, env, spec)
+    repo_str = _repo_str(ingest, spec)
+    env_str = _env_str(env)
 
-    zh = f"""# 复现报告:{title} ({ingest.arxiv_id})
-{envl}
-判定汇总: {summ}
+    zh = f"""{_title_line("复现报告", ingest.title, ingest.arxiv_id)}
+
+{_meta_block(repo_str, env_str, summ, ("仓库", "环境", "判定"))}
 
 {_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |")}
 
@@ -199,9 +221,9 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {_replay(spec, runs)}
 {_patches_section(patches, "Setup 改动留痕")}"""
 
-    en = f"""# Reproduction Report: {title} ({ingest.arxiv_id})
-{envl}
-Verdict summary: {summ}
+    en = f"""{_title_line("Reproduction Report", ingest.title, ingest.arxiv_id)}
+
+{_meta_block(repo_str, env_str, summ, ("Repo", "Environment", "Verdict"))}
 
 {_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |")}
 
