@@ -136,6 +136,20 @@ def test_calib_status_rejects_garbage():
         Artifact(id="a1", base_model="m", method="AWQ", quant_config={}, calib_status="maybe")
 
 
+def test_calib_status_coerces_llm_calibration_phrasing():
+    # specextract often writes the calibration *situation* instead of the enum; the common
+    # variants must not abort the run (this was a real specextract failure on 2309.05516).
+    def cs(v):
+        return Artifact(id="a", base_model="m", method="X", quant_config={},
+                        calib_status=v).calib_status
+    assert cs("calibrated") == "known"
+    assert cs("uncalibrated") == "known"
+    assert cs("data-free") == "known"
+    assert cs("RTN") == "known"
+    assert cs("unspecified") == "UNKNOWN"
+    assert cs("not stated") == "UNKNOWN"
+
+
 def test_quant_config_bits_aliased_to_wbits():
     a = Artifact(id="a1", base_model="m", method="AWQ", quant_config={"bits": 2, "group_size": 128})
     assert a.quant_config["wbits"] == 2

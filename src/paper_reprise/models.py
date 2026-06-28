@@ -13,6 +13,21 @@ Runner = Literal["official", "cited-standard", "custom"]
 CalibStatus = Literal["known", "UNKNOWN"]
 Verdict = Literal["MATCH", "PARTIAL", "FAIL", "BLOCKED"]
 
+# specextract (LLM) often phrases calib_status as the calibration situation rather than
+# the required enum. Map the common variants so one mislabel doesn't abort the whole run;
+# genuinely unrecognized values still fall through and are rejected (loud failure).
+# `known` == the calibration config is determinable (incl. data-free / no calibration);
+# `UNKNOWN` == it cannot be determined → grade BLOCKS the claim.
+_CALIB_KNOWN = {
+    "known", "calibrated", "uncalibrated", "calibration-free", "calibration free",
+    "data-free", "data free", "datafree", "static", "rtn", "round-to-nearest",
+    "none", "n/a", "na",
+}
+_CALIB_UNKNOWN = {
+    "unknown", "unspecified", "unclear", "undetermined", "tbd",
+    "not specified", "not stated", "?",
+}
+
 
 class EvalProtocol(BaseModel):
     runner: Runner
@@ -56,12 +71,12 @@ class Artifact(BaseModel):
     @classmethod
     def _normalize_calib_status(cls, v):
         if isinstance(v, str):
-            u = v.strip().upper()
-            if u == "KNOWN":
+            u = v.strip().lower()
+            if u in _CALIB_KNOWN:
                 return "known"
-            if u == "UNKNOWN":
+            if u in _CALIB_UNKNOWN:
                 return "UNKNOWN"
-        return v
+        return v  # unrecognized -> falls through to the Literal (rejected, loud failure)
 
     @model_validator(mode="after")
     def _alias_bits_to_wbits(self) -> "Artifact":
