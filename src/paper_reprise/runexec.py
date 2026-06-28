@@ -264,7 +264,7 @@ def detect_available_hardware() -> list[str]:
 
 
 def _rundir_paths(claim_dir: Path) -> tuple[Path, Path, Path]:
-    """Given rd.claim_dir(id) == rd.root/'runs'/id, derive (root, env_dir, repo_dir)."""
+    """Given rd.claim_dir(id) == rd.root/'claims'/id, derive (root, env_dir, repo_dir)."""
     root = claim_dir.parent.parent
     return root, root / "env", root / "repo"
 

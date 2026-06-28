@@ -4,13 +4,11 @@ Verdict summary: MATCH 1 / PARTIAL 1 / FAIL 0 / BLOCKED 0
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
-| meta-llama/Llama-3.1-8B-Instruct | BF16 | - | acc_norm_avg | 73.71 | 73.79(+0.08) | MATCH | baseline reproduces paper (+0.08, <0.5) |
-| meta-llama/Llama-3.1-8B-Instruct | INT2 G128 | GSQ | acc_norm_avg | 68.55 | 66.51(-2.04) | PARTIAL | faithful process, value off by 2.04 (>0.5) |
-
-> **Why run the baseline first:** the uncompressed FP16 model measures **73.79**, essentially identical to the paper's reported baseline **73.71** (+0.08, well within the 0.5 tolerance). This confirms our **eval protocol (vLLM serving + lm-eval tasks/metric) matches the paper's**, so the −2.04 gap at 2-bit is a *real algorithmic* gap (the released GSQ repo does not implement the paper's scale-only fine-tuning step for 2-bit Llama), not an eval-harness artifact.
+| meta-llama/Llama-3.1-8B-Instruct | BF16 | - | acc_norm_avg | 73.71 | 73.79(+0.08) | MATCH | — |
+| meta-llama/Llama-3.1-8B-Instruct | INT2 G128 | GSQ | acc_norm_avg | 68.55 | 66.51(-2.04) | PARTIAL | 过程忠实但数值超容差 2.04 (>0.5) |
 
 ## Per-task raw scores
-**llama3-8b-baseline (FP16/BF16 uncompressed model)**
+**llama3-8b-baseline**
 
 |    Tasks    |Version|Filter|n-shot| Metric |   |Value |   |Stderr|
 |-------------|------:|------|-----:|--------|---|-----:|---|-----:|
@@ -40,7 +38,7 @@ Verdict summary: MATCH 1 / PARTIAL 1 / FAIL 0 / BLOCKED 0
 
 ## Replay script (per config)
 **meta-llama/Llama-3.1-8B-Instruct · BF16**
-`runs/gsq-2604.18556-20260621-091834/runs/llama3-8b-baseline/stdout.log`
+`runs/gsq-2604.18556-20260621-091834/claims/llama3-8b-baseline/stdout.log`
 
 ```bash
 export SLURM_JOB_ID=local
@@ -48,12 +46,11 @@ VLLM_USE_DEEP_GEMM=0 VLLM_MOE_USE_DEEP_GEMM=0 EVAL=1 KEEP_SERVING=0 \
   MODEL_PATH=$PAPER_REPRISE_MODEL \
   EVAL_TASKS=${PAPER_REPRISE_TASKS:-arc_challenge,arc_easy,hellaswag,winogrande,piqa} \
   TP_SIZE=${PAPER_REPRISE_GPUS:-8} \
-  EXTRA_VLLM_ARGS="--gpu-memory-utilization 0.85 --tokenizer-mode hf --max-num-seqs 4 --disable-custom-all-reduce" \
   bash scripts/serve_model.sh
 ```
 
 **meta-llama/Llama-3.1-8B-Instruct · INT2 G128 · GSQ**
-`runs/gsq-2604.18556-20260621-091834/runs/llama3-8b-2bit-avg-acc/stdout.log`
+`runs/gsq-2604.18556-20260621-091834/claims/llama3-8b-2bit-avg-acc/stdout.log`
 
 ```bash
 bash scripts/serve_model.sh && python eval_model.py --config configs/local/config.yaml

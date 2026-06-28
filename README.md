@@ -79,7 +79,7 @@ runs/<paper-name>-<arxiv_id>-<timestamp>/
 ├── env_snapshot.json    # frozen torch/transformers + CUDA or ROCm + pip freeze (on a successful setup)
 ├── setup_log/           # logs from the setup loop: create_env.log, smoke_<n>.log per attempt
 ├── setup_patches/       # patch_<n>.txt — one line per change the setup agent made to the env/repo
-├── runs/                # per-claim execution outputs (one subdir per claim id):
+├── claims/              # per-claim execution outputs (one subdir per claim id):
 │   └── <claim_id>/
 │       ├── stdout.log         # raw combined stdout+stderr of that claim's eval run
 │       └── actual_config.json # the config the eval was launched with (for the faithfulness check)

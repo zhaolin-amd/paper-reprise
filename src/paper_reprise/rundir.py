@@ -88,7 +88,9 @@ class RunDir:
 
     @property
     def runs_dir(self) -> Path:
-        return self.root / "runs"
+        # Per-claim execution outputs live under `claims/` (one subdir per claim id) —
+        # named so it doesn't read as a second `runs/` nested in the top-level runs/ tree.
+        return self.root / "claims"
 
     @property
     def setup_log_dir(self) -> Path:
