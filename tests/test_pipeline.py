@@ -180,7 +180,7 @@ def test_clean_models_removes_exported_weights_keeps_report(tmp_path, monkeypatc
     assert not wt.exists()                       # exported model cleaned
     assert result.cleaned                        # freed list reported
     assert (result.root / "report.zh.md").exists()   # records kept
-    assert (result.root / "runs/c1/stdout.log").exists()
+    assert (result.root / "claims/c1/stdout.log").exists()
 
 
 def test_keep_models_leaves_exported_weights(tmp_path, monkeypatch):

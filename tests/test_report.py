@@ -21,7 +21,7 @@ def _ctx():
     grades = [ClaimGrade(claim_id="c1", verdict="MATCH", measured=5.80, expected=5.78,
                          reason="—", checks={"value": True, "faithful": True})]
     runs = [RunResult(claim_id="c1", command="python e.py", seed=0, gpu="A100x1",
-                      minutes=18.0, stdout_path="runs/c1/stdout.log")]
+                      minutes=18.0, stdout_path="claims/c1/stdout.log")]
     env = {"torch": "2.3.0", "transformers": "4.36.0", "cuda": "12.1"}
     return spec, ingest, grades, runs, env
 

@@ -321,7 +321,7 @@ runs/<paper_name>-<arxiv_id>-<timestamp>/
   env_snapshot.json
   setup_log/
   setup_patches/
-  runs/<claim_id>/       # per-claim raw output, command, seed
+  claims/<claim_id>/     # per-claim raw output, command, seed
   report.zh.md           # verdicts are rendered here, not a separate grades.json
   report.en.md
 ```

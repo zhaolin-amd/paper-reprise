@@ -4,13 +4,11 @@ repo: https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|
-| meta-llama/Llama-3.1-8B-Instruct | BF16 | - | acc_norm_avg | 73.71 | 73.79(+0.08) | MATCH | baseline 对齐 paper(差 +0.08，<0.5) |
+| meta-llama/Llama-3.1-8B-Instruct | BF16 | - | acc_norm_avg | 73.71 | 73.79(+0.08) | MATCH | — |
 | meta-llama/Llama-3.1-8B-Instruct | INT2 G128 | GSQ | acc_norm_avg | 68.55 | 66.51(-2.04) | PARTIAL | 过程忠实但数值超容差 2.04 (>0.5) |
 
-> **为什么先跑 baseline:** 原始 FP16 模型实测 **73.79**,与 paper 报告的 baseline **73.71** 几乎完全一致(差 +0.08,远小于容差 0.5)。这说明我们的**评测协议(vLLM 服务 + lm-eval 任务/口径)与 paper 一致**,因此 2-bit 量化上 −2.04 的差距是**算法本身的真实差距**(释放的 GSQ repo 未实现 paper 中针对 2-bit Llama 的 scale-only 微调步骤),而非评测口径导致的假象。
-
 ## 各任务原始分数
-**llama3-8b-baseline (FP16/BF16 原始模型)**
+**llama3-8b-baseline**
 
 |    Tasks    |Version|Filter|n-shot| Metric |   |Value |   |Stderr|
 |-------------|------:|------|-----:|--------|---|-----:|---|-----:|
@@ -40,7 +38,7 @@ repo: https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
 
 ## 复算脚本(每个 config)
 **meta-llama/Llama-3.1-8B-Instruct · BF16**
-`runs/gsq-2604.18556-20260621-091834/runs/llama3-8b-baseline/stdout.log`
+`runs/gsq-2604.18556-20260621-091834/claims/llama3-8b-baseline/stdout.log`
 
 ```bash
 export SLURM_JOB_ID=local
@@ -48,12 +46,11 @@ VLLM_USE_DEEP_GEMM=0 VLLM_MOE_USE_DEEP_GEMM=0 EVAL=1 KEEP_SERVING=0 \
   MODEL_PATH=$PAPER_REPRISE_MODEL \
   EVAL_TASKS=${PAPER_REPRISE_TASKS:-arc_challenge,arc_easy,hellaswag,winogrande,piqa} \
   TP_SIZE=${PAPER_REPRISE_GPUS:-8} \
-  EXTRA_VLLM_ARGS="--gpu-memory-utilization 0.85 --tokenizer-mode hf --max-num-seqs 4 --disable-custom-all-reduce" \
   bash scripts/serve_model.sh
 ```
 
 **meta-llama/Llama-3.1-8B-Instruct · INT2 G128 · GSQ**
-`runs/gsq-2604.18556-20260621-091834/runs/llama3-8b-2bit-avg-acc/stdout.log`
+`runs/gsq-2604.18556-20260621-091834/claims/llama3-8b-2bit-avg-acc/stdout.log`
 
 ```bash
 bash scripts/serve_model.sh && python eval_model.py --config configs/local/config.yaml
