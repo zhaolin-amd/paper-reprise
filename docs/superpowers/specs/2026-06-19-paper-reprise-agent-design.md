@@ -300,6 +300,11 @@ paper's method from its description instead of running a repo's scripts.
   **read-only** references to disambiguate details the paper underspecifies — the paper is
   the source of truth (implement its explicit definitions even where a reference repo
   differs) and they are never a way to back into a number.
+- **Independent cross-check**: the scaffold prompt asks the implementer, whenever possible,
+  to validate the method against an INDEPENDENT closed-form/textbook result (a known
+  distortion/variance formula, an unbiasedness/invariance identity, a limiting value) in an
+  `impl/test_*.py` — never against the paper's withheld target. This catches an impl that
+  only coincidentally matches the reported number.
 - **Honesty**: from-scratch claims use `runner: custom` (flagged unofficial); the system
   trusts the agent's implementation (no cross-check against an official impl), the same
   faithfulness limitation §5.1 already documents.

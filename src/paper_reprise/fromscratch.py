@@ -106,6 +106,19 @@ made-up value.
 `{public_spec}` is the only spec you need; do NOT read any other spec file \
 (e.g. `spec.yaml`) — the expected numbers are deliberately withheld.
 
+INDEPENDENT CROSS-CHECK (do this whenever it is possible):
+  - If the method's correctness can be checked against an INDEPENDENT closed-form or \
+textbook result — NOT the paper's reported number — add a small test under `impl/` \
+(e.g. `impl/test_*.py`, runnable with the env's pytest) that asserts it, and run it. \
+Examples: a known distortion/variance formula, an unbiasedness or invariance identity, \
+a limiting/asymptotic value, a property the transform must satisfy (orthogonality, \
+norm preservation). This catches an implementation that only coincidentally matches the \
+target. Validate ONLY against the independent result — never against the paper's expected \
+value (it is withheld). If the paper genuinely offers no such independent check, say so \
+in {patch_note} and move on; do not invent one.
+  - If a prior method this paper builds on is provided as a read-only reference repo \
+(see below), the PAPER's restated definition wins over the repo where they differ.
+
 For EACH file you create under `impl/`, append ONE line describing what it \
 implements to `{patch_note}` (create the file; one line per file). When `impl/` \
 and `{entrypoint}` exist and `--smoke` runs, you are done."""
