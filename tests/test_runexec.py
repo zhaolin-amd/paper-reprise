@@ -353,3 +353,16 @@ def test_successful_eval_is_ran_via_run_claims(tmp_path):
     assert results[0].status == "ran"
     assert results[0].gpu == "A100"
     assert configs["c1"]["wbits"] == 4
+
+
+def test_activated_env_uses_absolute_env_path(tmp_path, monkeypatch):
+    # The eval command may `cd` (e.g. `bash impl/run_eval.sh` -> impl/), so a relative
+    # env/bin on PATH would break python/entrypoint resolution. PATH must be absolute.
+    import os
+    from paper_reprise.runexec import _activated_env
+    monkeypatch.chdir(tmp_path)
+    env = _activated_env(Path("rundir/env"))            # relative input
+    first = env["PATH"].split(os.pathsep)[0]
+    assert os.path.isabs(first)
+    assert first.endswith("rundir/env/bin")
+    assert os.path.isabs(env["VIRTUAL_ENV"])

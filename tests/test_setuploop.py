@@ -228,3 +228,15 @@ def test_loop_env_creation_failure_is_surfaced(tmp_path):
     assert res.ok is False
     assert "env creation failed" in res.error
     assert (rd.setup_log_dir / "create_env.log").read_text() == "conda not found"
+
+
+def test_run_smoke_puts_absolute_env_bin_on_path(tmp_path, monkeypatch):
+    # Same absolute-path requirement as _activated_env: a relative env/bin would break
+    # once the smoke command cd's elsewhere. Run a trivial command that echoes $PATH.
+    from paper_reprise.setuploop import _run_smoke
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "env" / "bin").mkdir(parents=True)
+    code, out = _run_smoke("echo PATHIS=$PATH", tmp_path, Path("env"))   # relative env
+    assert code == 0
+    abs_bin = str((tmp_path / "env" / "bin").resolve())
+    assert abs_bin in out
