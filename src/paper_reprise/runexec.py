@@ -71,10 +71,15 @@ def resolve_actual_config(claim: Claim, artifact: Artifact) -> dict:
 
 def _activated_env(env_dir: Path) -> dict:
     """Return an environment dict with env_dir's venv/conda prefix activated, plus
-    the model-path overlay (read shared cache / download missing to scratch)."""
+    the model-path overlay (read shared cache / download missing to scratch).
+
+    env_dir is resolved to an ABSOLUTE path: the eval command runs under bash and may
+    `cd` (e.g. `bash impl/run_eval.sh` cd's into impl/), so a relative `env/bin` on PATH
+    would resolve against the new cwd and the env's python/entrypoints wouldn't be found."""
+    abs_env_dir = env_dir.resolve()
     env = dict(os.environ)
-    env["PATH"] = f"{env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
-    env["VIRTUAL_ENV"] = str(env_dir)
+    env["PATH"] = f"{abs_env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
+    env["VIRTUAL_ENV"] = str(abs_env_dir)
     env.update(hf_env_overlay())
     return env
 

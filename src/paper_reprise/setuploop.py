@@ -156,8 +156,9 @@ def _run_smoke(command: str, cwd: Path, env_dir: Path) -> tuple[int, str]:
     """
     import tempfile
     env = dict(os.environ)
-    env["PATH"] = f"{env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
-    env["VIRTUAL_ENV"] = str(env_dir)
+    abs_env_dir = env_dir.resolve()
+    env["PATH"] = f"{abs_env_dir / 'bin'}{os.pathsep}{env.get('PATH', '')}"
+    env["VIRTUAL_ENV"] = str(abs_env_dir)
     # Read models from the shared cache / download missing ones to scratch.
     env.update(hf_env_overlay())
     with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as out_f:
