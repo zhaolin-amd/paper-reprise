@@ -256,37 +256,67 @@ def _resources(spec: Spec, runs: list[RunResult], header: str) -> str:
 
 
 def _conclusion(spec: Spec, grades: list[ClaimGrade], lang: str) -> str:
-    """A short, FACTUAL digest below the verdict table: counts, and — when every graded
-    claim's measured value sits on the same side of the paper — that systematic offset.
-    Computed, not editorialized."""
+    """A short, FACTUAL digest below the verdict table. Computed, not editorialized:
+    - verdict counts;
+    - if the FP baseline matched but quantized configs are off → the eval protocol is
+      validated, so those gaps are a real reproduction gap (the baseline-as-claim logic);
+    - else, if every graded value sits on one side of the paper → a systematic offset;
+    - a note on any BLOCKED claims."""
     c = Counter(g.verdict for g in grades)
     graded = [g for g in grades if g.measured is not None and g.expected is not None]
     diffs = [g.measured - g.expected for g in graded]
+    art = {a.id: a for a in spec.artifacts}
+    clm = {cl.id: cl.artifact for cl in spec.claims}
+
+    def _is_baseline(g: ClaimGrade) -> bool:
+        a = art.get(clm.get(g.claim_id))
+        return a is not None and _algorithm_label(a) == "-"
+
+    base_match = [g for g in graded if _is_baseline(g) and g.checks.get("value")]
+    quant_off = [g for g in graded if not _is_baseline(g) and not g.checks.get("value")]
+    zh = lang == "zh"
     lines = []
-    if lang == "zh":
+    if zh:
         lines.append(f"- 共 {len(grades)} 个 claim:MATCH {c['MATCH']} · PARTIAL "
                      f"{c['PARTIAL']} · FAIL {c['FAIL']} · BLOCKED {c['BLOCKED']}。")
-        if diffs and all(d > 0 for d in diffs):
-            lines.append(f"- 实测相对论文**一致偏高**(Δ +{min(diffs):.2f}~+{max(diffs):.2f}),"
-                         "更像系统性的评测/环境偏移(如 lm-eval/算法库版本差异),而非逐配置噪声。")
-        elif diffs and all(d < 0 for d in diffs):
-            lines.append(f"- 实测相对论文**一致偏低**(Δ {max(diffs):.2f}~{min(diffs):.2f}),"
-                         "更像系统性的评测/环境偏移,而非逐配置噪声。")
-        if c["BLOCKED"]:
-            lines.append(f"- {c['BLOCKED']} 个 BLOCKED 未产出可比数值(见各自 reason),"
-                         "非「未复现」。")
     else:
         lines.append(f"- {len(grades)} claims: MATCH {c['MATCH']} · PARTIAL {c['PARTIAL']} "
                      f"· FAIL {c['FAIL']} · BLOCKED {c['BLOCKED']}.")
-        if diffs and all(d > 0 for d in diffs):
+
+    if base_match and quant_off:
+        n = len(quant_off)
+        worst = min(quant_off, key=lambda g: g.measured - g.expected)
+        d = worst.measured - worst.expected
+        if zh:
+            lines.append(f"- FP 基线与论文吻合,说明**评测协议可信**;因此 {n} 个超容差的"
+                         f"量化配置(最大偏差 {d:+.2f})是**真实的复现差距**(算法/校准/版本所致),"
+                         "而非评测口径问题。")
+        else:
+            lines.append(f"- The FP baseline matches the paper, so the **eval protocol is "
+                         f"validated**; the {n} quantized config(s) outside tolerance "
+                         f"(worst {d:+.2f}) are therefore a **genuine reproduction gap** "
+                         "(algorithm/calibration/version), not an eval-protocol artifact.")
+    elif diffs and all(d > 0 for d in diffs):
+        if zh:
+            lines.append(f"- 实测相对论文**一致偏高**(Δ +{min(diffs):.2f}~+{max(diffs):.2f}),"
+                         "更像系统性的评测/环境偏移(如 lm-eval/算法库版本差异),而非逐配置噪声。")
+        else:
             lines.append(f"- Measured is **consistently above** the paper "
                          f"(Δ +{min(diffs):.2f}…+{max(diffs):.2f}) — a systematic eval/setup "
                          "offset (e.g. lm-eval/library version drift), not per-config noise.")
-        elif diffs and all(d < 0 for d in diffs):
+    elif diffs and all(d < 0 for d in diffs):
+        if zh:
+            lines.append(f"- 实测相对论文**一致偏低**(Δ {max(diffs):.2f}~{min(diffs):.2f}),"
+                         "更像系统性的评测/环境偏移,而非逐配置噪声。")
+        else:
             lines.append(f"- Measured is **consistently below** the paper "
                          f"(Δ {max(diffs):.2f}…{min(diffs):.2f}) — a systematic eval/setup "
                          "offset, not per-config noise.")
-        if c["BLOCKED"]:
+
+    if c["BLOCKED"]:
+        if zh:
+            lines.append(f"- {c['BLOCKED']} 个 BLOCKED 未产出可比数值(见各自 reason),非「未复现」。")
+        else:
             lines.append(f"- {c['BLOCKED']} BLOCKED produced no comparable value "
                          "(see each reason) — not 'failed to reproduce'.")
     return "\n".join(lines)
