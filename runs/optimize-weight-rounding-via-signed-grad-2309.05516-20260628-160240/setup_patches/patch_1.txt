@@ -1,0 +1,1 @@
+Installed lm-eval==0.4.12 (>=0.4.10 required for transformers>=5.0.0) into venv via `uv pip install --python env/bin/python "lm-eval>=0.4.10"` — provides the `lm_eval` module that `auto-round --eval` imports for benchmark evaluation

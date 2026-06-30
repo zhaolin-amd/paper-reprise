@@ -1,0 +1,3 @@
+Using CPython 3.12.0 interpreter at: /home/zhaolin/miniconda3/envs/quark_cuda/bin/python3
+Creating virtual environment at: runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env
+Activate with: source runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/bin/activate

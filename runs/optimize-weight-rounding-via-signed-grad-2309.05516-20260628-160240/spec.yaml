@@ -1,0 +1,172 @@
+paper: '2309.05516'
+repo:
+  url: https://github.com/intel/auto-round
+  commit: 9468e52
+artifacts:
+- id: mistral-7b-fp16
+  base_model: mistralai/Mistral-7B-v0.1
+  method: none
+  quant_config:
+    wbits: 16
+  calib_status: known
+- id: mistral-7b-w4g128
+  base_model: mistralai/Mistral-7B-v0.1
+  method: signround
+  quant_config:
+    wbits: 4
+    group_size: 128
+    sym: false
+    iters: 200
+    nsamples: 512
+    seqlen: 2048
+  calib_status: known
+- id: mistral-7b-w2g128
+  base_model: mistralai/Mistral-7B-v0.1
+  method: signround
+  quant_config:
+    wbits: 2
+    group_size: 128
+    sym: false
+    iters: 200
+    nsamples: 512
+    seqlen: 2048
+  calib_status: known
+- id: llama2-7b-fp16
+  base_model: meta-llama/Llama-2-7b-hf
+  method: none
+  quant_config:
+    wbits: 16
+  calib_status: known
+- id: llama2-7b-w4g128
+  base_model: meta-llama/Llama-2-7b-hf
+  method: signround
+  quant_config:
+    wbits: 4
+    group_size: 128
+    sym: false
+    iters: 200
+    nsamples: 512
+    seqlen: 2048
+  calib_status: known
+- id: llama2-7b-w2g128
+  base_model: meta-llama/Llama-2-7b-hf
+  method: signround
+  quant_config:
+    wbits: 2
+    group_size: 128
+    sym: false
+    iters: 200
+    nsamples: 512
+    seqlen: 2048
+  calib_status: known
+claims:
+- id: mistral-7b-fp16-baseline
+  artifact: mistral-7b-fp16
+  eval_protocol:
+    runner: official
+    command: auto-round --model $PAPER_REPRISE_MODEL --eval --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
+    metric: avg_accuracy_11tasks
+    dataset: mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge
+    split: standard
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 63.3
+  tolerance: 0.5
+  source: Table 1 (tab:llama and mistral at W2-W4), row 16 bits, col Mistral-7B
+  hardware: A100
+- id: mistral-7b-w4g128-claim
+  artifact: mistral-7b-w4g128
+  eval_protocol:
+    runner: official
+    command: auto-round --model $PAPER_REPRISE_MODEL --bits 4 --group_size 128 --iters
+      200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round
+      --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
+    metric: avg_accuracy_11tasks
+    dataset: mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge
+    split: standard
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 62.62
+  tolerance: 0.5
+  source: Table 1 (tab:llama and mistral at W2-W4), W4G128, row Ours, col Mistral-7B
+  hardware: A100
+- id: mistral-7b-w2g128-claim
+  artifact: mistral-7b-w2g128
+  eval_protocol:
+    runner: official
+    command: auto-round --model $PAPER_REPRISE_MODEL --bits 2 --group_size 128 --iters
+      200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round
+      --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
+    metric: avg_accuracy_11tasks
+    dataset: mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge
+    split: standard
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 52.71
+  tolerance: 0.5
+  source: Table 1 (tab:llama and mistral at W2-W4), W2G128, row Ours, col Mistral-7B
+  hardware: A100
+- id: llama2-7b-fp16-baseline
+  artifact: llama2-7b-fp16
+  eval_protocol:
+    runner: official
+    command: auto-round --model $PAPER_REPRISE_MODEL --eval --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
+    metric: avg_accuracy_11tasks
+    dataset: mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge
+    split: standard
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 57.98
+  tolerance: 0.5
+  source: Table 1 (tab:llama and mistral at W2-W4), row 16 bits, col V2-7B
+  hardware: A100
+- id: llama2-7b-w4g128-claim
+  artifact: llama2-7b-w4g128
+  eval_protocol:
+    runner: official
+    command: auto-round --model $PAPER_REPRISE_MODEL --bits 4 --group_size 128 --iters
+      200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round
+      --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
+    metric: avg_accuracy_11tasks
+    dataset: mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge
+    split: standard
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 57.57
+  tolerance: 0.5
+  source: Table 1 (tab:llama and mistral at W2-W4), W4G128, row Ours, col V2-7B
+  hardware: A100
+- id: llama2-7b-w2g128-claim
+  artifact: llama2-7b-w2g128
+  eval_protocol:
+    runner: official
+    command: auto-round --model $PAPER_REPRISE_MODEL --bits 2 --group_size 128 --iters
+      200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round
+      --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
+    metric: avg_accuracy_11tasks
+    dataset: mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge
+    split: standard
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 48.64
+  tolerance: 0.5
+  source: Table 1 (tab:llama and mistral at W2-W4), W2G128, row Ours, col V2-7B
+  hardware: A100
+references:
+- method: AdaRound (Adaptive Rounding)
+  repo_url: https://github.com/quic/aimet
+  note: SignRound's trainable rounding variable V (Eq. 3) directly extends AdaRound's
+    learnable rounding formulation; look at the BRECQ / AdaRound block-wise reconstruction
+    objective and the binary rounding parametrisation.
