@@ -1,7 +1,6 @@
 # 复现报告: 2504.19874
 
 - **仓库:** (no official repo)
-- **判定:** MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|
@@ -15,6 +14,12 @@
 | Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M | INT4 | TurboQuant_prod | ip_distortion | 3.0599e-05 | 3.54e-05(+4.85e-06) | MATCH | — |
 | Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M | INT1 | TurboQuant_mse | ip_ratio | 0.6366 | 0.637(+0.0004) | MATCH | — |
 | Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M | INT2 | TurboQuant_prod | ip_ratio | 1 | 0.991(-0.008966) | MATCH | — |
+
+## 结论
+- 共 10 个 claim:MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0。
+
+## 资源占用(每个 config)
+(none)
 
 ## 各任务原始分数
 (none)
