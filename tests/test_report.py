@@ -278,3 +278,21 @@ def test_resources_table_has_time_and_vram(tmp_path):
     runs = [RunResult(claim_id="c1", command="x", stdout_path=str(log), status="ran")]
     out = _resources(spec, runs, "| model | config | time | peak VRAM |")
     assert "5.0 min" in out and "12.5 GB" in out
+
+
+def _has_cjk(s):
+    return any('一' <= ch <= '鿿' for ch in s)
+
+
+def test_en_report_reason_is_english_zh_is_chinese():
+    from paper_reprise.models import ClaimGrade
+    spec, ingest, _g, runs, env = _ctx()
+    grades = [ClaimGrade(claim_id="c1", verdict="PARTIAL", measured=6.0, expected=5.78,
+                         reason="process faithful but value off tolerance 0.22 (>0.05)",
+                         reason_zh="过程忠实但数值超容差 0.22 (>0.05)",
+                         checks={"value": False, "faithful": True})]
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    en_table = en.split("## Conclusion")[0]
+    assert not _has_cjk(en_table)                      # the en verdict table has no Chinese
+    assert "process faithful but value off tolerance" in en
+    assert "过程忠实但数值超容差" in zh                  # zh keeps Chinese reason

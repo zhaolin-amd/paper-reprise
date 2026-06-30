@@ -170,5 +170,6 @@ class ClaimGrade(BaseModel):
     verdict: Verdict
     measured: Optional[float]
     expected: float
-    reason: str
+    reason: str                      # canonical English (shown in report.en.md)
+    reason_zh: Optional[str] = None  # Chinese rendering (report.zh.md); falls back to reason
     checks: dict                     # {"value": bool, "faithful": bool}

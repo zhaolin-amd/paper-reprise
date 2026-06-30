@@ -107,16 +107,21 @@ def _measured_cell(g, expected) -> str:
     return f"{_fmt_num(g.measured)}({_fmt_signed(g.measured - expected)})"
 
 
-def _table(spec, grades, header):
+def _table(spec, grades, header, lang="en"):
     """One row per claim (model × config × metric), with paper, measured(diff),
-    verdict and reason all in a single table."""
+    verdict and reason all in a single table. `lang` picks the reason language."""
     runs_by = {g.claim_id: g for g in grades}
     lines = [header, "|---|---|---|---|---|---|---|---|"]
     for c in spec.claims:
         g = runs_by.get(c.id)
         measured = _measured_cell(g, c.expected)
         verdict = g.verdict if g else "BLOCKED"
-        reason = g.reason if g else "no grade"
+        if not g:
+            reason = "无评分" if lang == "zh" else "no grade"
+        elif lang == "zh":
+            reason = g.reason_zh or g.reason
+        else:
+            reason = g.reason
         a = _artifact(spec, c.artifact)
         model = a.base_model if a else c.artifact
         lines.append(f"| {model} | {_config_label(a)} | {_algorithm_label(a)} | "
@@ -296,7 +301,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 {_meta_block(repo_str, env_str, ("仓库", "环境"))}
 
-{_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |")}
+{_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |", "zh")}
 
 ## 结论
 {_conclusion(spec, grades, "zh")}
@@ -315,7 +320,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 {_meta_block(repo_str, env_str, ("Repo", "Environment"))}
 
-{_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |")}
+{_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |", "en")}
 
 ## Conclusion
 {_conclusion(spec, grades, "en")}

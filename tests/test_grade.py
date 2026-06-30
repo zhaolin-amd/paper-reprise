@@ -114,3 +114,20 @@ def test_bits_only_artifact_makes_wbits_faithfulness_comparable(tmp_path):
     g = grade_claim(_claim(), art, _run(out), actual_config={"seqlen": 2048, "wbits": 8})
     assert g.verdict == "PARTIAL"          # wbits 4 (spec) vs 8 (actual) caught
     assert "wbits" in g.reason
+
+
+def test_grade_reason_is_bilingual():
+    from paper_reprise.models import Artifact, Claim, EvalProtocol, RunResult
+    from paper_reprise.grade import grade_claim
+    art = Artifact(id="a", base_model="m", method="X", quant_config={"wbits": 4},
+                   calib_status="known")
+    claim = Claim(id="c", artifact="a",
+                  eval_protocol=EvalProtocol(runner="custom", command="x",
+                                             metric="perplexity", dataset="d"),
+                  expected=5.0, tolerance=0.05, source="T")
+    run = RunResult(claim_id="c", command="x", stdout_path="/nonexistent", status="blocked",
+                    block_reason="boom")
+    g = grade_claim(claim, art, run, actual_config={})
+    assert g.verdict == "BLOCKED"
+    assert g.reason == "run did not complete: boom"        # English canonical
+    assert g.reason_zh == "run 未跑成: boom"                # Chinese rendering
