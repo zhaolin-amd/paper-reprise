@@ -10,6 +10,7 @@
 
 ## Conclusion
 - 2 claims: MATCH 1 · PARTIAL 1 · FAIL 0 · BLOCKED 0.
+- The FP baseline matches the paper, so the **eval protocol is validated**; the 1 quantized config(s) outside tolerance (worst -2.04) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
 
 ## Resources (per config)
 (none)
