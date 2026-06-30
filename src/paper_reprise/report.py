@@ -10,7 +10,11 @@ from collections import Counter
 from pathlib import Path
 
 from paper_reprise.models import ClaimGrade, IngestInfo, RunResult, Spec
-from paper_reprise.parsers import extract_results_table
+from paper_reprise.parsers import (
+    extract_results_table,
+    parse_peak_vram_gb,
+    parse_runtime_minutes,
+)
 
 
 def _summary(grades: list[ClaimGrade]) -> str:
@@ -217,6 +221,79 @@ def _patches_section(patches: list[str], heading: str) -> str:
     return f"\n## {heading}\n{body}\n"
 
 
+def _fmt_minutes(m: float | None) -> str:
+    if m is None:
+        return "—"
+    if m < 60:
+        return f"{m:.1f} min"
+    return f"{m / 60:.1f} h"
+
+
+def _resources(spec: Spec, runs: list[RunResult], header: str) -> str:
+    """Per-claim cost: wall-clock time and peak GPU memory, parsed from each run's log.
+    Omitted rows when a claim produced no log (e.g. BLOCKED before running)."""
+    runs_by = {r.claim_id: r for r in runs}
+    rows = [header, "|---|---|---|---|"]
+    any_row = False
+    for c in spec.claims:
+        r = runs_by.get(c.id)
+        text = ""
+        if r and r.stdout_path:
+            try:
+                p = Path(r.stdout_path)
+                if p.exists():
+                    text = p.read_text(errors="replace")
+            except OSError:
+                text = ""
+        mins = parse_runtime_minutes(text) if text else None
+        vram = parse_peak_vram_gb(text) if text else None
+        if mins is None and vram is None:
+            continue
+        any_row = True
+        a = _artifact(spec, c.artifact)
+        model = a.base_model if a else c.artifact
+        vram_s = f"{vram:.1f} GB" if vram is not None else "—"
+        rows.append(f"| {model} | {_config_label(a)} | {_fmt_minutes(mins)} | {vram_s} |")
+    return "\n".join(rows) if any_row else "(none)"
+
+
+def _conclusion(spec: Spec, grades: list[ClaimGrade], lang: str) -> str:
+    """A short, FACTUAL digest below the verdict table: counts, and — when every graded
+    claim's measured value sits on the same side of the paper — that systematic offset.
+    Computed, not editorialized."""
+    c = Counter(g.verdict for g in grades)
+    graded = [g for g in grades if g.measured is not None and g.expected is not None]
+    diffs = [g.measured - g.expected for g in graded]
+    lines = []
+    if lang == "zh":
+        lines.append(f"- 共 {len(grades)} 个 claim:MATCH {c['MATCH']} · PARTIAL "
+                     f"{c['PARTIAL']} · FAIL {c['FAIL']} · BLOCKED {c['BLOCKED']}。")
+        if diffs and all(d > 0 for d in diffs):
+            lines.append(f"- 实测相对论文**一致偏高**(Δ +{min(diffs):.2f}~+{max(diffs):.2f}),"
+                         "更像系统性的评测/环境偏移(如 lm-eval/算法库版本差异),而非逐配置噪声。")
+        elif diffs and all(d < 0 for d in diffs):
+            lines.append(f"- 实测相对论文**一致偏低**(Δ {max(diffs):.2f}~{min(diffs):.2f}),"
+                         "更像系统性的评测/环境偏移,而非逐配置噪声。")
+        if c["BLOCKED"]:
+            lines.append(f"- {c['BLOCKED']} 个 BLOCKED 未产出可比数值(见各自 reason),"
+                         "非「未复现」。")
+    else:
+        lines.append(f"- {len(grades)} claims: MATCH {c['MATCH']} · PARTIAL {c['PARTIAL']} "
+                     f"· FAIL {c['FAIL']} · BLOCKED {c['BLOCKED']}.")
+        if diffs and all(d > 0 for d in diffs):
+            lines.append(f"- Measured is **consistently above** the paper "
+                         f"(Δ +{min(diffs):.2f}…+{max(diffs):.2f}) — a systematic eval/setup "
+                         "offset (e.g. lm-eval/library version drift), not per-config noise.")
+        elif diffs and all(d < 0 for d in diffs):
+            lines.append(f"- Measured is **consistently below** the paper "
+                         f"(Δ {max(diffs):.2f}…{min(diffs):.2f}) — a systematic eval/setup "
+                         "offset, not per-config noise.")
+        if c["BLOCKED"]:
+            lines.append(f"- {c['BLOCKED']} BLOCKED produced no comparable value "
+                         "(see each reason) — not 'failed to reproduce'.")
+    return "\n".join(lines)
+
+
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str]) -> tuple[str, str]:
     summ = _summary(grades)
@@ -228,6 +305,12 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {_meta_block(repo_str, env_str, summ, ("仓库", "环境", "判定"))}
 
 {_table(spec, grades, "| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |")}
+
+## 结论
+{_conclusion(spec, grades, "zh")}
+
+## 资源占用(每个 config)
+{_resources(spec, runs, "| model | config | 时长 | 峰值显存 |")}
 
 ## 各任务原始分数
 {_raw_scores(runs)}
@@ -241,6 +324,12 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {_meta_block(repo_str, env_str, summ, ("Repo", "Environment", "Verdict"))}
 
 {_table(spec, grades, "| model | config | algorithm | metric | paper | measured | verdict | reason |")}
+
+## Conclusion
+{_conclusion(spec, grades, "en")}
+
+## Resources (per config)
+{_resources(spec, runs, "| model | config | time | peak VRAM |")}
 
 ## Per-task raw scores
 {_raw_scores(runs)}

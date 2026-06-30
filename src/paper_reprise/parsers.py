@@ -144,6 +144,34 @@ def parse_per_task(text: str) -> dict:
     return out
 
 
+_VRAM_RE = re.compile(r"peak_vram['\"]?\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)\s*GB", re.IGNORECASE)
+_TS_RE = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
+_RUNTIME_RE = re.compile(r"running time\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*s", re.IGNORECASE)
+
+
+def parse_peak_vram_gb(text: str) -> Optional[float]:
+    """Peak GPU memory in GB from an eval log (auto-round logs `peak_vram: 32.84GB`).
+    Returns the maximum seen, or None if not reported."""
+    vals = [float(m) for m in _VRAM_RE.findall(text or "")]
+    return max(vals) if vals else None
+
+
+def parse_runtime_minutes(text: str) -> Optional[float]:
+    """Wall-clock minutes for a run: span between the first and last `YYYY-MM-DD HH:MM:SS`
+    log timestamps; falls back to summing `running time=<n>s` lines. None if neither."""
+    from datetime import datetime
+    stamps = _TS_RE.findall(text or "")
+    if len(stamps) >= 2:
+        fmt = "%Y-%m-%d %H:%M:%S"
+        try:
+            ts = [datetime.strptime(s, fmt) for s in stamps]
+            return (max(ts) - min(ts)).total_seconds() / 60.0
+        except ValueError:
+            pass
+    secs = [float(s) for s in _RUNTIME_RE.findall(text or "")]
+    return sum(secs) / 60.0 if secs else None
+
+
 def extract_results_table(text: str) -> str:
     """Return the largest contiguous block of markdown table rows (`|...|` lines)
     from an eval log — the harness's raw results table — verbatim. "" if none."""
