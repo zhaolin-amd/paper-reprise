@@ -78,3 +78,24 @@ def test_parse_per_task_extracts_tasks_skips_average():
            "winogrande acc: 0.6922\nacc_norm_avg: 0.6651\n")
     d = parse_per_task(txt)
     assert d == {"arc_challenge": 0.459, "arc_easy": 0.7285, "winogrande": 0.6922}
+
+
+def test_avg_accuracy_over_tasks_from_lm_eval_table():
+    # No single "average" line — only an lm-eval per-task table. An "avg_accuracy_Ntasks"
+    # metric is the mean of the top-level `acc` cells (skip acc_norm / sub-group rows).
+    table = (
+        "|     Tasks     |Version|Filter|n-shot|Metric|   |Value |   |Stderr|\n"
+        "|---------------|------:|------|-----:|------|---|-----:|---|-----:|\n"
+        "|arc_challenge  |      1|none  |     0|acc   |↑  |0.4000|±  |0.01|\n"
+        "|               |       |none  |     0|acc_norm|↑|0.5000|± |0.01|\n"  # ignored
+        "|winogrande     |      1|none  |     0|acc   |↑  |0.6000|±  |0.01|\n"
+        "|mmlu           |      2|none  |      |acc   |   |0.5000|±  |0.01|\n"
+        "| - humanities  |      2|none  |     0|acc   |↑  |0.9000|±  |0.01|\n"  # sub-group, ignored
+    )
+    # mean(0.40, 0.60, 0.50) * 100 = 50.0
+    assert parse_metric("avg_accuracy_11tasks", table) == 50.0
+
+
+def test_avg_metric_prefers_explicit_line_over_table():
+    txt = "avg_acc: 0.6651\n|arc_easy|1|none|0|acc|↑|0.10|±|0|\n"
+    assert parse_metric("avg_acc", txt) == 66.51   # explicit line wins, not the table mean
