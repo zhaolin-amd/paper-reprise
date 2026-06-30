@@ -192,12 +192,21 @@ def test_rocm_version_is_printed_for_amd_builds():
 def test_header_is_a_markdown_meta_block_not_glued_lines():
     spec, ingest, grades, runs, env = _ctx()
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
-    # repo / env / verdict are separate bullet lines, not one run-on paragraph
+    # repo / env are separate bullet lines, not one run-on paragraph
     assert "- **Repo:** https://github.com/x/y@abc123" in en
-    assert "- **Verdict:** MATCH 1 · PARTIAL 0 · FAIL 0 · BLOCKED 0" in en
-    assert "- **仓库:**" in zh and "- **判定:**" in zh
+    assert "- **仓库:**" in zh
     # blank line after the H1 so Markdown doesn't fold the metadata into the title
     assert en.splitlines()[1] == ""
+
+
+def test_verdict_counts_only_in_conclusion_not_header():
+    spec, ingest, grades, runs, env = _ctx()
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    # the verdict counts are no longer duplicated in the header meta block
+    assert "- **Verdict:**" not in en and "- **判定:**" not in zh
+    # they appear once, in the Conclusion section
+    assert "MATCH 1 · PARTIAL 0 · FAIL 0 · BLOCKED 0" in en
+    assert en.index("## Conclusion") < en.index("MATCH 1 ·")
 
 
 def test_title_not_duplicated_when_no_distinct_title():
