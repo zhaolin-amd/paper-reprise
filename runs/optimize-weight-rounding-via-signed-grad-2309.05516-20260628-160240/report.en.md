@@ -5,7 +5,7 @@
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
-| mistralai/Mistral-7B-v0.1 | BF16 | - | avg_accuracy_11tasks | 63.3 | — | BLOCKED | could not parse avg_accuracy_11tasks from output |
+| mistralai/Mistral-7B-v0.1 | BF16 | - | avg_accuracy_11tasks | 63.3 | 64.52(+1.22) | PARTIAL | process faithful but value off tolerance 1.218 (>0.5) |
 | mistralai/Mistral-7B-v0.1 | INT4 G128 | signround | avg_accuracy_11tasks | 62.62 | 63.91(+1.29) | PARTIAL | process faithful but value off tolerance 1.289 (>0.5) |
 | mistralai/Mistral-7B-v0.1 | INT2 G128 | signround | avg_accuracy_11tasks | 52.71 | 53.86(+1.15) | PARTIAL | process faithful but value off tolerance 1.153 (>0.5) |
 | meta-llama/Llama-2-7b-hf | BF16 | - | avg_accuracy_11tasks | 57.98 | 59.47(+1.49) | PARTIAL | process faithful but value off tolerance 1.485 (>0.5) |
@@ -13,13 +13,13 @@
 | meta-llama/Llama-2-7b-hf | INT2 G128 | signround | avg_accuracy_11tasks | 48.64 | 51.03(+2.39) | PARTIAL | process faithful but value off tolerance 2.395 (>0.5) |
 
 ## Conclusion
-- 6 claims: MATCH 0 · PARTIAL 5 · FAIL 0 · BLOCKED 1.
+- 6 claims: MATCH 0 · PARTIAL 6 · FAIL 0 · BLOCKED 0.
 - Measured is **consistently above** the paper (Δ +1.15…+2.39) — a systematic eval/setup offset (e.g. lm-eval/library version drift), not per-config noise.
-- 1 BLOCKED produced no comparable value (see each reason) — not 'failed to reproduce'.
 
 ## Resources (per config)
 | model | config | time | peak VRAM |
 |---|---|---|---|
+| mistralai/Mistral-7B-v0.1 | BF16 | 6.7 min | — |
 | mistralai/Mistral-7B-v0.1 | INT4 G128 | 7.5 min | 32.4 GB |
 | mistralai/Mistral-7B-v0.1 | INT2 G128 | 7.3 min | 32.5 GB |
 | meta-llama/Llama-2-7b-hf | BF16 | 7.0 min | — |
@@ -27,6 +27,28 @@
 | meta-llama/Llama-2-7b-hf | INT2 G128 | 7.2 min | 32.8 GB |
 
 ## Per-task raw scores
+**mistral-7b-fp16-baseline**
+
+|                 Tasks                 |Version|Filter|n-shot|  Metric  |   |Value |   |Stderr|
+|---------------------------------------|------:|------|-----:|----------|---|-----:|---|-----:|
+|mmlu                                   |      2|none  |      |acc       |   |0.5975|±  |0.0039|
+|arc_challenge                          |      1|none  |     0|acc       |↑  |0.5034|±  |0.0146|
+|                                       |       |none  |     0|acc_norm  |↑  |0.5418|±  |0.0146|
+|arc_easy                               |      1|none  |     0|acc       |↑  |0.8081|±  |0.0081|
+|                                       |       |none  |     0|acc_norm  |↑  |0.7950|±  |0.0083|
+|boolq                                  |      2|none  |     0|acc       |↑  |0.8364|±  |0.0065|
+|hellaswag                              |      1|none  |     0|acc       |↑  |0.6135|±  |0.0049|
+|                                       |       |none  |     0|acc_norm  |↑  |0.8109|±  |0.0039|
+|lambada_openai                         |      1|none  |     0|acc       |↑  |0.7565|±  |0.0060|
+|                                       |       |none  |     0|perplexity|↓  |3.1802|±  |0.0583|
+|openbookqa                             |      1|none  |     0|acc       |↑  |0.3260|±  |0.0210|
+|                                       |       |none  |     0|acc_norm  |↑  |0.4400|±  |0.0222|
+|piqa                                   |      1|none  |     0|acc       |↑  |0.8085|±  |0.0092|
+|                                       |       |none  |     0|acc_norm  |↑  |0.8221|±  |0.0089|
+|rte                                    |      1|none  |     0|acc       |↑  |0.6751|±  |0.0282|
+|truthfulqa_mc2                         |      3|none  |     0|acc       |↑  |0.4261|±  |0.0142|
+|winogrande                             |      1|none  |     0|acc       |↑  |0.7459|±  |0.0122|
+
 **mistral-7b-w4g128-claim**
 
 |                 Tasks                 |Version|Filter|n-shot|  Metric  |   |Value |   |Stderr|
