@@ -296,3 +296,32 @@ def test_en_report_reason_is_english_zh_is_chinese():
     assert not _has_cjk(en_table)                      # the en verdict table has no Chinese
     assert "process faithful but value off tolerance" in en
     assert "过程忠实但数值超容差" in zh                  # zh keeps Chinese reason
+
+
+def test_conclusion_baseline_validates_so_quant_gap_is_real():
+    # FP baseline MATCH + a quantized config off-tolerance → conclusion says the eval
+    # protocol is validated and the quantized gap is a real reproduction gap.
+    from paper_reprise.models import Spec, Artifact, Claim, EvalProtocol, ClaimGrade
+    from paper_reprise.report import _conclusion
+    spec = Spec(paper="p",
+        artifacts=[Artifact(id="fp", base_model="M", method="none", quant_config={"wbits": 16}),
+                   Artifact(id="q", base_model="M", method="GSQ", quant_config={"wbits": 2})],
+        claims=[Claim(id="base", artifact="fp",
+                      eval_protocol=EvalProtocol(runner="custom", command="x",
+                                                 metric="avg_acc", dataset="d"),
+                      expected=73.71, tolerance=0.5, source="T"),
+                Claim(id="q2", artifact="q",
+                      eval_protocol=EvalProtocol(runner="custom", command="x",
+                                                 metric="avg_acc", dataset="d"),
+                      expected=68.55, tolerance=0.5, source="T")])
+    grades = [
+        ClaimGrade(claim_id="base", verdict="MATCH", measured=73.79, expected=73.71,
+                   reason="—", checks={"value": True, "faithful": True}),
+        ClaimGrade(claim_id="q2", verdict="PARTIAL", measured=66.51, expected=68.55,
+                   reason="...", checks={"value": False, "faithful": True}),
+    ]
+    zh = _conclusion(spec, grades, "zh")
+    en = _conclusion(spec, grades, "en")
+    assert "评测协议可信" in zh and "真实的复现差距" in zh
+    assert "eval protocol is validated" in en and "genuine reproduction gap" in en
+    assert "-2.04" in en or "-2.04" in zh        # worst quantized gap surfaced
