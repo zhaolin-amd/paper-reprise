@@ -56,6 +56,38 @@ def _first_match(patterns: list[str], text: str) -> Optional[float]:
     return None
 
 
+def _lm_eval_task_accs(text: str) -> list:
+    """Top-level per-task `acc` values from an lm-eval markdown results table, e.g.
+    `|arc_challenge|1|none|0|acc|↑|0.4872|±|0.0146|` → 0.4872. Used to average a
+    multi-task accuracy metric when the harness prints no single average line.
+
+    Counts only NAMED task rows with the bare `acc` metric — skips continuation rows
+    (acc_norm, empty name), sub-group rows (`- subject`), and the header/separator."""
+    accs = []
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        if len(cells) < 4:
+            continue
+        name = cells[1]
+        if not name or name.startswith("-") or name.lower() in ("tasks", "groups"):
+            continue
+        if "acc" not in cells:                 # bare `acc` metric cell (not acc_norm)
+            continue
+        mi = cells.index("acc")
+        val = None
+        for c in cells[mi + 1:]:               # first numeric cell after the metric
+            try:
+                val = float(c)
+                break
+            except ValueError:
+                continue
+        if val is not None and 0.0 <= val <= 1.0:
+            accs.append(val)
+    return accs
+
+
 def parse_metric(metric: str, text: str) -> Optional[float]:
     metric = metric.lower()
     if metric in ("perplexity", "ppl"):
@@ -72,9 +104,15 @@ def parse_metric(metric: str, text: str) -> Optional[float]:
         pats = [rf"{re.escape(metric)}[:\s=]+([0-9]+\.?[0-9]*)\s*%",
                 rf"{re.escape(metric)}[:\s=]+([0-9]*\.?[0-9]+)"] + _AVG_ACC_PATTERNS
         val = _first_match(pats, text)
-        if val is None:
-            return None
-        return val * 100 if val <= 1.0 else val
+        if val is not None:
+            return val * 100 if val <= 1.0 else val
+        # No explicit average line: many harnesses (lm-eval) only print a per-task table.
+        # An "average accuracy over N tasks" metric is then the mean of the top-level task
+        # `acc` cells — compute it. (e.g. AutoRound's `avg_accuracy_11tasks`.)
+        accs = _lm_eval_task_accs(text)
+        if accs:
+            return sum(accs) / len(accs) * 100.0
+        return None
     if metric == "speedup":
         return _first_match(_SPEEDUP_PATTERNS, text)
     # Unknown family: treat it as a generic scalar metric named exactly `metric`.
