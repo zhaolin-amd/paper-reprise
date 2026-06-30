@@ -5,12 +5,12 @@
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
-| mistralai/Mistral-7B-v0.1 | BF16 | - | avg_accuracy_11tasks | 63.3 | — | BLOCKED | 无法从输出解析 avg_accuracy_11tasks |
-| mistralai/Mistral-7B-v0.1 | INT4 G128 | signround | avg_accuracy_11tasks | 62.62 | 63.91(+1.29) | PARTIAL | 过程忠实但数值超容差 1.289 (>0.5) |
-| mistralai/Mistral-7B-v0.1 | INT2 G128 | signround | avg_accuracy_11tasks | 52.71 | 53.86(+1.15) | PARTIAL | 过程忠实但数值超容差 1.153 (>0.5) |
-| meta-llama/Llama-2-7b-hf | BF16 | - | avg_accuracy_11tasks | 57.98 | 59.47(+1.49) | PARTIAL | 过程忠实但数值超容差 1.485 (>0.5) |
-| meta-llama/Llama-2-7b-hf | INT4 G128 | signround | avg_accuracy_11tasks | 57.57 | 59.08(+1.51) | PARTIAL | 过程忠实但数值超容差 1.513 (>0.5) |
-| meta-llama/Llama-2-7b-hf | INT2 G128 | signround | avg_accuracy_11tasks | 48.64 | 51.03(+2.39) | PARTIAL | 过程忠实但数值超容差 2.395 (>0.5) |
+| mistralai/Mistral-7B-v0.1 | BF16 | - | avg_accuracy_11tasks | 63.3 | — | BLOCKED | could not parse avg_accuracy_11tasks from output |
+| mistralai/Mistral-7B-v0.1 | INT4 G128 | signround | avg_accuracy_11tasks | 62.62 | 63.91(+1.29) | PARTIAL | process faithful but value off tolerance 1.289 (>0.5) |
+| mistralai/Mistral-7B-v0.1 | INT2 G128 | signround | avg_accuracy_11tasks | 52.71 | 53.86(+1.15) | PARTIAL | process faithful but value off tolerance 1.153 (>0.5) |
+| meta-llama/Llama-2-7b-hf | BF16 | - | avg_accuracy_11tasks | 57.98 | 59.47(+1.49) | PARTIAL | process faithful but value off tolerance 1.485 (>0.5) |
+| meta-llama/Llama-2-7b-hf | INT4 G128 | signround | avg_accuracy_11tasks | 57.57 | 59.08(+1.51) | PARTIAL | process faithful but value off tolerance 1.513 (>0.5) |
+| meta-llama/Llama-2-7b-hf | INT2 G128 | signround | avg_accuracy_11tasks | 48.64 | 51.03(+2.39) | PARTIAL | process faithful but value off tolerance 2.395 (>0.5) |
 
 ## Conclusion
 - 6 claims: MATCH 0 · PARTIAL 5 · FAIL 0 · BLOCKED 1.
