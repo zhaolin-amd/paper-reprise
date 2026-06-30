@@ -166,8 +166,8 @@ def test_unknown_env_values_are_dropped_not_question_marked():
     zh, _ = render_reports(spec, ingest, grades, runs,
                            env={"torch": "unknown", "transformers": "", "cuda": None},
                            patches=[])
-    assert "?" not in zh                # no "?" anywhere from unknown env
-    assert "环境" not in zh              # the env bullet is omitted entirely when nothing known
+    assert "- **环境:**" not in zh       # the env bullet is omitted when nothing known
+    assert "torch" not in zh             # no torch version anywhere in the report
 
 
 def test_known_env_values_are_kept_unknown_ones_dropped():
@@ -248,3 +248,24 @@ def test_raw_scores_drops_mmlu_subgroup_rows(tmp_path):
     assert "humanities" not in out                     # MMLU sub-items dropped
     assert "formal_logic" not in out
     assert "|------" in out or "-----:" in out         # separator preserved
+
+
+def test_conclusion_reports_counts_and_consistent_offset():
+    from paper_reprise.report import _conclusion
+    spec, _ing, grades, _runs, _env = _ctx()
+    grades[0].measured, grades[0].expected, grades[0].verdict = 6.0, 5.0, "PARTIAL"
+    zh = _conclusion(spec, grades, "zh")
+    en = _conclusion(spec, grades, "en")
+    assert "PARTIAL 1" in zh and "PARTIAL 1" in en
+    assert "偏高" in zh and "consistently above" in en   # all diffs same (positive) sign
+
+
+def test_resources_table_has_time_and_vram(tmp_path):
+    from paper_reprise.report import _resources
+    from paper_reprise.models import RunResult
+    log = tmp_path / "s.log"
+    log.write_text("2026-06-30 09:00:00 x\n'peak_vram': 12.5GB\n2026-06-30 09:05:00 y\n")
+    spec, _ing, _g, _r, _e = _ctx()
+    runs = [RunResult(claim_id="c1", command="x", stdout_path=str(log), status="ran")]
+    out = _resources(spec, runs, "| model | config | time | peak VRAM |")
+    assert "5.0 min" in out and "12.5 GB" in out

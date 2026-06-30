@@ -99,3 +99,18 @@ def test_avg_accuracy_over_tasks_from_lm_eval_table():
 def test_avg_metric_prefers_explicit_line_over_table():
     txt = "avg_acc: 0.6651\n|arc_easy|1|none|0|acc|↑|0.10|±|0|\n"
     assert parse_metric("avg_acc", txt) == 66.51   # explicit line wins, not the table mean
+
+
+def test_parse_peak_vram_gb():
+    from paper_reprise.parsers import parse_peak_vram_gb
+    log = "INFO 'peak_ram': 21.5GB, 'peak_vram': 30.86GB\nlater 'peak_vram': 32.84GB\n"
+    assert parse_peak_vram_gb(log) == 32.84      # max seen
+    assert parse_peak_vram_gb("no memory here") is None
+
+
+def test_parse_runtime_minutes_from_timestamps_and_fallback():
+    from paper_reprise.parsers import parse_runtime_minutes
+    log = "2026-06-30 09:17:45 start\n2026-06-30 09:24:45 end\n"
+    assert parse_runtime_minutes(log) == 7.0
+    assert parse_runtime_minutes("evaluation running time=120s") == 2.0
+    assert parse_runtime_minutes("nothing") is None
