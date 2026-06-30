@@ -1,7 +1,6 @@
 # Reproduction Report: 2504.19874
 
 - **Repo:** (no official repo)
-- **Verdict:** MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
@@ -15,6 +14,12 @@
 | Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M | INT4 | TurboQuant_prod | ip_distortion | 3.0599e-05 | 3.54e-05(+4.85e-06) | MATCH | — |
 | Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M | INT1 | TurboQuant_mse | ip_ratio | 0.6366 | 0.637(+0.0004) | MATCH | — |
 | Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M | INT2 | TurboQuant_prod | ip_ratio | 1 | 0.991(-0.008966) | MATCH | — |
+
+## Conclusion
+- 10 claims: MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0.
+
+## Resources (per config)
+(none)
 
 ## Per-task raw scores
 (none)
