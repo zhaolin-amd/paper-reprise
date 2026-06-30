@@ -123,40 +123,50 @@ def test_clean_env_removes_envs_keeps_records(tmp_path):
     assert (rd.root / "env_snapshot.json").exists()
 
 
-def test_link_repo_output_to_scratch_symlinks_when_absent(tmp_path, monkeypatch):
+def test_create_relocates_repo_and_env_to_scratch(tmp_path, monkeypatch):
     from paper_reprise.rundir import RunDir
-    from paper_reprise import modelpaths
     monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "scratch"))
     rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
+    # repo + env are symlinks into the per-run scratch dir (home keeps only small records)
+    for name in ("repo", "env"):
+        link = rd.root / name
+        assert link.is_symlink()
+        assert link.resolve() == (tmp_path / "scratch" / rd.root.name / name).resolve()
+    assert (rd.root / "claims").is_dir() and not (rd.root / "claims").is_symlink()
+    # a write through repo lands on scratch, not under runs/ (home)
+    (rd.repo_dir / "runtime").mkdir(parents=True)
+    (rd.repo_dir / "runtime" / "model.safetensors").write_bytes(b"\0" * 16)
+    assert (tmp_path / "scratch" / rd.root.name / "repo" / "runtime"
+            / "model.safetensors").exists()
+
+
+def test_link_repo_output_is_noop_when_repo_is_scratch_symlink(tmp_path):
+    from paper_reprise.rundir import RunDir
+    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
+    assert rd.repo_dir.is_symlink()                 # repo already on scratch by default
+    assert rd.link_repo_output_to_scratch() is None  # its output is already on scratch
+
+
+def test_link_repo_output_legacy_real_repo_still_redirects(tmp_path):
+    from paper_reprise.rundir import RunDir
+    from paper_reprise import modelpaths
+    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
+    (rd.root / "repo").unlink()                     # simulate a legacy real-repo run
+    rd.repo_dir.mkdir()
     target = rd.link_repo_output_to_scratch()
     link = rd.repo_dir / "runtime"
     assert link.is_symlink()
     assert target == modelpaths.run_models_dir(rd.root.name)
     assert link.resolve() == target.resolve()
-    # a write through the symlink lands on scratch, not under runs/
-    (link / "checkpoints").mkdir(parents=True)
-    (link / "checkpoints" / "model.safetensors").write_bytes(b"\0" * 16)
-    assert (target / "checkpoints" / "model.safetensors").exists()
 
 
-def test_link_repo_output_skips_existing_real_dir(tmp_path, monkeypatch):
+def test_clean_scratch_models_removes_runtime_output(tmp_path):
     from paper_reprise.rundir import RunDir
-    monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "scratch"))
-    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
-    real = rd.repo_dir / "runtime"
-    real.mkdir()
-    (real / "keep.log").write_text("x")           # pre-existing data
-    assert rd.link_repo_output_to_scratch() is None
-    assert not real.is_symlink()
-    assert (real / "keep.log").exists()           # not clobbered
-
-
-def test_clean_scratch_models_removes_target_and_link(tmp_path, monkeypatch):
-    from paper_reprise.rundir import RunDir
-    monkeypatch.setenv("PAPER_REPRISE_MODELS_DIR", str(tmp_path / "scratch"))
-    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")
-    target = rd.link_repo_output_to_scratch()
-    (target / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
+    rd = RunDir.create(tmp_path / "runs", arxiv_id="p", timestamp="t")  # repo → scratch
+    rt = rd.repo_dir / "runtime" / "checkpoints"
+    rt.mkdir(parents=True)
+    (rt / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
     removed = rd.clean_scratch_models()
-    assert removed and not target.exists()
-    assert not (rd.repo_dir / "runtime").is_symlink()   # dangling link removed
+    assert removed
+    assert not (rd.repo_dir / "runtime").exists()   # exported output gone
+    assert rd.repo_dir.is_dir()                      # repo source kept
