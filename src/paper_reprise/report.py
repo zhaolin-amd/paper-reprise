@@ -175,17 +175,32 @@ def _replay(spec, runs: list[RunResult]) -> str:
     return "\n\n".join(blocks)
 
 
+def _drop_subgroup_rows(table: str) -> str:
+    """Drop sub-group rows from an lm-eval results table — the per-subject MMLU breakdown
+    (`| - humanities |…`, `|  - formal_logic |…`) — keeping the top-level `mmlu` row and
+    the other tasks. A row is a sub-group when its first cell starts with `- ` (dash +
+    space); the markdown separator (all dashes, no space) is preserved."""
+    kept = []
+    for ln in table.splitlines():
+        cells = ln.split("|")
+        first = cells[1].strip() if len(cells) > 1 else ""
+        if first.startswith("- "):
+            continue
+        kept.append(ln)
+    return "\n".join(kept)
+
+
 def _raw_scores(runs: list[RunResult]) -> str:
-    """The harness's raw per-task results table (verbatim) behind each claim's
-    averaged metric, read from its stdout — so a suite-average claim (e.g.
-    acc_norm_avg) isn't a black box."""
+    """The harness's raw per-task results table (per-task, minus the noisy MMLU subject
+    breakdown) behind each claim's averaged metric, read from its stdout — so a
+    suite-average claim (e.g. acc_norm_avg) isn't a black box."""
     out = []
     for r in runs:
         tbl = ""
         try:
             p = Path(r.stdout_path)
             if p.exists():
-                tbl = extract_results_table(p.read_text(errors="replace"))
+                tbl = _drop_subgroup_rows(extract_results_table(p.read_text(errors="replace")))
         except OSError:
             pass
         if tbl:

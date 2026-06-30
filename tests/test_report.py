@@ -228,3 +228,23 @@ def test_report_includes_per_task_raw_scores(tmp_path):
         assert "|arc_easy|acc_norm|0.73|" in doc      # raw table embedded verbatim
         assert "|piqa|acc|0.76|" in doc
     assert "各任务原始分数" in zh and "Per-task raw scores" in en
+
+
+def test_raw_scores_drops_mmlu_subgroup_rows(tmp_path):
+    from paper_reprise.report import _raw_scores
+    from paper_reprise.models import RunResult
+    log = tmp_path / "stdout.log"
+    log.write_text(
+        "|   Tasks   |Version|Filter|n-shot|Metric|   |Value |\n"
+        "|-----------|------:|------|-----:|------|---|-----:|\n"
+        "|mmlu       |      2|none  |      |acc   |   |0.5000|\n"
+        "| - humanities|    2|none  |     0|acc   |↑  |0.5200|\n"
+        "|  - formal_logic|1|none |     0|acc   |↑  |0.3900|\n"
+        "|winogrande |      1|none  |     0|acc   |↑  |0.7000|\n"
+    )
+    out = _raw_scores([RunResult(claim_id="c1", command="x",
+                                 stdout_path=str(log), status="ran")])
+    assert "mmlu" in out and "winogrande" in out      # top-level tasks kept
+    assert "humanities" not in out                     # MMLU sub-items dropped
+    assert "formal_logic" not in out
+    assert "|------" in out or "-----:" in out         # separator preserved
