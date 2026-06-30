@@ -318,11 +318,11 @@ paper's method from its description instead of running a repo's scripts.
 runs/<paper_name>-<arxiv_id>-<timestamp>/
   ingest.json
   paper/                 # LaTeX source
-  repo/                  # cloned official repo
+  repo/                  # cloned official repo (symlink → per-run scratch dir)
   spec.yaml
   spec.public.yaml       # from-scratch path only: redacted spec the implementer reads
   plan.json
-  env/                   # conda/uv env (or reference)
+  env/                   # conda/uv env (symlink → per-run scratch dir; GBs, off home quota)
   env_snapshot.json
   setup_log/
   setup_patches/

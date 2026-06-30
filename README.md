@@ -69,13 +69,13 @@ runs/<paper-name>-<arxiv_id>-<timestamp>/
 ├── ingest.json          # resolved arxiv id + source url (the located repo url/commit are
 │                        #   recorded in spec.yaml by specextract, not here)
 ├── paper/               # the paper's LaTeX source, downloaded from arxiv (not OCR'd)
-├── repo/                # the official repo, git-cloned here — its own eval scripts live inside
+├── repo/                # the official repo, git-cloned here (symlink → scratch; see below)
 ├── spec.yaml            # extracted reproduction spec: artifacts × claims × eval protocol
 │                        #   (the interactive claim picker writes the chosen subset here; `resume` re-reads it)
 ├── spec.public.yaml     # from-scratch path only: redacted spec the implementer agent reads
 │                        #   (expected/tolerance/source stripped so it can't target the number)
 ├── plan.json            # per-claim feasibility estimate (hardware required vs available)
-├── env/                 # the dedicated conda/uv virtualenv built for this paper
+├── env/                 # the dedicated conda/uv virtualenv built for this paper (symlink → scratch)
 ├── env_snapshot.json    # frozen torch/transformers + CUDA or ROCm + pip freeze (on a successful setup)
 ├── setup_log/           # logs from the setup loop: create_env.log, smoke_<n>.log per attempt
 ├── setup_patches/       # patch_<n>.txt — one line per change the setup agent made to the env/repo
@@ -151,12 +151,15 @@ commands read as `${PAPER_REPRISE_TASKS:-<spec default>}` / `${PAPER_REPRISE_GPU
 so your value wins when given and the paper's default applies otherwise. (`--gpus` sets how
 many GPUs; *which* ones is still `CUDA_VISIBLE_DEVICES`/`ROCR_VISIBLE_DEVICES`.)
 
-**Where the model is written.** A paper's repo can emit a multi-GB quantized checkpoint. To
-keep `runs/` (home, small quota) light, setup symlinks `repo/runtime` (override:
-`PAPER_REPRISE_REPO_OUTPUT_SUBDIR`) to a per-run scratch dir under
-`/scratch/$USER/paper-reprise-models/` (override: `PAPER_REPRISE_MODELS_DIR`) — the repo
-writes there transparently, no command changes; paper-reprise's own records stay in the run
-dir. (Skipped if `repo/runtime` already exists as a real directory, to avoid clobbering.)
+**Where the heavy data lives.** The cloned **`repo/`** (its source + the multi-GB quantized
+checkpoints it emits) and the per-run **`env/`** (a torch venv, also GBs) are the space hogs.
+To keep `runs/` (home, small quota) light, `RunDir.create` makes `repo/` and `env/` **symlinks
+to a per-run scratch dir** under `/scratch/$USER/paper-reprise-models/<run>/` (override:
+`PAPER_REPRISE_MODELS_DIR`) — everything writes there transparently (no command changes),
+while paper-reprise's own small records (spec, plan, logs, per-claim outputs, reports) stay in
+the home run dir. Falls back to real home dirs if scratch is unwritable. (A legacy run dir
+with a real `repo/` instead gets just its `repo/runtime` output redirected, as before;
+override the output subdir with `PAPER_REPRISE_REPO_OUTPUT_SUBDIR`.)
 
 **Freeing disk.** `run`/`resume` **keep** the exported model and env by default, so you can run
 a dir many times (resume more claims, re-eval) without re-quantizing. When you're done with a

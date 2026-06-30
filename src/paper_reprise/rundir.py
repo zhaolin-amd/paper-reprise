@@ -65,9 +65,16 @@ class RunDir:
         stem = f"{slug}-{arxiv_id}-{timestamp}" if slug else f"{arxiv_id}-{timestamp}"
         root = Path(base) / stem
         rd = cls(root)
-        for d in (rd.root, rd.paper_dir, rd.repo_dir, rd.runs_dir,
+        # Small records stay in the run root (home): paper sources, per-claim outputs, logs.
+        for d in (rd.root, rd.paper_dir, rd.runs_dir,
                   rd.setup_log_dir, rd.setup_patches_dir):
             d.mkdir(parents=True, exist_ok=True)
+        # The bulky dirs — the cloned repo and the per-run venv — are GBs and would blow
+        # the small home quota, so they live on scratch (run_models_dir) and are symlinked
+        # in. Transparent to everything that uses rd.repo_dir / rd.root/"env". Falls back
+        # to a real home dir if scratch is unwritable.
+        for name_ in ("repo", "env"):
+            rd._link_dir_to_scratch(name_)
         return rd
 
     @classmethod
@@ -161,32 +168,73 @@ class RunDir:
         the run dir) and are never under here. Returns [(relpath, bytes)] removed.
         Best-effort: unreadable/locked files are skipped, then emptied dirs pruned."""
         removed: list[tuple[str, int]] = []
-        for p in self.root.rglob("*"):
-            if not p.is_file() or p.is_symlink():
-                continue
-            if p.suffix.lower() not in _MODEL_WEIGHT_EXTS:
+
+        def _scan(base: Path) -> None:
+            # os.walk WITHOUT following symlinks: scanning self.root won't descend into the
+            # repo/env scratch symlinks, so we scan the repo target explicitly below — no
+            # double counting, no version-dependent rglob-symlink behavior.
+            for dirpath, _dirs, files in os.walk(base, followlinks=False):
+                for fn in files:
+                    p = Path(dirpath) / fn
+                    if p.is_symlink() or p.suffix.lower() not in _MODEL_WEIGHT_EXTS:
+                        continue
+                    try:
+                        size = p.stat().st_size
+                        if size < min_bytes:
+                            continue
+                        p.unlink()
+                    except OSError:
+                        continue
+                    # repo/env live under self.root path-wise (symlinks), so relative_to
+                    # works for both home files and scratch files reached via the symlink.
+                    try:
+                        rel = str(p.relative_to(self.root))
+                    except ValueError:
+                        rel = str(p)
+                    removed.append((rel, size))
+
+        _scan(self.root)
+        if self.repo_dir.is_symlink():          # weights live under the scratch repo
+            _scan(self.repo_dir)
+        # prune now-empty dirs under the home root (deepest first), never the root,
+        # never crossing into the scratch symlinks.
+        for dirpath, _dirs, _files in sorted(os.walk(self.root, followlinks=False),
+                                             key=lambda t: len(t[0]), reverse=True):
+            d = Path(dirpath)
+            if d == self.root:
                 continue
             try:
-                size = p.stat().st_size
-                if size < min_bytes:
-                    continue
-                p.unlink()
-            except OSError:
-                continue
-            removed.append((str(p.relative_to(self.root)), size))
-        # prune now-empty directories left behind (deepest first), never the root
-        for d in sorted((q for q in self.root.rglob("*") if q.is_dir()),
-                        key=lambda q: len(q.parts), reverse=True):
-            try:
-                next(d.iterdir())
-            except StopIteration:
-                try:
-                    d.rmdir()
-                except OSError:
-                    pass
+                d.rmdir()
             except OSError:
                 pass
         return removed
+
+    def _link_dir_to_scratch(self, name: str) -> Optional[Path]:
+        """Make `root/<name>` (e.g. `repo`, `env`) a symlink to a per-run scratch subdir,
+        so its bytes live on scratch (big) not home (small quota). Idempotent. Skips a
+        real, non-empty dir (e.g. a pre-existing run being resumed — don't move data).
+        On any OSError (scratch unwritable) falls back to a real home dir so the run still
+        works. Returns the scratch target, or None on skip/fallback."""
+        src = self.root / name
+        target = run_models_dir(self.root.name) / name
+        try:
+            if src.is_symlink():
+                target.mkdir(parents=True, exist_ok=True)
+                return target
+            if src.exists() and any(src.iterdir()):
+                return None                          # real non-empty dir — leave as-is
+            if src.exists():
+                src.rmdir()                          # empty dir from a prior mkdir
+            target.mkdir(parents=True, exist_ok=True)
+            src.symlink_to(target, target_is_directory=True)
+            return target
+        except OSError:
+            if not src.exists():
+                try:
+                    src.mkdir(parents=True, exist_ok=True)
+                except OSError:
+                    pass
+            return None
 
     def link_repo_output_to_scratch(self) -> Optional[Path]:
         """Symlink `repo/<subdir>` (default `runtime`) → a per-run scratch dir, so the
@@ -196,6 +244,10 @@ class RunDir:
         exists as a real dir (won't clobber data). Best-effort: returns the scratch
         target, or None if skipped/failed (e.g. scratch unwritable → repo falls back
         to its default home path)."""
+        # When the whole repo is already symlinked to scratch (the default since
+        # create()), its output subdir is on scratch too — nothing to redirect.
+        if self.repo_dir.is_symlink():
+            return None
         src = self.repo_dir / _repo_output_subdir()
         target = run_models_dir(self.root.name)
         try:
@@ -212,22 +264,35 @@ class RunDir:
             return None
 
     def clean_scratch_models(self) -> list[tuple[str, int]]:
-        """Remove this run's scratch export dir (run_models_dir) and the dangling
-        repo symlink, if present. Returns [(abspath, bytes)] removed."""
+        """Remove the repo's exported-model output dir (default `repo/runtime`) — the
+        quantized checkpoints — wherever it lives, keeping the repo source and env.
+
+        Two layouts: (a) default — `repo` is a scratch symlink, so `repo/runtime` is a
+        real dir on scratch → rmtree it; (b) legacy — `repo/runtime` is itself a symlink
+        to an old per-run export dir → remove that target and the symlink. Returns
+        [(path, bytes)] removed."""
         removed: list[tuple[str, int]] = []
-        target = run_models_dir(self.root.name)
-        if target.exists() and not target.is_symlink():
-            size = sum(p.stat().st_size for p in target.rglob("*")
-                       if p.is_file() and not p.is_symlink())
+        rt = self.repo_dir / _repo_output_subdir()
+        if rt.is_symlink():                         # legacy repo/runtime → scratch symlink
+            target = run_models_dir(self.root.name)
+            if target.exists() and not target.is_symlink():
+                size = sum(p.stat().st_size for p in target.rglob("*")
+                           if p.is_file() and not p.is_symlink())
+                try:
+                    shutil.rmtree(target)
+                    removed.append((str(target), size))
+                except OSError:
+                    pass
             try:
-                shutil.rmtree(target)
-                removed.append((str(target), size))
+                rt.unlink()
             except OSError:
                 pass
-        link = self.repo_dir / _repo_output_subdir()
-        if link.is_symlink():
+        elif rt.is_dir():                           # default: real output dir (on scratch)
+            size = sum(p.stat().st_size for p in rt.rglob("*")
+                       if p.is_file() and not p.is_symlink())
             try:
-                link.unlink()
+                shutil.rmtree(rt)
+                removed.append((str(rt), size))
             except OSError:
                 pass
         return removed
@@ -240,13 +305,19 @@ class RunDir:
         space can be less when a uv venv hardlinks packages from the shared uv cache.)"""
         removed: list[tuple[str, int]] = []
         for d in (self.root / "env", self.repo_dir / ".venv"):
-            if not d.is_dir():
+            real = d.resolve() if d.is_symlink() else d
+            if not real.is_dir():
                 continue
-            size = sum(p.stat().st_size for p in d.rglob("*")
+            size = sum(p.stat().st_size for p in real.rglob("*")
                        if p.is_file() and not p.is_symlink())
             try:
-                shutil.rmtree(d)
+                shutil.rmtree(real)              # the bytes (on scratch, when relocated)
             except OSError:
                 continue
+            if d.is_symlink():
+                try:
+                    d.unlink()                   # the dangling home symlink
+                except OSError:
+                    pass
             removed.append((str(d.relative_to(self.root)), size))
         return removed
