@@ -1,0 +1,99 @@
+Loading weights:   0%|          | 0/291 [00:00<?, ?it/s]Loading weights:   2%|▏         | 5/291 [00:00<00:06, 47.03it/s]Loading weights:   8%|▊         | 23/291 [00:00<00:02, 110.03it/s]Loading weights:  12%|█▏        | 34/291 [00:00<00:02, 105.26it/s]Loading weights:  16%|█▌        | 46/291 [00:00<00:02, 108.71it/s]Loading weights:  20%|█▉        | 58/291 [00:00<00:02, 106.88it/s]Loading weights:  24%|██▎       | 69/291 [00:00<00:02, 96.29it/s] Loading weights:  28%|██▊       | 82/291 [00:00<00:02, 104.00it/s]Loading weights:  32%|███▏      | 94/291 [00:00<00:01, 103.68it/s]Loading weights:  36%|███▌      | 105/291 [00:01<00:01, 95.15it/s]Loading weights:  41%|████      | 118/291 [00:01<00:01, 102.77it/s]Loading weights:  45%|████▍     | 130/291 [00:01<00:01, 103.00it/s]Loading weights:  48%|████▊     | 141/291 [00:01<00:01, 95.81it/s] Loading weights:  53%|█████▎    | 154/291 [00:01<00:01, 104.23it/s]Loading weights:  57%|█████▋    | 166/291 [00:01<00:01, 105.02it/s]Loading weights:  61%|██████    | 177/291 [00:01<00:01, 97.49it/s] Loading weights:  65%|██████▌   | 190/291 [00:01<00:00, 105.65it/s]Loading weights:  69%|██████▉   | 202/291 [00:01<00:00, 105.84it/s]Loading weights:  73%|███████▎  | 213/291 [00:02<00:00, 96.95it/s] Loading weights:  78%|███████▊  | 226/291 [00:02<00:00, 104.37it/s]Loading weights:  82%|████████▏ | 238/291 [00:02<00:00, 103.42it/s]Loading weights:  86%|████████▌ | 249/291 [00:02<00:00, 95.88it/s] Loading weights:  90%|█████████ | 262/291 [00:02<00:00, 103.40it/s]Loading weights:  94%|█████████▍| 274/291 [00:02<00:00, 102.91it/s]Loading weights:  98%|█████████▊| 285/291 [00:02<00:00, 95.37it/s] Loading weights: 100%|██████████| 291/291 [00:02<00:00, 102.06it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Traceback (most recent call last):
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 776, in hf_raise_for_status
+    response.raise_for_status()
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Server error '504 Gateway Time-out' for url 'https://huggingface.co/api/datasets/allenai/winogrande/tree/01e74176c63542e6b0bcb004dcdea22d94fb67b5/winogrande_xl?recursive=true&expand=false'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/zhaolin/.local/bin/auto-round", line 10, in <module>
+    sys.exit(run())
+             ^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/repo/auto_round/cli/main.py", line 464, in run
+    run_eval(command_argv)
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/repo/auto_round/cli/main.py", line 416, in run_eval
+    eval(args)
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/repo/auto_round/eval/eval_cli.py", line 237, in eval
+    res = simple_evaluate(
+          ^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/repo/auto_round/eval/evaluation.py", line 110, in simple_evaluate
+    return lm_eval.simple_evaluate(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/utils.py", line 575, in _wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/evaluator.py", line 302, in simple_evaluate
+    loaded = task_manager.load(tasks)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/tasks/manager.py", line 208, in load
+    obj = self._load_spec(spec) if not isinstance(spec, (Task, Group)) else spec  # type:ignore[invalid-argument-type]
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/tasks/manager.py", line 154, in _load_spec
+    return self._factory.build(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/tasks/_factory.py", line 61, in build
+    return self._build_task(entry, overrides)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/tasks/_factory.py", line 81, in _build_task
+    obj = ConfigurableTask(config=cfg)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/api/task.py", line 753, in __init__
+    self.download(self.config.dataset_kwargs)
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/lm_eval/api/task.py", line 869, in download
+    self.dataset = datasets.load_dataset(
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/repo/auto_round/utils/__init__.py", line 46, in patch_load_dataset
+    return datasets.original_load_dataset(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/load.py", line 1698, in load_dataset
+    builder_instance = load_dataset_builder(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/load.py", line 1363, in load_dataset_builder
+    builder_instance: DatasetBuilder = builder_cls(
+                                       ^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/builder.py", line 351, in __init__
+    self.config, self.config_id = self._create_builder_config(
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/builder.py", line 566, in _create_builder_config
+    builder_config._resolve_data_files(
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/builder.py", line 211, in _resolve_data_files
+    self.data_files = self.data_files.resolve(base_path, download_config)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/data_files.py", line 822, in resolve
+    out[key] = data_files_patterns_list.resolve(base_path, download_config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/data_files.py", line 775, in resolve
+    resolve_pattern(
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/datasets/data_files.py", line 372, in resolve_pattern
+    for filepath, info in fs.glob(fs_pattern, detail=True, **glob_kwargs).items():
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/hf_file_system.py", line 728, in glob
+    return super().glob(path, maxdepth=maxdepth, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/fsspec/spec.py", line 643, in glob
+    allpaths = self.find(
+               ^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/hf_file_system.py", line 767, in find
+    out = self._ls_tree(path, recursive=True, refresh=refresh, maxdepth=maxdepth, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/hf_file_system.py", line 612, in _ls_tree
+    for path_info in tree:
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/hf_api.py", line 3945, in list_repo_tree
+    for path_info in paginate(path=tree_url, headers=headers, params={"recursive": recursive, "expand": expand}):
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/utils/_pagination.py", line 37, in paginate
+    hf_raise_for_status(r)
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 905, in hf_raise_for_status
+    raise _format(HfHubHTTPError, str(e), response) from e
+huggingface_hub.errors.HfHubHTTPError: Server error '504 Gateway Time-out' for url 'https://huggingface.co/api/datasets/allenai/winogrande/tree/01e74176c63542e6b0bcb004dcdea22d94fb67b5/winogrande_xl?recursive=true&expand=false' (Amz CF ID: 0MCOtQIOaAEXJ6sX_qSNmc-WqCs0-wwAtiJ8H3DmrjEBQsTFlIgJ0w==)
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504
+Exception ignored in: <function ResourceTracker.__del__ at 0x7ffea4222840>
+Traceback (most recent call last):
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'

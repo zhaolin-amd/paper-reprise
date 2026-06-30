@@ -1,0 +1,186 @@
+{
+  "claims": [
+    {
+      "claim_id": "mistral-7b-fp16-baseline",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "mistral-7b-w4g1-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "mistral-7b-w4g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "mistral-7b-w3g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "mistral-7b-w2g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-7b-fp16-baseline",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-7b-w4g1-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-7b-w4g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-7b-w3g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-7b-w2g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-13b-fp16-baseline",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-13b-w4g1-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-13b-w4g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-13b-w3g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-13b-w2g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-70b-fp16-baseline",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-70b-w4g1-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-70b-w4g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-70b-w3g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    },
+    {
+      "claim_id": "llama2-70b-w2g128-claim",
+      "est_gpus": 1,
+      "est_vram_gb": null,
+      "est_minutes": null,
+      "required_hardware": "A100",
+      "feasible": false,
+      "anomaly": "硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+    }
+  ],
+  "needs_user_decision": true,
+  "decision_reason": "mistral-7b-fp16-baseline: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; mistral-7b-w4g1-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; mistral-7b-w4g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; mistral-7b-w3g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; mistral-7b-w2g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-7b-fp16-baseline: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-7b-w4g1-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-7b-w4g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-7b-w3g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-7b-w2g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-13b-fp16-baseline: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-13b-w4g1-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-13b-w4g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-13b-w3g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-13b-w2g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-70b-fp16-baseline: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-70b-w4g1-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-70b-w4g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-70b-w3g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']; llama2-70b-w2g128-claim: 硬件不可行: 需要 A100,可用 ['NVIDIA H200']"
+}

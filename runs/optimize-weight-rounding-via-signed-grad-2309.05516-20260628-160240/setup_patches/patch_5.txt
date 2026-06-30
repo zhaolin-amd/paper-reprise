@@ -1,0 +1,1 @@
+Symlinked env/bin/auto-round into ~/.local/bin/auto-round (absolute path) so the smoke command finds auto-round via the ambient PATH already in the harness process's os.environ, bypassing the relative-path env/bin issue in the still-running (pre-patch-4) _run_smoke code that already imported setuploop before the resolve() fix was written to disk.

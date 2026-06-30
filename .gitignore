@@ -1,8 +1,11 @@
 # run artifacts — track reports/specs/metadata + eval stdout; exclude heavy or
 # non-portable / re-fetchable folders (cloned repo with nested .git, venv, paper
 # LaTeX source) and any model weights.
+# repo/ and env/ — both their contents AND the symlinks-to-scratch themselves
 runs/**/repo/
 runs/**/env/
+runs/**/repo
+runs/**/env
 runs/**/paper/
 runs/**/*.safetensors
 runs/**/*.bin

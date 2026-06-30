@@ -1,0 +1,1 @@
+Added "--batch-size" as an alias to the --eval_bs argument in repo/auto_round/eval/eval_cli.py (EvalArgumentParser) — the smoke command passes --batch-size 1 but the eval subcommand only recognized --eval_bs/--bs/--batch_size (underscore); argparse does not auto-normalize hyphens to underscores in option strings, so the alias was required.

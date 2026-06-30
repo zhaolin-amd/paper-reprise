@@ -1,0 +1,1 @@
+No additional changes needed: verified env/bin/auto-round exists (auto-round==0.14.0 editable install), lm-eval==0.4.12 is installed, and --batch-size alias is present in eval_cli.py; the smoke command runs successfully (exit code 0) when env/bin is prepended to PATH as the harness does in _run_smoke.

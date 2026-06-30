@@ -1,0 +1,2 @@
+Installed setuptools into venv (was missing, required by auto-round's setup.py build backend)
+Installed auto-round==0.14.0 from repo source (editable) into venv via `uv pip install -e repo/ --no-build-isolation` — provides the `auto-round` CLI entrypoint
