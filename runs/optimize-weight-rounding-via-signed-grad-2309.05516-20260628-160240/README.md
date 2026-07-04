@@ -1,7 +1,7 @@
 # Reproduction Report: 2309.05516
 
 - **Repo:** https://github.com/intel/auto-round@9468e52
-- **Environment:** lm_eval 0.4.12 / CUDA 13.0
+- **Environment:** torch 2.12.1 / transformers 5.12.1 / lm_eval 0.4.12 / CUDA 13.0
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|

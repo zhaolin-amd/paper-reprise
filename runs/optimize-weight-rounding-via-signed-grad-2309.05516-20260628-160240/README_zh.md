@@ -1,7 +1,7 @@
 # 复现报告: 2309.05516
 
 - **仓库:** https://github.com/intel/auto-round@9468e52
-- **环境:** lm_eval 0.4.12 / CUDA 13.0
+- **环境:** torch 2.12.1 / transformers 5.12.1 / lm_eval 0.4.12 / CUDA 13.0
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|

@@ -1,6 +1,7 @@
 {
-  "torch": "unknown",
-  "transformers": "unknown",
+  "torch": "2.12.1",
+  "transformers": "5.12.1",
+  "lm_eval": "0.4.12",
   "cuda": "13.0",
   "rocm": "unknown",
   "pip_freeze": ""
