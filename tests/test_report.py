@@ -352,3 +352,12 @@ def test_conclusion_baseline_validates_so_quant_gap_is_real():
     assert "评测协议可信" in zh and "真实的复现差距" in zh
     assert "eval protocol is validated" in en and "genuine reproduction gap" in en
     assert "-2.04" in en or "-2.04" in zh        # worst quantized gap surfaced
+
+
+def test_env_order_is_hardware_to_eval():
+    from paper_reprise.report import _env_str
+    s = _env_str({"torch": "2.1", "transformers": "4.4", "lm_eval": "0.4", "cuda": "13.0"})
+    assert s == "CUDA 13.0 / torch 2.1 / transformers 4.4 / lm_eval 0.4"
+    # AMD: ROCm takes the accelerator slot, still first
+    s2 = _env_str({"torch": "2.1", "rocm": "6.1"})
+    assert s2 == "ROCm 6.1 / torch 2.1"
