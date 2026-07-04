@@ -37,9 +37,9 @@ def test_full_pipeline_produces_match_report(tmp_path, monkeypatch):
         setup_executor=_fake_setup,
         run_executor=_fake_executor,
     )
-    assert (result.root / "report.zh.md").exists()
-    assert (result.root / "report.en.md").exists()
-    assert "MATCH 1" in (result.root / "report.zh.md").read_text()
+    assert (result.root / "README_zh.md").exists()
+    assert (result.root / "README.md").exists()
+    assert "MATCH 1" in (result.root / "README_zh.md").read_text()
 
 
 def test_pipeline_aborts_when_spec_rejected(tmp_path, monkeypatch):
@@ -52,7 +52,7 @@ def test_pipeline_aborts_when_spec_rejected(tmp_path, monkeypatch):
         fetch_sources=lambda rd, arxiv_id, url: None,
         setup_executor=_fake_setup, run_executor=_fake_executor,
     )
-    assert not (result.root / "report.zh.md").exists()
+    assert not (result.root / "README_zh.md").exists()
     assert result.aborted_at == "spec-approval"
 
 
@@ -67,7 +67,7 @@ def test_pipeline_aborts_when_specextract_returns_none(tmp_path, monkeypatch):
         setup_executor=_fake_setup, run_executor=_fake_executor,
     )
     assert result.aborted_at == "specextract"
-    assert not (result.root / "report.zh.md").exists()
+    assert not (result.root / "README_zh.md").exists()
 
 
 def test_pipeline_aborts_at_plan_gate(tmp_path, monkeypatch):
@@ -90,7 +90,7 @@ def test_pipeline_aborts_at_plan_gate(tmp_path, monkeypatch):
         setup_executor=_fake_setup, run_executor=_fake_executor,
     )
     assert result.aborted_at == "plan"
-    assert not (result.root / "report.zh.md").exists()
+    assert not (result.root / "README_zh.md").exists()
 
 
 def test_pipeline_aborts_when_setup_fails(tmp_path, monkeypatch):
@@ -106,7 +106,7 @@ def test_pipeline_aborts_when_setup_fails(tmp_path, monkeypatch):
         run_executor=_fake_executor,
     )
     assert result.aborted_at == "setup"
-    assert not (result.root / "report.zh.md").exists()
+    assert not (result.root / "README_zh.md").exists()
 
 
 def test_resume_continues_from_existing_spec(tmp_path, monkeypatch):
@@ -125,8 +125,8 @@ def test_resume_continues_from_existing_spec(tmp_path, monkeypatch):
         setup_executor=_fake_setup, run_executor=_fake_executor,
     )
     assert result.aborted_at is None
-    assert (result.root / "report.zh.md").exists()
-    assert "MATCH 1" in (result.root / "report.zh.md").read_text()
+    assert (result.root / "README_zh.md").exists()
+    assert "MATCH 1" in (result.root / "README_zh.md").read_text()
 
 
 def test_resume_aborts_when_no_spec(tmp_path):
@@ -179,7 +179,7 @@ def test_clean_models_removes_exported_weights_keeps_report(tmp_path, monkeypatc
     wt = result.root / "repo/runtime/checkpoints/assembled/model.safetensors"
     assert not wt.exists()                       # exported model cleaned
     assert result.cleaned                        # freed list reported
-    assert (result.root / "report.zh.md").exists()   # records kept
+    assert (result.root / "README_zh.md").exists()   # records kept
     assert (result.root / "claims/c1/stdout.log").exists()
 
 

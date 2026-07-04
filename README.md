@@ -28,7 +28,7 @@ ingest → specextract → plan → setup → run → grade → report
 - **run** — execute each claim's eval command in that env, persist the raw output.
 - **grade** — pure code, isolated from execution: a claim is MATCH only if the number is
   in tolerance AND the run was faithful; otherwise PARTIAL / FAIL / BLOCKED.
-- **report** — bilingual `report.zh.md` / `report.en.md`, always the measured number,
+- **report** — bilingual `README.md` (English) / `README_zh.md` (Chinese), always the measured number,
   never the paper's, with the harness's raw per-task results table behind any averaged
   metric and full replay info.
 
@@ -83,9 +83,10 @@ runs/<paper-name>-<arxiv_id>-<timestamp>/
 │   └── <claim_id>/
 │       ├── stdout.log         # raw combined stdout+stderr of that claim's eval run
 │       └── actual_config.json # the config the eval was launched with (for the faithfulness check)
-├── report.zh.md         # Chinese reproduction report — the per-claim verdict table
-│                        #   (MATCH / PARTIAL / FAIL / BLOCKED + reason), measured numbers, replay info
-└── report.en.md         # English reproduction report (same content)
+├── README.md            # English reproduction report — the per-claim verdict table
+│                        #   (MATCH / PARTIAL / FAIL / BLOCKED + reason), measured numbers, replay info;
+│                        #   named README.md so it renders by default when the run dir is opened
+└── README_zh.md         # Chinese reproduction report (same content)
 ```
 
 Notes:

@@ -91,8 +91,8 @@ def _finish_pipeline(rd, spec, ingest, *, available_hardware, approve_plan,
     ingest.repo = spec.repo
     zh, en = render_reports(spec, ingest, grades, runs, setup.env_snapshot,
                             patches=setup.patches)
-    (rd.root / "report.zh.md").write_text(zh)
-    (rd.root / "report.en.md").write_text(en)
+    (rd.root / "README_zh.md").write_text(zh)
+    (rd.root / "README.md").write_text(en)
 
     # --- cleanup: drop the exported quantized model (regenerable), keep records.
     # Only when something was actually verified (a non-BLOCKED grade), so a failed
