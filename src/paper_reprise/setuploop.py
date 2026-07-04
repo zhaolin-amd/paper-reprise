@@ -211,23 +211,37 @@ def _freeze_env(env_dir: Path) -> dict:
             prefixes = (f"{pkg}==",) if pkg != "lm_eval" else ("lm_eval==", "lm-eval==")
             if any(low.startswith(p) for p in prefixes):
                 versions[pkg] = line.split("==", 1)[1].strip()
-    # Accelerator runtime: a torch build is CUDA (NVIDIA) XOR ROCm/HIP (AMD). cuda is in
-    # torch.version.cuda, ROCm in torch.version.hip; probe both in one call.
+    # Probe the interpreter for: the accelerator runtime (CUDA on NVIDIA XOR ROCm/HIP on
+    # AMD, from torch.version) and the package versions via importlib.metadata. The latter
+    # is the source of truth for uv venvs, which ship NO pip — so `pip freeze` above is
+    # empty and torch/transformers would otherwise read 'unknown'.
+    probe_src = (
+        "import importlib.metadata as M\n"
+        "def v(n):\n"
+        "    try: return M.version(n)\n"
+        "    except Exception: return None\n"
+        "try:\n"
+        "    import torch; c=torch.version.cuda; h=getattr(torch.version,'hip',None)\n"
+        "except Exception: c=h=None\n"
+        "print(c); print(h); print(v('torch')); print(v('transformers')); print(v('lm_eval'))\n"
+    )
     try:
-        probe = subprocess.run(
-            [str(env_dir / "bin" / "python"), "-c",
-             "import torch;print(torch.version.cuda);print(getattr(torch.version,'hip',None))"],
-            capture_output=True, text=True, timeout=_FREEZE_TIMEOUT_S)
+        probe = subprocess.run([str(env_dir / "bin" / "python"), "-c", probe_src],
+                               capture_output=True, text=True, timeout=_FREEZE_TIMEOUT_S)
         if probe.returncode == 0:
-            out = probe.stdout.splitlines()
-            cuda_v = out[0].strip() if len(out) > 0 else ""
-            hip_v = out[1].strip() if len(out) > 1 else ""
+            out = [ln.strip() for ln in probe.stdout.splitlines()]
+            out += [""] * (5 - len(out))
+            cuda_v, hip_v, torch_v, tr_v, lme_v = out[:5]
             if cuda_v not in ("", "None"):
                 versions["cuda"] = cuda_v
             if hip_v not in ("", "None"):
                 versions["rocm"] = hip_v
+            # importlib.metadata fills what pip freeze couldn't (uv venvs have no pip).
+            for key, val in (("torch", torch_v), ("transformers", tr_v), ("lm_eval", lme_v)):
+                if key not in versions and val not in ("", "None"):
+                    versions[key] = val
     except Exception:
-        pass  # accelerator probe is best-effort
+        pass  # probe is best-effort
     return versions
 
 
