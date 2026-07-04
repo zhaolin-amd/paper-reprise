@@ -77,9 +77,11 @@ def _env_str(env: dict) -> str:
     # rendered as "?" (e.g. a pure-numpy from-scratch run has no torch/transformers/CUDA).
     # CUDA (NVIDIA) and ROCm (AMD) are mutually exclusive per torch build; whichever the
     # snapshot captured is shown, the absent one is simply dropped.
+    # Order follows the stack top-down: hardware runtime -> framework -> library -> eval
+    # harness (CUDA/ROCm -> torch -> transformers -> lm_eval), i.e. quantization to eval.
     parts = []
-    for label, key in (("torch", "torch"), ("transformers", "transformers"),
-                       ("lm_eval", "lm_eval"), ("CUDA", "cuda"), ("ROCm", "rocm")):
+    for label, key in (("CUDA", "cuda"), ("ROCm", "rocm"), ("torch", "torch"),
+                       ("transformers", "transformers"), ("lm_eval", "lm_eval")):
         val = str(env.get(key) or "").strip()
         if val and val.lower() not in _UNKNOWN:
             parts.append(f"{label} {val}")
