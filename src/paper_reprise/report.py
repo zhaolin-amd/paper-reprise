@@ -6,6 +6,7 @@ Iron rules (design §5.2):
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -24,6 +25,53 @@ def _repo_str(ingest: IngestInfo, spec: Spec | None = None) -> str:
     return f"{repo.url}@{repo.commit}" if repo else "(no official repo)"
 
 
+_UNKNOWN = {"", "?", "unknown", "none"}
+
+# Version banners the eval itself prints, used to recover versions the venv
+# snapshot missed (e.g. when the eval ran in a shared conda env, or pip freeze
+# came back empty). auto-round / GPTQModel print "Torch : X" / "Transformers : X";
+# lm-eval prints "Using lm-eval version X". Logs are committed (see .gitignore
+# `!runs/**/*.log`), so this stays reproducible.
+_VER_PATTERNS = {
+    "torch": [r"Torch\s*:\s*([0-9][^\s]+)", r"\btorch==([0-9][^\s,]+)"],
+    "transformers": [r"Transformers\s*:\s*([0-9][^\s]+)", r"\btransformers==([0-9][^\s,]+)"],
+    "lm_eval": [r"lm[- ]eval(?:uation)?(?:[- ]harness)? version\s+([0-9][^\s]+)",
+                r"\blm[_-]eval==([0-9][^\s,]+)"],
+}
+
+
+def _versions_from_logs(runs: list[RunResult]) -> dict:
+    """Recover torch/transformers/lm_eval versions from each claim's stdout.log."""
+    found: dict = {}
+    for r in runs:
+        path = getattr(r, "stdout_path", None)
+        if not path:
+            continue
+        try:
+            text = Path(path).read_text(errors="ignore")
+        except OSError:
+            continue
+        text = re.sub(r"\x1b\[[0-9;]*m", "", text)  # strip ANSI color codes
+        for key, pats in _VER_PATTERNS.items():
+            if key in found:
+                continue
+            for pat in pats:
+                m = re.search(pat, text)
+                if m:
+                    found[key] = m.group(1).rstrip(".,;")
+                    break
+    return found
+
+
+def _effective_env(env: dict, runs: list[RunResult]) -> dict:
+    """Snapshot env, with any empty/unknown version field filled from the logs."""
+    eff = dict(env or {})
+    for k, v in _versions_from_logs(runs).items():
+        if str(eff.get(k) or "").strip().lower() in _UNKNOWN:
+            eff[k] = v
+    return eff
+
+
 def _env_str(env: dict) -> str:
     # Only show env components we actually know — an unknown one is dropped rather than
     # rendered as "?" (e.g. a pure-numpy from-scratch run has no torch/transformers/CUDA).
@@ -31,9 +79,9 @@ def _env_str(env: dict) -> str:
     # snapshot captured is shown, the absent one is simply dropped.
     parts = []
     for label, key in (("torch", "torch"), ("transformers", "transformers"),
-                       ("CUDA", "cuda"), ("ROCm", "rocm")):
+                       ("lm_eval", "lm_eval"), ("CUDA", "cuda"), ("ROCm", "rocm")):
         val = str(env.get(key) or "").strip()
-        if val and val.lower() != "unknown":
+        if val and val.lower() not in _UNKNOWN:
             parts.append(f"{label} {val}")
     return " / ".join(parts)
 
@@ -325,7 +373,7 @@ def _conclusion(spec: Spec, grades: list[ClaimGrade], lang: str) -> str:
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str]) -> tuple[str, str]:
     repo_str = _repo_str(ingest, spec)
-    env_str = _env_str(env)
+    env_str = _env_str(_effective_env(env, runs))
 
     zh = f"""{_title_line("复现报告", ingest.title, ingest.arxiv_id)}
 

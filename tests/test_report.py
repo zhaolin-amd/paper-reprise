@@ -189,6 +189,33 @@ def test_rocm_version_is_printed_for_amd_builds():
     assert "CUDA" not in zh             # AMD build: CUDA omitted, ROCm shown
 
 
+def test_lm_eval_version_shown_in_env():
+    spec, ingest, grades, runs, _ = _ctx()
+    zh, _ = render_reports(spec, ingest, grades, runs,
+                           env={"torch": "2.3.0", "lm_eval": "0.4.12"}, patches=[])
+    assert "lm_eval 0.4.12" in zh
+
+
+def test_versions_recovered_from_eval_logs(tmp_path):
+    # The eval prints its own versions; recover them when the snapshot missed them
+    # (e.g. eval ran in a shared env, or pip freeze came back empty).
+    from paper_reprise.models import RunResult
+    from paper_reprise.report import _effective_env, _versions_from_logs
+
+    log = tmp_path / "stdout.log"
+    log.write_text("Torch        : 2.10.0+rocm7.1\nTransformers : 5.13.0\n"
+                   "\x1b[38;20mINFO Using lm-eval version 0.4.12\x1b[0m\n")
+    r = RunResult(claim_id="c", command="x", stdout_path=str(log),
+                  status="ran", block_reason=None)
+    assert _versions_from_logs([r]) == {
+        "torch": "2.10.0+rocm7.1", "transformers": "5.13.0", "lm_eval": "0.4.12"}
+    # unknown snapshot fields get filled from logs; known ones are kept
+    eff = _effective_env({"torch": "unknown", "cuda": "13.0"}, [r])
+    assert eff["torch"] == "2.10.0+rocm7.1"
+    assert eff["lm_eval"] == "0.4.12"
+    assert eff["cuda"] == "13.0"
+
+
 def test_header_is_a_markdown_meta_block_not_glued_lines():
     spec, ingest, grades, runs, env = _ctx()
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])

@@ -67,6 +67,7 @@ def assemble_snapshot(freeze: dict) -> dict:
     return {
         "torch": freeze.get("torch") or "unknown",
         "transformers": freeze.get("transformers") or "unknown",
+        "lm_eval": freeze.get("lm_eval") or "unknown",
         "cuda": freeze.get("cuda") or "unknown",
         "rocm": freeze.get("rocm") or "unknown",
         "pip_freeze": freeze.get("pip_freeze", ""),
@@ -204,8 +205,11 @@ def _freeze_env(env_dir: Path) -> dict:
     freeze_text = proc.stdout
     versions: dict = {"pip_freeze": freeze_text}
     for line in freeze_text.splitlines():
-        for pkg in ("torch", "transformers"):
-            if line.lower().startswith(f"{pkg}=="):
+        low = line.lower()
+        for pkg in ("torch", "transformers", "lm_eval"):
+            # pip normalizes the harness dist name to either lm_eval or lm-eval
+            prefixes = (f"{pkg}==",) if pkg != "lm_eval" else ("lm_eval==", "lm-eval==")
+            if any(low.startswith(p) for p in prefixes):
                 versions[pkg] = line.split("==", 1)[1].strip()
     # Accelerator runtime: a torch build is CUDA (NVIDIA) XOR ROCm/HIP (AMD). cuda is in
     # torch.version.cuda, ROCm in torch.version.hip; probe both in one call.
