@@ -1,7 +1,7 @@
 # Reproduction Report: 2604.18556
 
 - **Repo:** https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
-- **Environment:** torch 2.11.0+cu130 / transformers 5.8.1 / CUDA 13.0
+- **Environment:** CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.8.1
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
