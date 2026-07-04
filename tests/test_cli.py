@@ -48,7 +48,7 @@ def test_cli_report_rerenders(tmp_path, monkeypatch):
 
     res = CliRunner().invoke(cli, ["report", str(rd.root)])
     assert res.exit_code == 0
-    assert (rd.root / "report.zh.md").exists()
+    assert (rd.root / "README_zh.md").exists()
 
 
 def test_cli_run_resolves_title_then_aborts_on_specextract(tmp_path, monkeypatch):
@@ -205,7 +205,7 @@ def test_cli_report_reads_actual_config_for_faithfulness(tmp_path):
     from paper_reprise.cli import cli
     res = CliRunner().invoke(cli, ["report", str(rd.root)])
     assert res.exit_code == 0
-    report = (rd.root / "report.zh.md").read_text()
+    report = (rd.root / "README_zh.md").read_text()
     assert "PARTIAL" in report          # faithfulness caught the seqlen divergence
     assert "seqlen" in report
 
@@ -513,13 +513,13 @@ def test_cli_clean_frees_model_and_env_keeps_records(tmp_path):
     (ck / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
     (rd.root / "env" / "bin").mkdir(parents=True)
     (rd.root / "env" / "bin" / "python").write_bytes(b"\0" * 4096)
-    (rd.root / "report.zh.md").write_text("report")       # record, kept
+    (rd.root / "README_zh.md").write_text("report")       # record, kept
 
     res = CliRunner().invoke(cli, ["clean", str(rd.root)])
     assert res.exit_code == 0
     assert not (ck / "model.safetensors").exists()        # model freed
     assert not (rd.root / "env").exists()                 # env freed
-    assert (rd.root / "report.zh.md").exists()            # record kept
+    assert (rd.root / "README_zh.md").exists()            # record kept
     assert "freed" in res.output.lower()
 
 
@@ -531,10 +531,10 @@ def test_cli_clean_no_arg_cleans_all_runs_under_base(tmp_path):
         ck = rd.repo_dir / "runtime" / "checkpoints"
         ck.mkdir(parents=True)
         (ck / "model.safetensors").write_bytes(b"\0" * (11 * 1024 * 1024))
-        (rd.root / "report.zh.md").write_text("r")        # record, kept
+        (rd.root / "README_zh.md").write_text("r")        # record, kept
 
     res = CliRunner().invoke(cli, ["clean", "--base-dir", str(base)])
     assert res.exit_code == 0
     assert not list(base.rglob("model.safetensors"))      # all runs' models gone
-    assert len(list(base.rglob("report.zh.md"))) == 2     # all records kept
+    assert len(list(base.rglob("README_zh.md"))) == 2     # all records kept
     assert "Total freed" in res.output

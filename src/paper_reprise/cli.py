@@ -209,7 +209,7 @@ def run(input_arg: str, base_dir: str, yes: bool, tasks: str | None, gpus: int |
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
         _echo_cleaned(result.cleaned)
-        click.echo(f"Done. Report: {result.root}/report.zh.md")
+        click.echo(f"Done. Report: {result.root}/README.md")
 
 
 @cli.command()
@@ -244,7 +244,7 @@ def resume(run_dir: str, yes: bool, tasks: str | None, gpus: int | None,
         click.echo(f"Aborted at: {result.aborted_at}")
     else:
         _echo_cleaned(result.cleaned)
-        click.echo(f"Done. Report: {result.root}/report.zh.md")
+        click.echo(f"Done. Report: {result.root}/README.md")
 
 
 @cli.command()
@@ -282,9 +282,9 @@ def report(run_dir: str) -> None:
         except (OSError, ValueError):
             env = {}
     zh, en = render_reports(spec, ingest, grades, runs, env=env, patches=[])
-    (rd.root / "report.zh.md").write_text(zh)
-    (rd.root / "report.en.md").write_text(en)
-    click.echo(f"Re-rendered: {rd.root}/report.zh.md")
+    (rd.root / "README_zh.md").write_text(zh)
+    (rd.root / "README.md").write_text(en)
+    click.echo(f"Re-rendered: {rd.root}/README.md")
 
 
 def _clean_one(rd: "RunDir", env: bool) -> list:

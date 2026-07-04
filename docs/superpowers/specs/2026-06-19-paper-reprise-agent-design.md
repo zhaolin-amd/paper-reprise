@@ -33,7 +33,7 @@ Running the code itself is already highly standardized in the quantization field
 | Compute | Multi-GPU available, cost not a constraint |
 | Default claims | Extract main results only (the paper's headline/bolded ones), rest on demand |
 | Default tolerance | PPL ±0.05, accuracy ±0.5% (use the paper's if it states one) |
-| Report | Bilingual zh/en, split into two files `report.zh.md` / `report.en.md` |
+| Report | Bilingual, two files `README.md` (en) / `README_zh.md` (zh); README.md renders by default on folder open |
 
 ### 1.3 Architecture Choice
 
@@ -64,7 +64,7 @@ ingest → specextract → plan → setup → run → grade → report
 | **setup** | agentic debug loop | build conda/uv env, fix deps until the repo's own eval command passes a smoke test | `env/`, `setup_log/`, `env_snapshot.json`, `setup_patches/` |
 | **run** | deterministic | quantize per artifact, invoke eval script per claim, persist raw output | `runs/<claim_id>/` |
 | **grade** | pure code | parse output, value+faithfulness double check, verdict MATCH/PARTIAL/FAIL/BLOCKED | verdicts rendered into the reports (not persisted separately) |
-| **report** | deterministic | render bilingual reports | `report.zh.md`, `report.en.md` |
+| **report** | deterministic | render bilingual reports | `README.md`, `README_zh.md` |
 
 ### 2.1 Gates
 
@@ -245,7 +245,7 @@ PARTIAL always carries a reason (which config item differs, by how much). Never 
 
 ### 5.2 Report — deterministic rendering, two bilingual files
 
-Each paper produces `report.zh.md` and `report.en.md`; the core is a traceable, replayable table:
+Each paper produces `README.md` (en) and `README_zh.md` (zh); the core is a traceable, replayable table:
 
 ```markdown
 # Reproduction Report: <title> (<arxiv_id>)
@@ -327,8 +327,8 @@ runs/<paper_name>-<arxiv_id>-<timestamp>/
   setup_log/
   setup_patches/
   claims/<claim_id>/     # per-claim raw output, command, seed
-  report.zh.md           # verdicts are rendered here, not a separate grades.json
-  report.en.md
+  README.md              # verdicts are rendered here, not a separate grades.json
+  README_zh.md
 ```
 
 `<paper_name>` is a best-effort slug of the paper title — the authors' short name before a colon when the title has one (e.g. `turboquant`), else the truncated title; it is omitted (just `<arxiv_id>-<timestamp>`) when the title can't be fetched.
