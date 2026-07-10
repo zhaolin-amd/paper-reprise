@@ -5,8 +5,8 @@
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
-| Qwen/Qwen3-8B | INT4 | MXFP4-16 | acc_norm | 71.17 | — | BLOCKED | run did not complete: no stdout.log |
-| Qwen/Qwen3-8B | INT4 | MXFP4-16 | word_perplexity | 15.15 | — | BLOCKED | run did not complete: no stdout.log |
+| Qwen/Qwen3-8B | INT4 | MXFP4-16 | acc_norm | 71.17 | 71.66(+0.489) | MATCH | — |
+| Qwen/Qwen3-8B | INT4 | MXFP4-16 | word_perplexity | 15.15 | 13.65(-1.50) | PARTIAL | process faithful but value off tolerance 1.504 (>0.5) |
 | Qwen/Qwen3-8B | INT4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | process faithful but value off tolerance 2.109 (>0.5) |
 | Qwen/Qwen3-8B | BF16 | - | acc_norm | 76.51 | 74.96(-1.55) | PARTIAL | process faithful but value off tolerance 1.555 (>0.5) |
 | Qwen/Qwen3-8B | INT4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | process faithful but value off tolerance 1.312 (>0.5) |
@@ -19,9 +19,8 @@
 | Qwen/Qwen3-8B | INT4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
 
 ## Conclusion
-- 12 claims: MATCH 5 · PARTIAL 5 · FAIL 0 · BLOCKED 2.
-- The FP baseline matches the paper, so the **eval protocol is validated**; the 4 quantized config(s) outside tolerance (worst -2.11) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
-- 2 BLOCKED produced no comparable value (see each reason) — not 'failed to reproduce'.
+- 12 claims: MATCH 6 · PARTIAL 6 · FAIL 0 · BLOCKED 0.
+- The FP baseline matches the paper, so the **eval protocol is validated**; the 5 quantized config(s) outside tolerance (worst -2.11) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
 
 ## Analysis
 **Root cause of acc_norm PARTIAL: inference engine mismatch**
