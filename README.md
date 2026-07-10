@@ -98,6 +98,10 @@ Notes:
 - Verdicts are not persisted as a separate file — they are computed in `grade` (pure code)
   and rendered straight into the two reports; `paper-reprise report <run_dir>` re-renders
   them from `spec.yaml` + the per-claim `stdout.log` / `actual_config.json`.
+- **Gap analysis**: if you place an `analysis.md` file in the run dir, its content is
+  appended verbatim after the auto-generated Conclusion as `## Analysis` / `## 差距分析`
+  on every re-render. The file is never overwritten. Write it in both languages or whichever
+  you prefer — it appears in both `README.md` and `README_zh.md`.
 
 ## Install
 

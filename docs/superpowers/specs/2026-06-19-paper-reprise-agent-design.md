@@ -62,7 +62,7 @@ ingest → specextract → plan → setup → run → grade → report
 | **specextract** | 1 headless call | LaTeX+README → full spec → **interactive claim selection** | `spec.yaml` |
 | **plan** | deterministic | estimate each claim's GPU/VRAM/runtime → feasibility/anomaly check | `plan.json` |
 | **setup** | agentic debug loop | build conda/uv env, fix deps until the repo's own eval command passes a smoke test | `env/`, `setup_log/`, `env_snapshot.json`, `setup_patches/` |
-| **run** | deterministic | quantize per artifact, invoke eval script per claim, persist raw output | `runs/<claim_id>/` |
+| **run** | deterministic | quantize per artifact, invoke eval script per claim, persist raw output | `claims/<claim_id>/` |
 | **grade** | pure code | parse output, value+faithfulness double check, verdict MATCH/PARTIAL/FAIL/BLOCKED | verdicts rendered into the reports (not persisted separately) |
 | **report** | deterministic | render bilingual reports | `README.md`, `README_zh.md` |
 
@@ -189,7 +189,7 @@ No agent after setup passes. Execute per spec, item by item:
 for artifact in spec.artifacts:
     quantize per quant_config (call repo's quant entry or provided checkpoint)
 for claim in spec.claims:
-    run eval per eval_protocol.command, persist raw stdout/products to runs/<claim_id>/
+    run eval per eval_protocol.command, persist raw stdout/products to claims/<claim_id>/
     record: actual command, seed, start/end time, GPU used
 ```
 
@@ -217,7 +217,7 @@ Two independent checks per claim, both must pass for MATCH:
 
 **Check 1 · Value in tolerance**
 ```
-parse runs/<claim_id>/ → measured
+parse claims/<claim_id>/ → measured
 pass_value = |measured - expected| <= tolerance
 unparseable → UNPARSEABLE (don't guess)
 ```
@@ -259,7 +259,7 @@ Verdict summary: MATCH 3 / PARTIAL 1 / FAIL 0 / BLOCKED 1
 | c3 | ... | | speedup | 2.1x | — | BLOCKED | setup failed: cuda kernel won't compile |
 
 ## Replay info (per claim)
-c1: command `...` | seed 0 | GPU A100×1 | 18min | raw output runs/c1/stdout.log
+c1: command `...` | seed 0 | GPU A100×1 | 18min | raw output claims/c1/stdout.log
 ## Setup patch trail
 - pinned transformers==4.36 (repo requires 4.31 but conflicts with torch 2.x)
 ## Which half reproduced
@@ -329,6 +329,9 @@ runs/<paper_name>-<arxiv_id>-<timestamp>/
   claims/<claim_id>/     # per-claim raw output, command, seed
   README.md              # verdicts are rendered here, not a separate grades.json
   README_zh.md
+  analysis.md            # optional: human-written gap analysis appended after the
+                         # auto-generated Conclusion on every re-render (never overwritten).
+                         # Write in both languages or whichever preferred — appears in both reports.
 ```
 
 `<paper_name>` is a best-effort slug of the paper title — the authors' short name before a colon when the title has one (e.g. `turboquant`), else the truncated title; it is omitted (just `<arxiv_id>-<timestamp>`) when the title can't be fetched.
