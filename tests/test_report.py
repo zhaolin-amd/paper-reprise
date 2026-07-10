@@ -78,6 +78,22 @@ def test_baseline_artifact_bf16_algorithm_is_dash():
     assert _algorithm_label(base) == "-"  # uncompressed -> no algorithm
 
 
+def test_config_label_fp4_formats_are_not_int4():
+    from paper_reprise.report import _config_label
+    from paper_reprise.models import Artifact
+    # MXFP4 is microscaling FP4 (E2M1 + E8M0 scale), NOT integer quantization.
+    for method in ("MXFP4-16", "MXFP4-OCP", "MXFP4-MBS-H"):
+        a = Artifact(id="x", base_model="m", method=method, quant_config={"wbits": 4})
+        assert _config_label(a) == "MXFP4", method
+    # Plain FP8 keeps its format tag too.
+    fp8 = Artifact(id="y", base_model="m", method="FP8-static", quant_config={"wbits": 8})
+    assert _config_label(fp8) == "FP8"
+    # Integer methods still fall back to INT<bits> (+ group size).
+    awq = Artifact(id="z", base_model="m", method="AWQ",
+                   quant_config={"wbits": 4, "group_size": 128})
+    assert _config_label(awq) == "INT4 G128"
+
+
 def test_single_table_only_no_separate_summary_and_detail():
     # two metrics -> two rows in ONE table (no separate 汇总/明细 tables)
     art = Artifact(id="a1", base_model="Llama-8B", method="GSQ",
