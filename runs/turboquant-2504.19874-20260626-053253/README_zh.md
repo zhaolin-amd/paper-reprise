@@ -18,8 +18,7 @@
 ## 结论
 - 共 10 个 claim:MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0。
 
-## 资源占用(每个 config)
-(none)
+
 
 ## 各任务原始分数
 (none)

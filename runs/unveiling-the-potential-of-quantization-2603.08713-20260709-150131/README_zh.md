@@ -37,8 +37,7 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 
 **Fix / 修复方向**：`lm_eval --model vllm --model_args pretrained=<path>`
 
-## 资源占用(每个 config)
-(none)
+
 
 ## 各任务原始分数
 (none)
