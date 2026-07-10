@@ -361,3 +361,22 @@ def test_env_order_is_hardware_to_eval():
     # AMD: ROCm takes the accelerator slot, still first
     s2 = _env_str({"torch": "2.1", "rocm": "6.1"})
     assert s2 == "ROCm 6.1 / torch 2.1"
+
+
+def test_analysis_section_appended_after_conclusion(tmp_path):
+    from paper_reprise.report import render_reports
+    spec, ingest, grades, runs, env = _ctx()
+    analysis = "The gap is due to inference engine mismatch (vLLM vs HF)."
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis=analysis)
+    # analysis appears after Conclusion, before Resources
+    assert "## Analysis\n" + analysis in en
+    assert "## 差距分析\n" + analysis in zh
+    assert en.index("## Analysis") > en.index("## Conclusion")
+    assert en.index("## Analysis") < en.index("## Resources")
+
+
+def test_analysis_section_omitted_when_empty(tmp_path):
+    spec, ingest, grades, runs, env = _ctx()
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis="")
+    assert "## Analysis" not in en
+    assert "## 差距分析" not in zh

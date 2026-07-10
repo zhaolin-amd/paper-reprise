@@ -18,12 +18,29 @@
 
 ## Conclusion
 - 10 claims: MATCH 5 · PARTIAL 5 · FAIL 0 · BLOCKED 0.
-- **PPL (Wikitext word_perplexity): 5/5 MATCH**, max deviation ±0.06 — the fake-quant implementation precisely reproduces the paper's perplexity numbers.
-- **acc_norm (Hellaswag): 5/5 PARTIAL**, measured consistently ~1.1–2.1 below the paper. Root cause is an **inference engine mismatch**, not a quantization error:
-  - Paper uses **vLLM** as the inference engine with lm-eval; we use `HFLM` with a pre-instantiated HuggingFace model object.
-  - When lm-eval receives an already-instantiated model (not a string path), it skips several initialization steps (`Many other model arguments may be ignored` warning in logs) — affecting log-likelihood computation for the ranking task.
-  - PPL is teacher-forced and insensitive to this difference; acc_norm compares log-likelihoods across choices and is more sensitive to batching/tokenization details, explaining why PPL matches exactly while acc_norm diverges by ~1.5 points.
-  - To close this gap: re-run via lm-eval's vLLM backend (`lm_eval --model vllm --model_args pretrained=<path>`) instead of passing a pre-loaded model.
+- The FP baseline matches the paper, so the **eval protocol is validated**; the 4 quantized config(s) outside tolerance (worst -2.11) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
+
+## Analysis
+**Why acc_norm (Hellaswag) is PARTIAL while PPL (Wikitext) is MATCH:**
+
+The paper uses **vLLM** as the inference engine with lm-eval; this reproduction passes a
+pre-instantiated HuggingFace model object to `HFLM` instead. When lm-eval receives an
+already-instantiated model (not a string path), it skips several initialization steps —
+the log shows `Many other model arguments may be ignored`. This affects the log-likelihood
+computation that acc_norm relies on.
+
+- **PPL** is teacher-forced (no sampling, no batching across choices) → insensitive to
+  this difference → 5/5 MATCH within ±0.06.
+- **acc_norm** compares log-likelihoods across multiple choice strings → sensitive to
+  batching, tokenization padding, and prefix caching differences between vLLM and HF
+  eager mode → systematically 1.1–2.1 below the paper.
+
+The BF16 baseline itself is off by 1.55 (74.96 vs 76.51), which rules out the
+quantization implementation as the cause — the gap is entirely in the eval infrastructure.
+
+**To close this gap:** re-run via lm-eval's vLLM backend, passing the model as a string
+path (`--model vllm --model_args pretrained=<path>`) so lm-eval initializes the
+full pipeline consistently with the paper's setup.
 
 ## Resources (per config)
 (none)

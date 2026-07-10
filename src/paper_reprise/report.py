@@ -372,8 +372,17 @@ def _conclusion(spec: Spec, grades: list[ClaimGrade], lang: str) -> str:
     return "\n".join(lines)
 
 
+def _analysis_section(analysis: str, heading: str) -> str:
+    """Optional human-written gap analysis appended after the auto-generated Conclusion.
+    Written to `analysis.md` in the run dir; never overwritten by re-renders. Empty
+    string → section omitted. The heading is bilingual: pass "## Analysis" or "## 分析"."""
+    body = (analysis or "").strip()
+    return f"\n{heading}\n{body}\n" if body else ""
+
+
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
-                   runs: list[RunResult], env: dict, patches: list[str]) -> tuple[str, str]:
+                   runs: list[RunResult], env: dict, patches: list[str],
+                   analysis: str = "") -> tuple[str, str]:
     repo_str = _repo_str(ingest, spec)
     env_str = _env_str(_effective_env(env, runs))
 
@@ -385,7 +394,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## 结论
 {_conclusion(spec, grades, "zh")}
-
+{_analysis_section(analysis, "## 差距分析")}
 ## 资源占用(每个 config)
 {_resources(spec, runs, "| model | config | 时长 | 峰值显存 |")}
 
@@ -404,7 +413,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## Conclusion
 {_conclusion(spec, grades, "en")}
-
+{_analysis_section(analysis, "## Analysis")}
 ## Resources (per config)
 {_resources(spec, runs, "| model | config | time | peak VRAM |")}
 
