@@ -281,7 +281,16 @@ def report(run_dir: str) -> None:
             env = _json.loads(snap.read_text())
         except (OSError, ValueError):
             env = {}
-    zh, en = render_reports(spec, ingest, grades, runs, env=env, patches=[])
+    # Load human-written gap analysis if present — appended after the auto Conclusion
+    # and never overwritten by re-renders (the file lives next to spec.yaml).
+    analysis_path = rd.root / "analysis.md"
+    analysis = ""
+    if analysis_path.exists():
+        try:
+            analysis = analysis_path.read_text()
+        except OSError:
+            analysis = ""
+    zh, en = render_reports(spec, ingest, grades, runs, env=env, patches=[], analysis=analysis)
     (rd.root / "README_zh.md").write_text(zh)
     (rd.root / "README.md").write_text(en)
     click.echo(f"Re-rendered: {rd.root}/README.md")
