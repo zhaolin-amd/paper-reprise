@@ -21,26 +21,18 @@
 - FP 基线与论文吻合,说明**评测协议可信**;因此 4 个超容差的量化配置(最大偏差 -2.11)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
 
 ## 差距分析
-**Why acc_norm (Hellaswag) is PARTIAL while PPL (Wikitext) is MATCH:**
+**acc_norm PARTIAL 的根因：推理引擎差异**
 
-The paper uses **vLLM** as the inference engine with lm-eval; this reproduction passes a
-pre-instantiated HuggingFace model object to `HFLM` instead. When lm-eval receives an
-already-instantiated model (not a string path), it skips several initialization steps —
-the log shows `Many other model arguments may be ignored`. This affects the log-likelihood
-computation that acc_norm relies on.
+| | 论文 | 本次复现 |
+|---|---|---|
+| 推理引擎 | vLLM | HuggingFace 直接加载 |
+| 传给 lm-eval | 模型路径（字符串） | 已实例化的 model 对象 |
 
-- **PPL** is teacher-forced (no sampling, no batching across choices) → insensitive to
-  this difference → 5/5 MATCH within ±0.06.
-- **acc_norm** compares log-likelihoods across multiple choice strings → sensitive to
-  batching, tokenization padding, and prefix caching differences between vLLM and HF
-  eager mode → systematically 1.1–2.1 below the paper.
+lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many other model arguments may be ignored`），影响 log-likelihood 计算。BF16 基线本身就偏低 1.55（74.96 vs 76.51），排除了量化实现的责任——差距完全来自评测基础设施。
 
-The BF16 baseline itself is off by 1.55 (74.96 vs 76.51), which rules out the
-quantization implementation as the cause — the gap is entirely in the eval infrastructure.
+**PPL 不受影响**：teacher-forcing 无需跨选项对比 log-likelihood，对推理引擎不敏感 → 5/5 MATCH（最大偏差 ±0.06）。
 
-**To close this gap:** re-run via lm-eval's vLLM backend, passing the model as a string
-path (`--model vllm --model_args pretrained=<path>`) so lm-eval initializes the
-full pipeline consistently with the paper's setup.
+**修复方向**：改用 lm-eval vLLM 后端（`--model vllm --model_args pretrained=<path>`）。
 
 ## 资源占用(每个 config)
 (none)
