@@ -1,0 +1,83 @@
+Torch : 2.11.0+cu130
+Transformers : 5.13.0
+lm_eval==0.4.12
+[eval_one] claim=qwen3-8b-mxfp4-16-oas-ppl method=MXFP4-16-OAS tasks=['hellaswag'] smoke=False
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 7510.43it/s]
+[eval_one] quantized 252 linear layers with MXFP4-16-OAS
+`pretrained` model kwarg is not of type `str`. Many other model arguments may be ignored. Please do not launch via accelerate or use `parallelize=True` if passing an existing model this way.
+Passed an already-initialized model through `pretrained`, assuming single-process call to evaluate() or custom distributed integration
+[Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+[Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+[Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+[Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+[Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+[Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Using the latest cached version of the dataset since EleutherAI/wikitext_document_level couldn't be found on the Hugging Face Hub (offline mode is enabled).
+Found the latest cached dataset configuration 'wikitext-2-raw-v1' at /scratch/zhaolin/cache/huggingface/datasets/EleutherAI___wikitext_document_level/wikitext-2-raw-v1/0.0.0/647234772b9554e208af6c826f23b99e3cac88c8 (last modified on Fri Jul 10 11:18:23 2026).
+Overwriting default num_fewshot of wikitext from None to 0
+  0%|          | 0/62 [00:00<?, ?it/s] 66%|██████▌   | 41/62 [00:00<00:00, 406.77it/s]100%|██████████| 62/62 [00:00<00:00, 477.11it/s]
+  0%|          | 0/62 [00:00<?, ?it/s] 19%|█▉        | 12/62 [00:00<00:00, 108.84it/s] 44%|████▎     | 27/62 [00:00<00:00, 127.10it/s] 65%|██████▍   | 40/62 [00:00<00:00, 122.57it/s] 97%|█████████▋| 60/62 [00:00<00:00, 147.64it/s]100%|██████████| 62/62 [00:00<00:00, 138.05it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.15it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.15it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.88it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.88it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.09it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.08it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.19it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.19it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.52it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.52it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.16it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.16it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.14s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.14s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.17it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.17it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.20s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.20s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.16it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.15it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.75it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.75it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.02s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.02s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.80it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.80it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.35it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.35it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.89it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.88it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.00it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.00it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.28it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.28it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.69it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.68it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.23it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.23it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.31it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.31it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.00it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.00it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.06it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.05it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.21it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.21it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.23s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.23s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.21it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.21it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.29it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.29it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.19s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.19s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.51it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.50it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.54it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.53it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.84it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.83it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.00it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.00it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.41it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.41it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.47it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.47it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.28it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.27it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.02it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.02it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.27it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.27it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.48it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.47it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.48s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.48s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.08it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.07it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.04s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.04s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.17s/it]Running loglikelihood requests: 100%|██████████| 1/1 [00:01<00:00,  1.17s/it]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.15it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.15it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.70it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.69it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.73it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.73it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.40it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  3.39it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.51it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.51it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.18it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.18it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.28it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.28it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.72it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.72it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.73it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  4.73it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.86it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.86it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.81it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.81it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.80it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.79it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.78it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.77it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.02it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  6.01it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.99it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  5.98it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.32it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.32it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  7.05it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  7.04it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.57it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.57it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.61it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  1.61it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.10it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.10it/s]
+Running loglikelihood requests:   0%|          | 0/1 [00:00<?, ?it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.47it/s]Running loglikelihood requests: 100%|██████████| 1/1 [00:00<00:00,  2.47it/s]
+word_perplexity: 13.5865
+[eval_one] wikitext: word_perplexity=13.5865
