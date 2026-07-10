@@ -380,3 +380,18 @@ def test_analysis_section_omitted_when_empty(tmp_path):
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis="")
     assert "## Analysis" not in en
     assert "## 差距分析" not in zh
+
+
+def test_display_model_strips_local_snapshot_path():
+    from paper_reprise.report import _display_model
+    import unittest.mock as mock
+    local = "/group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B"
+    with mock.patch("paper_reprise.report.model_base",
+                    return_value=__import__("pathlib").Path(
+                        "/group/amdneuralopt/huggingface/pretrained_models")):
+        assert _display_model(local) == "Qwen/Qwen3-8B"
+    # HF id unchanged
+    assert _display_model("meta-llama/Llama-2-7b-hf") == "meta-llama/Llama-2-7b-hf"
+    # scratch fallback
+    assert _display_model("/scratch/user/pretrained_models/mistralai/Mistral-7B") == \
+        "mistralai/Mistral-7B"
