@@ -57,6 +57,11 @@ be used to obtain any reported number. Use [] if none apply.
 - quant_config: use the key `wbits` (not `bits`) for the weight bit-width.
 - Default tolerance: perplexity 0.05, accuracy 0.5. If the paper states one, use it.
 - source: pin each claim to its location, e.g. "Table 3, row 2, col W4".
+- claim order: list claims in the SAME order the algorithms/rows appear in the paper's \
+table (e.g. baseline first, then each method top-to-bottom as printed). The report renders \
+rows in claim order, so this makes the report's table match the paper. When one metric has \
+several methods, keep them in paper row order; group by metric if the paper uses separate \
+tables per metric.
 - hardware: the MINIMUM hardware needed to reproduce THIS specific claim's model, \
 taken from the official repo's README/docs (look for a per-model hardware table or \
 requirements section) — NOT the larger setup the paper happened to report its runs on. \
