@@ -1,0 +1,8 @@
+{
+  "torch": "2.11.0+cu130",
+  "transformers": "5.13.0",
+  "lm_eval": "0.4.12",
+  "cuda": "13.0",
+  "rocm": "unknown",
+  "pip_freeze": ""
+}

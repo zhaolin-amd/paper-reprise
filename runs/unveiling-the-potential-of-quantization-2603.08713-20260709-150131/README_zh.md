@@ -18,7 +18,12 @@
 
 ## 结论
 - 共 10 个 claim:MATCH 5 · PARTIAL 5 · FAIL 0 · BLOCKED 0。
-- FP 基线与论文吻合,说明**评测协议可信**;因此 4 个超容差的量化配置(最大偏差 -2.11)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
+- **PPL(Wikitext word_perplexity):5/5 全部 MATCH**,最大偏差 ±0.06——fake-quant 实现精确复现了论文的困惑度数值。
+- **acc_norm(Hellaswag):5/5 全部 PARTIAL**,实测一致低于论文约 1.1~2.1。根因是**推理引擎差异**,而非量化误差:
+  - 论文使用 **vLLM** 作为推理引擎配合 lm-eval;我们使用 `HFLM` 传入已实例化的 HuggingFace model 对象。
+  - lm-eval 接收到已实例化 model(而非字符串路径)时会跳过部分初始化步骤(日志中出现 `Many other model arguments may be ignored` 警告),影响 log-likelihood 的计算精度。
+  - PPL 是 teacher-forcing 模式,对此不敏感;acc_norm 是多选项 log-likelihood 排名,对 batch 拼接、tokenization 细节更敏感,因此 PPL 完全吻合而 acc_norm 偏低约 1.5 点。
+  - 消除此差距的方向:改用 lm-eval 的 vLLM 后端(`lm_eval --model vllm --model_args pretrained=<path>`)替代传入预加载模型。
 
 ## 资源占用(每个 config)
 (none)

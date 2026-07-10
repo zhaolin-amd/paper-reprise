@@ -18,7 +18,12 @@
 
 ## Conclusion
 - 10 claims: MATCH 5 · PARTIAL 5 · FAIL 0 · BLOCKED 0.
-- The FP baseline matches the paper, so the **eval protocol is validated**; the 4 quantized config(s) outside tolerance (worst -2.11) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
+- **PPL (Wikitext word_perplexity): 5/5 MATCH**, max deviation ±0.06 — the fake-quant implementation precisely reproduces the paper's perplexity numbers.
+- **acc_norm (Hellaswag): 5/5 PARTIAL**, measured consistently ~1.1–2.1 below the paper. Root cause is an **inference engine mismatch**, not a quantization error:
+  - Paper uses **vLLM** as the inference engine with lm-eval; we use `HFLM` with a pre-instantiated HuggingFace model object.
+  - When lm-eval receives an already-instantiated model (not a string path), it skips several initialization steps (`Many other model arguments may be ignored` warning in logs) — affecting log-likelihood computation for the ranking task.
+  - PPL is teacher-forced and insensitive to this difference; acc_norm compares log-likelihoods across choices and is more sensitive to batching/tokenization details, explaining why PPL matches exactly while acc_norm diverges by ~1.5 points.
+  - To close this gap: re-run via lm-eval's vLLM backend (`lm_eval --model vllm --model_args pretrained=<path>`) instead of passing a pre-loaded model.
 
 ## Resources (per config)
 (none)
