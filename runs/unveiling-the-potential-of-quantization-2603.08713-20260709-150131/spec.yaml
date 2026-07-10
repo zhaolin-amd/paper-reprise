@@ -28,6 +28,19 @@ artifacts:
       wbits: 16
     calib_status: none
 
+  # ── MXFP4-16 : 1x16 block, E8M0 power-of-two scale, NO OAS ──────────────────────
+  - id: qwen3-8b-mxfp4-16
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: MXFP4-16
+    quant_config:
+      wbits: 4
+      abits: 4
+      block_size: 16
+      oas: false
+      weight_mbs: none
+      activation_mbs: none
+    calib_status: none
+
   # ── MXFP4-16-OAS : 1x16 block, E8M0 power-of-two scale + Overflow-Aware Scaling ──
   - id: qwen3-8b-mxfp4-16-oas
     base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
@@ -70,6 +83,40 @@ artifacts:
     calib_status: none
 
 claims:
+  - id: qwen3-8b-mxfp4-16-hellaswag
+    artifact: qwen3-8b-mxfp4-16
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 71.17
+    tolerance: 0.5
+    source: "Table 2 (tab:eval_qwen), row MXFP4-16, col Hellaswag"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-16-ppl
+    artifact: qwen3-8b-mxfp4-16
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 15.15
+    tolerance: 0.5
+    source: "Appendix Table (tab:ppl_eval), row MXFP4-16, col Qwen3-8B"
+    hardware: null
+
   - id: qwen3-8b-mxfp4-ocp-hellaswag
     artifact: qwen3-8b-mxfp4-ocp
     eval_protocol:

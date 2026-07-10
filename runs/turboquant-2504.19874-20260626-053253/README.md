@@ -20,8 +20,7 @@
 
 
 
-## Per-task raw scores
-(none)
+
 
 ## Replay script (per config)
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT1 · TurboQuant_mse**

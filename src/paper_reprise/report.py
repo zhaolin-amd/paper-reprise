@@ -282,7 +282,7 @@ def _raw_scores(runs: list[RunResult]) -> str:
             pass
         if tbl:
             out.append(f"**{r.claim_id}**\n\n{tbl}")
-    return "\n\n".join(out) if out else "(none)"
+    return "\n\n".join(out) if out else ""
 
 
 def _patches_section(patches: list[str], heading: str) -> str:
@@ -429,8 +429,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {_analysis_section(analysis, "## 差距分析")}
 {_optional_section(_resources(spec, runs, "| model | config | 时长 | 峰值显存 |"), "## 资源占用(每个 config)")}
 
-## 各任务原始分数
-{_raw_scores(runs)}
+{_optional_section(_raw_scores(runs), "## 各任务原始分数")}
 
 ## 复算脚本(每个 config)
 {_replay(spec, runs)}
@@ -447,8 +446,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 {_analysis_section(analysis, "## Analysis")}
 {_optional_section(_resources(spec, runs, "| model | config | time | peak VRAM |"), "## Resources (per config)")}
 
-## Per-task raw scores
-{_raw_scores(runs)}
+{_optional_section(_raw_scores(runs), "## Per-task raw scores")}
 
 ## Replay script (per config)
 {_replay(spec, runs)}

@@ -5,6 +5,8 @@
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|
+| Qwen/Qwen3-8B | INT4 | MXFP4-16 | acc_norm | 71.17 | — | BLOCKED | run 未跑成: no stdout.log |
+| Qwen/Qwen3-8B | INT4 | MXFP4-16 | word_perplexity | 15.15 | — | BLOCKED | run 未跑成: no stdout.log |
 | Qwen/Qwen3-8B | INT4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | 过程忠实但数值超容差 2.109 (>0.5) |
 | Qwen/Qwen3-8B | BF16 | - | acc_norm | 76.51 | 74.96(-1.55) | PARTIAL | 过程忠实但数值超容差 1.555 (>0.5) |
 | Qwen/Qwen3-8B | INT4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
@@ -17,8 +19,9 @@
 | Qwen/Qwen3-8B | INT4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
 
 ## 结论
-- 共 10 个 claim:MATCH 5 · PARTIAL 5 · FAIL 0 · BLOCKED 0。
+- 共 12 个 claim:MATCH 5 · PARTIAL 5 · FAIL 0 · BLOCKED 2。
 - FP 基线与论文吻合,说明**评测协议可信**;因此 4 个超容差的量化配置(最大偏差 -2.11)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
+- 2 个 BLOCKED 未产出可比数值(见各自 reason),非「未复现」。
 
 ## 差距分析
 **Root cause of acc_norm PARTIAL: inference engine mismatch**
@@ -39,10 +42,21 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 
 
 
-## 各任务原始分数
-(none)
+
 
 ## 复算脚本(每个 config)
+**Qwen/Qwen3-8B · INT4 · MXFP4-16**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
+```
+
 **Qwen/Qwen3-8B · INT4 · MXFP4-OCP**
 `runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-ocp-hellaswag/stdout.log`
 `runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-ocp-ppl/stdout.log`

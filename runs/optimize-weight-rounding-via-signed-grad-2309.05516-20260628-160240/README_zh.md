@@ -28,6 +28,7 @@
 | meta-llama/Llama-2-7b-hf | INT2 G128 | 7.2 min | 32.8 GB |
 
 
+
 ## 各任务原始分数
 **mistral-7b-fp16-baseline**
 
@@ -160,6 +161,7 @@
 |rte                                    |      1|none  |     0|acc       |↑  |0.5848|±  |0.0297|
 |truthfulqa_mc2                         |      3|none  |     0|acc       |↑  |0.3417|±  |0.0133|
 |winogrande                             |      1|none  |     0|acc       |↑  |0.6243|±  |0.0136|
+
 
 ## 复算脚本(每个 config)
 **mistralai/Mistral-7B-v0.1 · BF16**

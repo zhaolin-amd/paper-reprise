@@ -25,8 +25,10 @@ def method_for(claim_id: str):
         return None  # baseline, no quantization
     if "mxfp4-ocp" in c:
         return "MXFP4-OCP"
-    if "mxfp4-16-oas" in c:
+    if "mxfp4-16-oas" in c:   # check OAS before bare "16" to avoid prefix collision
         return "MXFP4-16-OAS"
+    if "mxfp4-16" in c:
+        return "MXFP4-16"
     if "mxfp4-mbs-s" in c:
         return "MXFP4-MBS-S"
     if "mxfp4-mbs-h" in c:

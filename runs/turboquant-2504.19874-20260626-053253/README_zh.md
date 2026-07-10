@@ -20,8 +20,7 @@
 
 
 
-## 各任务原始分数
-(none)
+
 
 ## 复算脚本(每个 config)
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT1 · TurboQuant_mse**
