@@ -374,6 +374,23 @@ def test_analysis_section_appended_after_conclusion(tmp_path):
     assert en.index("## Analysis") < en.index("## Replay script")
 
 
+def test_analysis_section_splits_by_language_markers(tmp_path):
+    from paper_reprise.report import render_reports
+    spec, ingest, grades, runs, env = _ctx()
+    text = ("shared preamble\n"
+            "<!-- en -->\nEnglish only.\n"
+            "<!-- zh -->\n仅中文。\n")
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis=text)
+    # English report: shared + en block, no Chinese leak
+    assert "English only." in en
+    assert "shared preamble" in en
+    assert "仅中文。" not in en
+    # Chinese report: shared + zh block, no English-only leak
+    assert "仅中文。" in zh
+    assert "shared preamble" in zh
+    assert "English only." not in zh
+
+
 def test_analysis_section_omitted_when_empty(tmp_path):
     spec, ingest, grades, runs, env = _ctx()
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis="")

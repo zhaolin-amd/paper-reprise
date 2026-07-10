@@ -402,19 +402,47 @@ def _conclusion(spec: Spec, grades: list[ClaimGrade], lang: str) -> str:
     return "\n".join(lines)
 
 
-def _analysis_section(analysis: str, heading: str) -> str:
+_ANALYSIS_MARKER = re.compile(r'^[ \t]*<!--[ \t]*(en|zh)[ \t]*-->[ \t]*$', re.M)
+
+
+def _analysis_for_lang(analysis: str, lang: str) -> str:
+    """Slice the language-specific part out of analysis.md.
+
+    The file may interleave language blocks with HTML-comment markers
+    `<!-- en -->` / `<!-- zh -->`; text before the first marker is shared and
+    emitted in both reports. A file with no markers is treated as shared in full
+    — backward compatible with older single-language analysis.md files."""
+    text = (analysis or "").strip()
+    if not text:
+        return ""
+    matches = list(_ANALYSIS_MARKER.finditer(text))
+    if not matches:
+        return text
+    segments = []  # (key, content) in document order; "shared" | "en" | "zh"
+    if matches[0].start() > 0:
+        segments.append(("shared", text[:matches[0].start()]))
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        segments.append((m.group(1), text[m.end():end]))
+    kept = [c.strip() for key, c in segments if key in ("shared", lang) and c.strip()]
+    return "\n\n".join(kept).strip()
+
+
+def _analysis_section(analysis: str, heading: str, lang: str) -> str:
     """Optional human-written gap analysis appended after the auto-generated Conclusion.
     Written to `analysis.md` in the run dir; never overwritten by re-renders. Empty
-    string → section omitted. The heading is bilingual: pass "## Analysis" or "## 分析"."""
-    body = (analysis or "").strip()
+    (for this `lang`) → section omitted. The heading is language-specific: pass
+    "## Analysis" (en) or "## 差距分析" (zh); see `_analysis_for_lang` for splitting."""
+    body = _analysis_for_lang(analysis, lang)
     return f"\n{heading}\n{body}\n" if body else ""
 
 
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str],
                    analysis: str = "") -> tuple[str, str]:
-    """Render bilingual reports. `analysis` (from analysis.md) is appended verbatim
-    to both reports — write it in both languages or whichever you prefer."""
+    """Render bilingual reports. `analysis` (from analysis.md) is appended after
+    each Conclusion; use `<!-- en -->` / `<!-- zh -->` markers to keep each report
+    monolingual (unmarked text is shared). See `_analysis_for_lang`."""
     repo_str = _repo_str(ingest, spec)
     env_str = _env_str(_effective_env(env, runs))
 
@@ -426,7 +454,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## 结论
 {_conclusion(spec, grades, "zh")}
-{_analysis_section(analysis, "## 差距分析")}
+{_analysis_section(analysis, "## 差距分析", "zh")}
 {_optional_section(_resources(spec, runs, "| model | config | 时长 | 峰值显存 |"), "## 资源占用(每个 config)")}
 
 {_optional_section(_raw_scores(runs), "## 各任务原始分数")}
@@ -443,7 +471,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## Conclusion
 {_conclusion(spec, grades, "en")}
-{_analysis_section(analysis, "## Analysis")}
+{_analysis_section(analysis, "## Analysis", "en")}
 {_optional_section(_resources(spec, runs, "| model | config | time | peak VRAM |"), "## Resources (per config)")}
 
 {_optional_section(_raw_scores(runs), "## Per-task raw scores")}
