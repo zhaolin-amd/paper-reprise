@@ -5,15 +5,15 @@
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
 |---|---|---|---|---|---|---|---|
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 71.66(+0.489) | MATCH | — |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 13.65(-1.50) | PARTIAL | 过程忠实但数值超容差 1.504 (>0.5) |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | 过程忠实但数值超容差 2.109 (>0.5) |
 | Qwen/Qwen3-8B | BF16 | - | acc_norm | 76.51 | 74.96(-1.55) | PARTIAL | 过程忠实但数值超容差 1.555 (>0.5) |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | 过程忠实但数值超容差 2.109 (>0.5) |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 71.66(+0.489) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | acc_norm | 74.12 | 72.46(-1.66) | PARTIAL | 过程忠实但数值超容差 1.664 (>0.5) |
 | Qwen/Qwen3-8B | BF16 | - | word_perplexity | 12.2 | 12.22(+0.0158) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | word_perplexity | 15.18 | 15.15(-0.0333) | MATCH | — |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 13.65(-1.50) | PARTIAL | 过程忠实但数值超容差 1.504 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
@@ -41,16 +41,16 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 
 
 ## 复算脚本(每个 config)
-**Qwen/Qwen3-8B · MXFP4 · MXFP4-16**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-ppl/stdout.log`
+**Qwen/Qwen3-8B · BF16**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-bf16-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-bf16-ppl/stdout.log`
 
 ```bash
-bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
+bash impl/run_eval.sh qwen3-8b-bf16-hellaswag
 ```
 
 ```bash
-bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
+bash impl/run_eval.sh qwen3-8b-bf16-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-OCP**
@@ -65,16 +65,16 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-ocp-hellaswag
 bash impl/run_eval.sh qwen3-8b-mxfp4-ocp-ppl
 ```
 
-**Qwen/Qwen3-8B · BF16**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-bf16-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-bf16-ppl/stdout.log`
+**Qwen/Qwen3-8B · MXFP4 · MXFP4-16**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-ppl/stdout.log`
 
 ```bash
-bash impl/run_eval.sh qwen3-8b-bf16-hellaswag
+bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
 ```
 
 ```bash
-bash impl/run_eval.sh qwen3-8b-bf16-ppl
+bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-16-OAS**
