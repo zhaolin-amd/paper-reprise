@@ -366,13 +366,23 @@ def test_env_order_is_hardware_to_eval():
 def test_analysis_section_appended_after_conclusion(tmp_path):
     from paper_reprise.report import render_reports
     spec, ingest, grades, runs, env = _ctx()
-    analysis = "The gap is due to inference engine mismatch (vLLM vs HF)."
-    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis=analysis)
-    # analysis appears after Conclusion, before Resources
-    assert "## Analysis\n" + analysis in en
-    assert "## 差距分析\n" + analysis in zh
+    en_text = "Engine mismatch (vLLM vs HF)."
+    zh_text = "推理引擎差异（vLLM vs HF）。"
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[],
+                            analysis=en_text, analysis_zh=zh_text)
+    assert "## Analysis\n" + en_text in en       # en gets English analysis
+    assert "## 差距分析\n" + zh_text in zh        # zh gets Chinese analysis
+    assert en_text not in zh                       # English text not in zh report
     assert en.index("## Analysis") > en.index("## Conclusion")
     assert en.index("## Analysis") < en.index("## Resources")
+
+
+def test_analysis_zh_falls_back_to_en_when_absent(tmp_path):
+    from paper_reprise.report import render_reports
+    spec, ingest, grades, runs, env = _ctx()
+    text = "Fallback text."
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis=text)
+    assert "## 差距分析\n" + text in zh   # zh falls back to the en analysis
 
 
 def test_analysis_section_omitted_when_empty(tmp_path):
