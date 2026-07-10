@@ -407,13 +407,11 @@ def _analysis_section(analysis: str, heading: str) -> str:
 
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str],
-                   analysis: str = "", analysis_zh: str = "") -> tuple[str, str]:
-    """Render bilingual reports.  `analysis` is the English gap-analysis text
-    (analysis.md); `analysis_zh` is the Chinese version (analysis_zh.md), falling
-    back to `analysis` when empty."""
+                   analysis: str = "") -> tuple[str, str]:
+    """Render bilingual reports. `analysis` (from analysis.md) is appended verbatim
+    to both reports — write it in both languages or whichever you prefer."""
     repo_str = _repo_str(ingest, spec)
     env_str = _env_str(_effective_env(env, runs))
-    _zh_analysis = analysis_zh or analysis   # prefer dedicated zh file when present
 
     zh = f"""{_title_line("复现报告", ingest.title, ingest.arxiv_id)}
 
@@ -423,7 +421,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## 结论
 {_conclusion(spec, grades, "zh")}
-{_analysis_section(_zh_analysis, "## 差距分析")}
+{_analysis_section(analysis, "## 差距分析")}
 ## 资源占用(每个 config)
 {_resources(spec, runs, "| model | config | 时长 | 峰值显存 |")}
 
