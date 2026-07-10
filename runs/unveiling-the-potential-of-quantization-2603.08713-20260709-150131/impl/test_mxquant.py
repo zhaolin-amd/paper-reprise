@@ -113,6 +113,26 @@ def test_dynamic_never_worse_than_oas_only():
     assert mse_dyn <= mse_none + 1e-9
 
 
+def test_mxfp4_16_uses_ocp_overflow_scale_not_oas():
+    # Paper 4.1: MXFP4-16 is MX/OCP-style scaling at block size 16 -> the SAME (4,8]
+    # overflow scale as MXFP4-OCP, just block 16. It is NOT the non-saturating (3,6]
+    # scale, which belongs to OAS (4.2). Regression guard for the pitfall where MXFP4-16
+    # was given the (3,6] scale and thereby reproduced the paper's OAS numbers.
+    cfg = mq.METHODS["MXFP4-16"]
+    assert cfg["ocp"] is True and cfg["ocp_block"] == 16
+    torch.manual_seed(0)
+    x = torch.randn(32, 512) * 3.0
+    x[:, ::129] *= 10.0  # sparse outliers so some blocks would overflow under (4,8]
+    mx16 = mq.fake_quant(x, mbs="none", oas=False, ocp=True, ocp_block=16)
+    oas = mq.fake_quant(x, mbs="none", oas=True)          # (3.5,7] OAS scale, block 16
+    ocp32 = mq.fake_quant(x, mbs="none", oas=False, ocp=True, ocp_block=32)
+    # MXFP4-16 must differ from OAS (the bug made them ~equal) and from block-32 OCP.
+    assert not torch.allclose(mx16, oas)
+    assert not torch.allclose(mx16, ocp32)
+    # OCP (4,8] saturates the block max; OAS avoids that -> OAS is at least as faithful.
+    assert mq.qsnr_db(x, mx16) <= mq.qsnr_db(x, oas) + 1e-6
+
+
 def test_fidelity_ordering_qsnr():
     # Paper's central fidelity claim (Fig. QSNR): OAS >= plain MXFP4, and MBS >= OAS.
     torch.manual_seed(3)
