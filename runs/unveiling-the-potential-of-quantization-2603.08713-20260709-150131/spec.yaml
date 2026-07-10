@@ -1,0 +1,249 @@
+# Scope (user-selected): reproduce Table 2 (tab:eval_qwen) on Qwen3-8B, Hellaswag column,
+# for MXFP4-16-OAS / MXFP4-MBS-S / MXFP4-MBS-H, plus the BF16 baseline (eval-protocol check).
+# Paper: "Unveiling the Potential of Quantization" (arXiv 2603.08713v1). No official repo →
+# from-scratch fake-quant reproduction (direct-cast, NO calibration, weights + activations).
+paper: "2603.08713"
+
+repo: null
+
+artifacts:
+  # ── MXFP4-OCP : block_size=32, OCP scale (maps amax to (4,8]), no OAS/MBS ──────
+  - id: qwen3-8b-mxfp4-ocp
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: MXFP4-OCP
+    quant_config:
+      wbits: 4
+      abits: 4
+      block_size: 32
+      oas: false
+      weight_mbs: none
+      activation_mbs: none
+    calib_status: none
+
+  # ── BF16 baseline (validates the Hellaswag eval protocol) ──────────────────
+  - id: qwen3-8b-bf16
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: none
+    quant_config:
+      wbits: 16
+    calib_status: none
+
+  # ── MXFP4-16-OAS : 1x16 block, E8M0 power-of-two scale + Overflow-Aware Scaling ──
+  - id: qwen3-8b-mxfp4-16-oas
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: MXFP4-16-OAS
+    quant_config:
+      wbits: 4
+      abits: 4
+      block_size: 16
+      oas: true
+      weight_mbs: none
+      activation_mbs: none
+    calib_status: none
+
+  # ── MXFP4-MBS-S : OAS + Macro-Block-Scaling (Static) on BOTH weights & activations ──
+  - id: qwen3-8b-mxfp4-mbs-s
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: MXFP4-MBS-S
+    quant_config:
+      wbits: 4
+      abits: 4
+      block_size: 16
+      macro_block_size: 128
+      oas: true
+      weight_mbs: static
+      activation_mbs: static
+    calib_status: none
+
+  # ── MXFP4-MBS-H : OAS + MBS-Dynamic (weights) + MBS-Static (activations) [paper default] ──
+  - id: qwen3-8b-mxfp4-mbs-h
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: MXFP4-MBS-H
+    quant_config:
+      wbits: 4
+      abits: 4
+      block_size: 16
+      macro_block_size: 128
+      oas: true
+      weight_mbs: dynamic
+      activation_mbs: static
+    calib_status: none
+
+claims:
+  - id: qwen3-8b-mxfp4-ocp-hellaswag
+    artifact: qwen3-8b-mxfp4-ocp
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-ocp-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 70.98
+    tolerance: 0.5
+    source: "Table 2 (tab:eval_qwen), row MXFP4-OCP, col Hellaswag"
+    hardware: null
+
+  - id: qwen3-8b-bf16-hellaswag
+    artifact: qwen3-8b-bf16
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-bf16-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 76.51
+    tolerance: 0.5
+    source: "Table 2 (tab:eval_qwen), row BF16, col Hellaswag"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-16-oas-hellaswag
+    artifact: qwen3-8b-mxfp4-16-oas
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-oas-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 73.14
+    tolerance: 0.5
+    source: "Table 2 (tab:eval_qwen), row MXFP4-16-OAS, col Hellaswag"
+    hardware: B200
+
+  - id: qwen3-8b-mxfp4-mbs-s-hellaswag
+    artifact: qwen3-8b-mxfp4-mbs-s
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-s-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 73.66
+    tolerance: 0.5
+    source: "Table 2 (tab:eval_qwen), row MXFP4-MBS-S, col Hellaswag"
+    hardware: B200
+
+  - id: qwen3-8b-mxfp4-mbs-h-hellaswag
+    artifact: qwen3-8b-mxfp4-mbs-h
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 74.12
+    tolerance: 0.5
+    source: "Table 2 (tab:eval_qwen), row MXFP4-MBS-H, col Hellaswag"
+    hardware: B200
+
+  # ── PPL claims (Appendix tab:ppl_eval, Wikitext word-level perplexity, Qwen3-8B) ──
+  - id: qwen3-8b-bf16-ppl
+    artifact: qwen3-8b-bf16
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-bf16-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 12.20
+    tolerance: 0.3
+    source: "Appendix Table (tab:ppl_eval), row BF16, col Qwen3-8B"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-ocp-ppl
+    artifact: qwen3-8b-mxfp4-ocp
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-ocp-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 15.18
+    tolerance: 0.5
+    source: "Appendix Table (tab:ppl_eval), row MXFP4-OCP, col Qwen3-8B"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-16-oas-ppl
+    artifact: qwen3-8b-mxfp4-16-oas
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-oas-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 13.65
+    tolerance: 0.5
+    source: "Appendix Table (tab:ppl_eval), row MXFP4-16-OAS, col Qwen3-8B"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-mbs-s-ppl
+    artifact: qwen3-8b-mxfp4-mbs-s
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-s-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 13.09
+    tolerance: 0.5
+    source: "Appendix Table (tab:ppl_eval), row MXFP4-MBS-S, col Qwen3-8B"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-mbs-h-ppl
+    artifact: qwen3-8b-mxfp4-mbs-h
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 13.03
+    tolerance: 0.5
+    source: "Appendix Table (tab:ppl_eval), row MXFP4-MBS-H, col Qwen3-8B"
+    hardware: null
+
+references:
+  - method: CUTLASS
+    repo_url: "https://github.com/NVIDIA/cutlass"
+    note: >-
+      MXFP4-MBS GEMM kernel built on CUTLASS 4.3.0 targeting NVIDIA Blackwell (SM100).
+      Kernels affect SPEED only; accuracy is a direct-cast fake-quant reproducible on any GPU.
