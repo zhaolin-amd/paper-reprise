@@ -136,13 +136,29 @@ def _artifact(spec: Spec, artifact_id: str):
     return next((a for a in spec.artifacts if a.id == artifact_id), None)
 
 
+def _format_tag(method: str | None) -> str:
+    """Floating-point microscaling format inferred from the method name, or "" when the
+    method is integer/none. MXFP4-16 / MXFP4-OCP -> "MXFP4"; MXFP8-* -> "MXFP8"; a bare
+    FP4/FP8 -> that. Integer or baseline methods return "" (caller falls back to INT)."""
+    m = (method or "").upper()
+    for tag in ("MXFP8", "MXFP6", "MXFP4", "FP8", "FP6", "FP4"):
+        if tag in m:      # MXFP* checked before FP* so "MXFP4" wins over its "FP4" substring
+            return tag
+    return ""
+
+
 def _config_label(a) -> str:
-    """Compact precision/config tag: 16-bit -> BF16, else INT<bits> (+ group size)."""
+    """Compact precision/config tag. 16-bit -> BF16. For sub-16-bit the tag reflects the
+    numeric *format*: MXFP4/FP4-family floating-point formats keep their name (they are
+    NOT integer quantization), everything else falls back to INT<bits> (+ group size)."""
     if not a:
         return "?"
     bits = a.quant_config.get("wbits", "?")
     if bits == 16:
         return "BF16"
+    fmt = _format_tag(a.method)
+    if fmt:
+        return fmt
     gs = a.quant_config.get("group_size")
     return f"INT{bits}" + (f" G{gs}" if gs else "")
 
