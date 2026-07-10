@@ -5,11 +5,19 @@ the paper's CUTLASS/SM100 kernels only affect SPEED, not the numbers):
 
   * FP4 (E2M1) round-to-nearest with clamp at Fmax = 6.0
   * MXFP4-OCP (baseline): block_size=32, E8M0 OCP scale (maps amax to (4,8])
-  * MXFP4 at block size 16 with an E8M0 (power-of-two) per-block scale
-    -- realized via the NVFP4 pipeline but constraining scales to powers of two
-       (paper 4.1 "Quantization Block Granularity")
+  * MXFP4-16: the SAME MX/OCP scale (maps amax to (4,8], allows overflow) but at
+    block size 16 -- the paper's "MX-style scaling at block size 16" (paper 4.1
+    "Quantization Block Granularity"), realized via the NVFP4 pipeline with the
+    scales constrained to powers of two.
   * Overflow-Aware Scaling (OAS): map block absmax to (3.5, 7] instead of (3, 6]
     (paper 4.2)
+
+  PITFALL (do not repeat): the non-saturating (3, 6] scale (SF = 2^floor(log2(6/amax)))
+  is an INGREDIENT OF OAS (paper 4.2), NOT of plain MXFP4-16. MXFP4-16 must use the
+  (4,8] overflow scale, same as OCP. If MXFP4-16 is (wrongly) given the (3,6] scale it
+  already realizes most of OAS's benefit, so it reproduces the paper's *OAS* numbers
+  (e.g. Qwen3-8B wikitext ppl ~13.65) instead of its own (~15.15), and OAS then appears
+  to add almost nothing.
   * Macro Block Scaling (MBS), 1x128 macro block, 8-bit mantissa refinement factor
     (paper 4.3):
       - Static  (MBS-S): factor from top-8 mantissa bits of 6/absmax128 (eq. 1)
@@ -114,11 +122,13 @@ def _quant_blocks16(x: torch.Tensor, oas: bool) -> torch.Tensor:
     return deq.reshape(*lead, k)
 
 
-def _quant_blocks_ocp(x: torch.Tensor) -> torch.Tensor:
-    """MXFP4-OCP: block_size=32, OCP scale (maps amax to (4,8], allows overflow)."""
+def _quant_blocks_ocp(x: torch.Tensor, block_size: int = 32) -> torch.Tensor:
+    """MX/OCP-style quant: E8M0 OCP scale (maps amax to (4,8], allows overflow) at the
+    given block size. block_size=32 -> MXFP4-OCP; block_size=16 -> MXFP4-16 (paper 4.1,
+    "MX-style scaling at block size 16")."""
     *lead, k = x.shape
-    assert k % 32 == 0, f"last dim {k} not divisible by 32"
-    xb = x.reshape(*lead, k // 32, 32)
+    assert k % block_size == 0, f"last dim {k} not divisible by {block_size}"
+    xb = x.reshape(*lead, k // block_size, block_size)
     amax = xb.abs().amax(dim=-1, keepdim=True)
     sf = _pow2_scale_ocp(amax)
     q = quant_fp4(xb * sf)
@@ -168,12 +178,13 @@ def _mbs_factor_dynamic(xr: torch.Tensor, oas: bool, n_slots: int = 16) -> torch
 
 
 def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
-               ocp: bool = False) -> torch.Tensor:
+               ocp: bool = False, ocp_block: int = 32) -> torch.Tensor:
     """Direct-cast MXFP4 fake-quant of `x` along its last dim.
 
-    ocp=True -> MXFP4-OCP: block_size=32, OCP scale (maps amax to (4,8]); mbs/oas ignored.
-    mbs (only when ocp=False):
-         "none"   -> MXFP4-16 (+OAS if oas)
+    ocp=True -> MX/OCP (4,8] overflow scale at `ocp_block` (32 = MXFP4-OCP, 16 = MXFP4-16);
+                mbs/oas ignored.
+    mbs (only when ocp=False; uses the (3,6]/OAS scale at block 16):
+         "none"   -> MXFP4-16-OAS (OAS scale)
          "static" -> + Macro Block Scaling (static)
          "dynamic"-> + Macro Block Scaling (dynamic search)
     Returns a tensor of the same shape/dtype as x.
@@ -182,7 +193,7 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
     xf = x.to(torch.float32)
 
     if ocp:
-        return _quant_blocks_ocp(xf).to(orig_dtype)
+        return _quant_blocks_ocp(xf, ocp_block).to(orig_dtype)
 
     if mbs == "none":
         return _quant_blocks16(xf, oas).to(orig_dtype)
@@ -207,8 +218,10 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
 # All rows quantize BOTH weights and activations (paper Setups).
 # ocp=True -> OCP path (block_size=32, OCP scale); ocp=False -> enhanced path (block_size=16).
 METHODS = {
-    "MXFP4-OCP":    {"weight_mbs": "none", "act_mbs": "none", "oas": False, "ocp": True},
-    "MXFP4-16":     {"weight_mbs": "none", "act_mbs": "none", "oas": False, "ocp": False},
+    "MXFP4-OCP":    {"weight_mbs": "none", "act_mbs": "none", "oas": False, "ocp": True,  "ocp_block": 32},
+    # MXFP4-16 = MX/OCP (4,8] overflow scale at block 16 (paper 4.1). It uses the SAME
+    # scale as OCP, NOT the (3,6]/OAS scale — see the PITFALL note in the module docstring.
+    "MXFP4-16":     {"weight_mbs": "none", "act_mbs": "none", "oas": False, "ocp": True,  "ocp_block": 16},
     "MXFP4-16-OAS": {"weight_mbs": "none", "act_mbs": "none", "oas": True,  "ocp": False},
     "MXFP4-MBS-S":  {"weight_mbs": "static",  "act_mbs": "static",  "oas": True, "ocp": False},
     # MBS-Hybrid: Dynamic for weights, Static for activations (paper default).
