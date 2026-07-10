@@ -302,6 +302,11 @@ def _fmt_minutes(m: float | None) -> str:
     return f"{m / 60:.1f} h"
 
 
+def _optional_section(body: str, heading: str) -> str:
+    """Render `## heading\nbody` only when body is non-empty; otherwise return ''."""
+    return f"\n{heading}\n{body.strip()}\n" if body and body.strip() else ""
+
+
 def _resources(spec: Spec, runs: list[RunResult], header: str) -> str:
     """Per-claim cost: wall-clock time and peak GPU memory, parsed from each run's log.
     Omitted rows when a claim produced no log (e.g. BLOCKED before running)."""
@@ -327,7 +332,7 @@ def _resources(spec: Spec, runs: list[RunResult], header: str) -> str:
         model = _display_model(a.base_model) if a else c.artifact
         vram_s = f"{vram:.1f} GB" if vram is not None else "—"
         rows.append(f"| {model} | {_config_label(a)} | {_fmt_minutes(mins)} | {vram_s} |")
-    return "\n".join(rows) if any_row else "(none)"
+    return "\n".join(rows) if any_row else ""
 
 
 def _conclusion(spec: Spec, grades: list[ClaimGrade], lang: str) -> str:
@@ -422,8 +427,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 ## 结论
 {_conclusion(spec, grades, "zh")}
 {_analysis_section(analysis, "## 差距分析")}
-## 资源占用(每个 config)
-{_resources(spec, runs, "| model | config | 时长 | 峰值显存 |")}
+{_optional_section(_resources(spec, runs, "| model | config | 时长 | 峰值显存 |"), "## 资源占用(每个 config)")}
 
 ## 各任务原始分数
 {_raw_scores(runs)}
@@ -441,8 +445,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 ## Conclusion
 {_conclusion(spec, grades, "en")}
 {_analysis_section(analysis, "## Analysis")}
-## Resources (per config)
-{_resources(spec, runs, "| model | config | time | peak VRAM |")}
+{_optional_section(_resources(spec, runs, "| model | config | time | peak VRAM |"), "## Resources (per config)")}
 
 ## Per-task raw scores
 {_raw_scores(runs)}

@@ -16,6 +16,7 @@
 - 共 6 个 claim:MATCH 0 · PARTIAL 6 · FAIL 0 · BLOCKED 0。
 - 实测相对论文**一致偏高**(Δ +1.15~+2.39),更像系统性的评测/环境偏移(如 lm-eval/算法库版本差异),而非逐配置噪声。
 
+
 ## 资源占用(每个 config)
 | model | config | 时长 | 峰值显存 |
 |---|---|---|---|
@@ -25,6 +26,7 @@
 | meta-llama/Llama-2-7b-hf | BF16 | 7.0 min | — |
 | meta-llama/Llama-2-7b-hf | INT4 G128 | 7.1 min | 32.8 GB |
 | meta-llama/Llama-2-7b-hf | INT2 G128 | 7.2 min | 32.8 GB |
+
 
 ## 各任务原始分数
 **mistral-7b-fp16-baseline**

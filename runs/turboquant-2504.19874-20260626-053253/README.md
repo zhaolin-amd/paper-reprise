@@ -18,8 +18,7 @@
 ## Conclusion
 - 10 claims: MATCH 10 · PARTIAL 0 · FAIL 0 · BLOCKED 0.
 
-## Resources (per config)
-(none)
+
 
 ## Per-task raw scores
 (none)

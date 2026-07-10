@@ -371,7 +371,7 @@ def test_analysis_section_appended_after_conclusion(tmp_path):
     assert "## Analysis\n" + text in en
     assert "## 差距分析\n" + text in zh   # same text in both (one file, both reports)
     assert en.index("## Analysis") > en.index("## Conclusion")
-    assert en.index("## Analysis") < en.index("## Resources")
+    assert en.index("## Analysis") < en.index("## Replay script")
 
 
 def test_analysis_section_omitted_when_empty(tmp_path):
@@ -379,6 +379,14 @@ def test_analysis_section_omitted_when_empty(tmp_path):
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis="")
     assert "## Analysis" not in en
     assert "## 差距分析" not in zh
+
+
+def test_resources_section_omitted_when_no_time_or_vram(tmp_path):
+    # When no claim has time/VRAM data, the Resources section should not appear at all.
+    spec, ingest, grades, runs, env = _ctx()
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    assert "## Resources" not in en
+    assert "## 资源占用" not in zh
 
 
 def test_display_model_strips_local_snapshot_path():

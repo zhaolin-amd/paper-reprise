@@ -16,6 +16,7 @@
 - 6 claims: MATCH 0 · PARTIAL 6 · FAIL 0 · BLOCKED 0.
 - Measured is **consistently above** the paper (Δ +1.15…+2.39) — a systematic eval/setup offset (e.g. lm-eval/library version drift), not per-config noise.
 
+
 ## Resources (per config)
 | model | config | time | peak VRAM |
 |---|---|---|---|
@@ -25,6 +26,7 @@
 | meta-llama/Llama-2-7b-hf | BF16 | 7.0 min | — |
 | meta-llama/Llama-2-7b-hf | INT4 G128 | 7.1 min | 32.8 GB |
 | meta-llama/Llama-2-7b-hf | INT2 G128 | 7.2 min | 32.8 GB |
+
 
 ## Per-task raw scores
 **mistral-7b-fp16-baseline**
