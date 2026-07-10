@@ -83,11 +83,12 @@ artifacts:
     calib_status: none
 
 claims:
-  - id: qwen3-8b-mxfp4-16-hellaswag
-    artifact: qwen3-8b-mxfp4-16
+  # ── Accuracy claims (Table 2 tab:eval_qwen, Hellaswag acc_norm) in paper row order ──
+  - id: qwen3-8b-bf16-hellaswag
+    artifact: qwen3-8b-bf16
     eval_protocol:
       runner: cited-standard
-      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
+      command: bash impl/run_eval.sh qwen3-8b-bf16-hellaswag
       metric: acc_norm
       dataset: hellaswag
       split: validation
@@ -95,26 +96,9 @@ claims:
       stride: null
       few_shot: 0
       extra_args: null
-    expected: 71.17
+    expected: 76.51
     tolerance: 0.5
-    source: "Table 2 (tab:eval_qwen), row MXFP4-16, col Hellaswag"
-    hardware: null
-
-  - id: qwen3-8b-mxfp4-16-ppl
-    artifact: qwen3-8b-mxfp4-16
-    eval_protocol:
-      runner: cited-standard
-      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
-      metric: word_perplexity
-      dataset: wikitext
-      split: test
-      seqlen: null
-      stride: null
-      few_shot: 0
-      extra_args: null
-    expected: 15.15
-    tolerance: 0.5
-    source: "Appendix Table (tab:ppl_eval), row MXFP4-16, col Qwen3-8B"
+    source: "Table 2 (tab:eval_qwen), row BF16, col Hellaswag"
     hardware: null
 
   - id: qwen3-8b-mxfp4-ocp-hellaswag
@@ -134,11 +118,11 @@ claims:
     source: "Table 2 (tab:eval_qwen), row MXFP4-OCP, col Hellaswag"
     hardware: null
 
-  - id: qwen3-8b-bf16-hellaswag
-    artifact: qwen3-8b-bf16
+  - id: qwen3-8b-mxfp4-16-hellaswag
+    artifact: qwen3-8b-mxfp4-16
     eval_protocol:
       runner: cited-standard
-      command: bash impl/run_eval.sh qwen3-8b-bf16-hellaswag
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
       metric: acc_norm
       dataset: hellaswag
       split: validation
@@ -146,9 +130,9 @@ claims:
       stride: null
       few_shot: 0
       extra_args: null
-    expected: 76.51
+    expected: 71.17
     tolerance: 0.5
-    source: "Table 2 (tab:eval_qwen), row BF16, col Hellaswag"
+    source: "Table 2 (tab:eval_qwen), row MXFP4-16, col Hellaswag"
     hardware: null
 
   - id: qwen3-8b-mxfp4-16-oas-hellaswag
@@ -202,7 +186,7 @@ claims:
     source: "Table 2 (tab:eval_qwen), row MXFP4-MBS-H, col Hellaswag"
     hardware: B200
 
-  # ── PPL claims (Appendix tab:ppl_eval, Wikitext word-level perplexity, Qwen3-8B) ──
+  # ── PPL claims (Appendix tab:ppl_eval, Wikitext word-level perplexity, Qwen3-8B) in paper row order ──
   - id: qwen3-8b-bf16-ppl
     artifact: qwen3-8b-bf16
     eval_protocol:
@@ -235,6 +219,23 @@ claims:
     expected: 15.18
     tolerance: 0.5
     source: "Appendix Table (tab:ppl_eval), row MXFP4-OCP, col Qwen3-8B"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-16-ppl
+    artifact: qwen3-8b-mxfp4-16
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 15.15
+    tolerance: 0.5
+    source: "Appendix Table (tab:ppl_eval), row MXFP4-16, col Qwen3-8B"
     hardware: null
 
   - id: qwen3-8b-mxfp4-16-oas-ppl
