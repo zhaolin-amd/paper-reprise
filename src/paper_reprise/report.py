@@ -11,11 +11,36 @@ from collections import Counter
 from pathlib import Path
 
 from paper_reprise.models import ClaimGrade, IngestInfo, RunResult, Spec
+from paper_reprise.modelpaths import model_base
 from paper_reprise.parsers import (
     extract_results_table,
     parse_peak_vram_gb,
     parse_runtime_minutes,
 )
+
+
+def _display_model(base_model: str) -> str:
+    """Convert a local snapshot path back to HF-style `org/name` for display.
+    `/group/.../Qwen/Qwen3-8B` → `Qwen/Qwen3-8B`. A genuine HF id is returned as-is.
+    Strips the shared model cache prefix (model_base()) when it matches; also strips
+    /scratch paths from resolve_model's scratch fallback."""
+    p = Path(base_model)
+    if not p.is_absolute():
+        return base_model          # already an HF id like "Qwen/Qwen3-8B"
+    for base in (model_base(),):
+        try:
+            rel = p.relative_to(base)
+            parts = rel.parts
+            if len(parts) >= 2:
+                return f"{parts[0]}/{parts[1]}"
+        except ValueError:
+            pass
+    # scratch fallback: /scratch/<user>/pretrained_models/<org>/<name>
+    parts = p.parts
+    for i, part in enumerate(parts):
+        if part == "pretrained_models" and i + 2 < len(parts):
+            return f"{parts[i+1]}/{parts[i+2]}"
+    return base_model              # unknown layout — keep as-is
 
 
 def _repo_str(ingest: IngestInfo, spec: Spec | None = None) -> str:
@@ -173,7 +198,7 @@ def _table(spec, grades, header, lang="en"):
         else:
             reason = g.reason
         a = _artifact(spec, c.artifact)
-        model = a.base_model if a else c.artifact
+        model = _display_model(a.base_model) if a else c.artifact
         lines.append(f"| {model} | {_config_label(a)} | {_algorithm_label(a)} | "
                      f"{c.eval_protocol.metric} | {c.expected:g} | {measured} | "
                      f"{verdict} | {reason} |")
@@ -203,7 +228,7 @@ def _replay(spec, runs: list[RunResult]) -> str:
     order: list = []
     for r in runs:
         a = art_by_claim.get(r.claim_id)
-        model = a.base_model if a else r.claim_id
+        model = _display_model(a.base_model) if a else r.claim_id
         key = (model, _config_label(a), _algorithm_label(a))
         if key not in groups:
             groups[key] = []
@@ -299,7 +324,7 @@ def _resources(spec: Spec, runs: list[RunResult], header: str) -> str:
             continue
         any_row = True
         a = _artifact(spec, c.artifact)
-        model = a.base_model if a else c.artifact
+        model = _display_model(a.base_model) if a else c.artifact
         vram_s = f"{vram:.1f} GB" if vram is not None else "—"
         rows.append(f"| {model} | {_config_label(a)} | {_fmt_minutes(mins)} | {vram_s} |")
     return "\n".join(rows) if any_row else "(none)"
