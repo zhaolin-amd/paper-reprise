@@ -208,6 +208,7 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
 # ocp=True -> OCP path (block_size=32, OCP scale); ocp=False -> enhanced path (block_size=16).
 METHODS = {
     "MXFP4-OCP":    {"weight_mbs": "none", "act_mbs": "none", "oas": False, "ocp": True},
+    "MXFP4-16":     {"weight_mbs": "none", "act_mbs": "none", "oas": False, "ocp": False},
     "MXFP4-16-OAS": {"weight_mbs": "none", "act_mbs": "none", "oas": True,  "ocp": False},
     "MXFP4-MBS-S":  {"weight_mbs": "static",  "act_mbs": "static",  "oas": True, "ocp": False},
     # MBS-Hybrid: Dynamic for weights, Static for activations (paper default).

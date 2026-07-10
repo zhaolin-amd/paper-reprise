@@ -402,3 +402,11 @@ def test_display_model_strips_local_snapshot_path():
     # scratch fallback
     assert _display_model("/scratch/user/pretrained_models/mistralai/Mistral-7B") == \
         "mistralai/Mistral-7B"
+
+
+def test_raw_scores_section_omitted_when_empty():
+    spec, ingest, grades, runs, env = _ctx()
+    # runs with no real stdout.log → raw scores table is empty
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[])
+    assert "## Per-task raw scores" not in en
+    assert "## 各任务原始分数" not in zh
