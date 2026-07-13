@@ -8,6 +8,8 @@
 | Qwen/Qwen3-8B | BF16 | - | acc_norm | 76.51 | 74.96(-1.55) | PARTIAL | 过程忠实但数值超容差 1.555 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | 过程忠实但数值超容差 2.109 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | 70.98 | 70.95(-0.028) | MATCH | — |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | 73.14 | 71.06(-2.08) | PARTIAL | 过程忠实但数值超容差 2.079 (>1.0) |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | 74.12 | 72.22(-1.90) | PARTIAL | 过程忠实但数值超容差 1.903 (>1.0) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | 过程忠实但数值超容差 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
@@ -15,14 +17,16 @@
 | Qwen/Qwen3-8B | BF16 | - | word_perplexity | 12.2 | 12.22(+0.0158) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | word_perplexity | 15.18 | 15.15(-0.0333) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | 15.18 | 13.89(-1.29) | PARTIAL | 过程忠实但数值超容差 1.29 (>1.0) |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | 13.65 | 13.92(+0.2711) | MATCH | — |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | 13.03 | 13.32(+0.2945) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
 
 ## 结论
-- 共 14 个 claim:MATCH 7 · PARTIAL 7 · FAIL 0 · BLOCKED 0。
-- FP 基线与论文吻合,说明**评测协议可信**;因此 6 个超容差的量化配置(最大偏差 -2.11)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
+- 共 18 个 claim:MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 0。
+- FP 基线与论文吻合,说明**评测协议可信**;因此 8 个超容差的量化配置(最大偏差 -2.11)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
 
 ## 差距分析
 **acc_norm PARTIAL 的根因：推理引擎差异**
@@ -79,6 +83,30 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-quark-hellaswag
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-quark-ppl
+```
+
+**Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark-OAS**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-oas-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-oas-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-oas-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-oas-ppl
+```
+
+**Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark-MBS-H**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-16**
