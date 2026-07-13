@@ -26,3 +26,15 @@ When lm-eval receives an already-instantiated model it skips several initializat
 
 Quark's even scale eliminates overflow for amax ∈ [7, 8) within each block — the root cause of OCP baseline saturation. This accounts for its large gain over plain OCP (+2.08 acc, −1.26 PPL). However, once OAS is applied (which independently prevents overflow via the (3.5,7] scale mapping), the finer block granularity of block=16 becomes the dominant factor: smaller blocks give more precise per-block scale → block=16 slightly outperforms block=32 for both acc and PPL.
 
+
+**Scale mapping interval comparison (per-block granularity)**:
+
+| Method | Block size | Scale format | Per-block mapped interval | Overflow | Notes |
+|---|---|---|---|---|---|
+| OCP | 32 | E8M0 | [4, 8) | 50% | ref=8 > Fmax=6 |
+| OAS | 16 | E8M0 | (3.5, 7] | 25% | ref=7 shrinks overflow |
+| OAS+MBS | 16 (OAS) + 128 (MBS) | E8M0 + 8-bit factor | (3.5, 7] (same as OAS) | 25% (better distribution) | MBS aligns macro-block max to ≈6, but interval unchanged |
+| Quark (even) | 32 | E8M0 + even rounding | [3.5, 7) | 25% | even rounding eliminates [7,8) overflow |
+| **NVFP4** | **16** | **E4M3 FP8** | **≈[5.625, 6.375]** | **Negligible** | **E4M3 per block, uniform ±0.375** |
+
+OAS and Quark each reduce overflow from 50% to 25% via different paths. OAS+MBS improves the distribution within (3.5, 7] (macro-block max maps to ≈6) but does not narrow the per-block OAS interval. NVFP4's E4M3 scale provides uniform ±0.375 precision independently for every 16-element block — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
