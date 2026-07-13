@@ -75,7 +75,8 @@ class QuantLinear(nn.Module):
     """A drop-in for nn.Linear: pre-quantized weight + per-forward activation quant."""
 
     def __init__(self, lin: nn.Linear, weight_mbs: str, act_mbs: str,
-                 oas: bool, ocp: bool = False, ocp_block: int = 32):
+                 oas: bool, ocp: bool = False, ocp_block: int = 32,
+                 oas_block: int = 16):
         super().__init__()
         self.in_features = lin.in_features
         self.out_features = lin.out_features
@@ -83,10 +84,12 @@ class QuantLinear(nn.Module):
         self.oas = oas
         self.ocp = ocp
         self.ocp_block = ocp_block
+        self.oas_block = oas_block
         with torch.no_grad():
             wq = fake_quant(lin.weight.data.to(torch.float32),
                             mbs=weight_mbs, oas=oas, ocp=ocp,
-                            ocp_block=ocp_block).to(lin.weight.dtype)
+                            ocp_block=ocp_block,
+                            oas_block=oas_block).to(lin.weight.dtype)
         self.weight = nn.Parameter(wq, requires_grad=False)
         if lin.bias is not None:
             self.bias = nn.Parameter(lin.bias.data.clone(), requires_grad=False)
@@ -95,7 +98,7 @@ class QuantLinear(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         xq = fake_quant(x, mbs=self.act_mbs, oas=self.oas, ocp=self.ocp,
-                        ocp_block=self.ocp_block)
+                        ocp_block=self.ocp_block, oas_block=self.oas_block)
         return F.linear(xq, self.weight, self.bias)
 
 
@@ -127,7 +130,8 @@ def quantize_model_(model: nn.Module, method: str) -> int:
             ql = QuantLinear(lin, weight_mbs=cfg["weight_mbs"],
                              act_mbs=cfg["act_mbs"], oas=cfg["oas"],
                              ocp=cfg.get("ocp", False),
-                             ocp_block=cfg.get("ocp_block", 32))
+                             ocp_block=cfg.get("ocp_block", 32),
+                             oas_block=cfg.get("oas_block", 16))
             ql = ql.to(next(lin.parameters()).device)
             setattr(parent, child, ql)
     return len(targets)
