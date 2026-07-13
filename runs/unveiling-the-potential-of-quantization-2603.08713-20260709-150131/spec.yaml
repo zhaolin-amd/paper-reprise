@@ -28,6 +28,19 @@ artifacts:
       wbits: 16
     calib_status: none
 
+  # ── MXFP4-Quark : Quark's qdq_mxfp4, block_size=32, even rounding ──────────────
+  # Differs from MXFP4-OCP in rounding mode: Quark uses round-half-to-even instead
+  # of round-to-nearest-up for tie-breaking. Imports quark.torch.kernel.mx directly.
+  - id: qwen3-8b-mxfp4-quark
+    base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+    method: MXFP4-Quark
+    quant_config:
+      wbits: 4
+      abits: 4
+      block_size: 32
+      rounding: even
+    calib_status: none
+
   # ── MXFP4-16 : 1x16 block, E8M0 power-of-two scale, NO OAS ──────────────────────
   - id: qwen3-8b-mxfp4-16
     base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
@@ -83,6 +96,41 @@ artifacts:
     calib_status: none
 
 claims:
+  # ── MXFP4-Quark comparison (not in paper; baseline comparison) ───────────────────
+  - id: qwen3-8b-mxfp4-quark-hellaswag
+    artifact: qwen3-8b-mxfp4-quark
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-hellaswag
+      metric: acc_norm
+      dataset: hellaswag
+      split: validation
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 70.98
+    tolerance: 1.0
+    source: "Baseline comparison — Quark MXFP4 (even rounding, block_size=32) vs paper MXFP4-OCP"
+    hardware: null
+
+  - id: qwen3-8b-mxfp4-quark-ppl
+    artifact: qwen3-8b-mxfp4-quark
+    eval_protocol:
+      runner: cited-standard
+      command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-ppl
+      metric: word_perplexity
+      dataset: wikitext
+      split: test
+      seqlen: null
+      stride: null
+      few_shot: 0
+      extra_args: null
+    expected: 15.18
+    tolerance: 1.0
+    source: "Baseline comparison — Quark MXFP4 (even rounding) vs paper MXFP4-OCP PPL 15.18"
+    hardware: null
+
   # ── Accuracy claims (Table 2 tab:eval_qwen, Hellaswag acc_norm) in paper row order ──
   - id: qwen3-8b-bf16-hellaswag
     artifact: qwen3-8b-bf16
