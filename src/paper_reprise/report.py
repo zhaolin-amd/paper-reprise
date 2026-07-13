@@ -205,18 +205,24 @@ def _table(spec, grades, header, lang="en"):
     lines = [header, "|---|---|---|---|---|---|---|---|"]
     for c in spec.claims:
         g = runs_by.get(c.id)
-        measured = _measured_cell(g, c.expected)
-        verdict = g.verdict if g else "BLOCKED"
-        if not g:
+        no_ref = getattr(c, "no_paper_ref", False)
+        paper_col = "—" if no_ref else f"{c.expected:g}"
+        measured = (_measured_cell(g, c.expected) if not no_ref
+                    else ("—" if not g or g.measured is None
+                          else _fmt_num(g.measured)))
+        if no_ref:
+            verdict = "—"
+            reason = "参考对比，无论文数值" if lang == "zh" else "comparison only, no paper value"
+        elif not g:
+            verdict = "BLOCKED"
             reason = "无评分" if lang == "zh" else "no grade"
-        elif lang == "zh":
-            reason = g.reason_zh or g.reason
         else:
-            reason = g.reason
+            verdict = g.verdict
+            reason = (g.reason_zh or g.reason) if lang == "zh" else g.reason
         a = _artifact(spec, c.artifact)
         model = _display_model(a.base_model) if a else c.artifact
         lines.append(f"| {model} | {_config_label(a)} | {_algorithm_label(a)} | "
-                     f"{c.eval_protocol.metric} | {c.expected:g} | {measured} | "
+                     f"{c.eval_protocol.metric} | {paper_col} | {measured} | "
                      f"{verdict} | {reason} |")
     return "\n".join(lines)
 
