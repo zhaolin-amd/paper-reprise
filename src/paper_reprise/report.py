@@ -468,12 +468,19 @@ def _analysis_section(analysis: str, heading: str, lang: str) -> str:
 
 def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
                    runs: list[RunResult], env: dict, patches: list[str],
-                   analysis: str = "") -> tuple[str, str]:
-    """Render bilingual reports. `analysis` (from analysis.md) is appended after
-    each Conclusion; use `<!-- en -->` / `<!-- zh -->` markers to keep each report
-    monolingual (unmarked text is shared). See `_analysis_for_lang`."""
+                   analysis: str = "",
+                   analysis_en: str = "", analysis_zh: str = "") -> tuple[str, str]:
+    """Render bilingual reports.
+
+    Analysis content: prefer `analysis_en` / `analysis_zh` (separate files per language);
+    fall back to `analysis` with `<!-- en -->` / `<!-- zh -->` markers for backward compat.
+    """
     repo_str = _repo_str(ingest, spec)
     env_str = _env_str(_effective_env(env, runs))
+    # Resolve analysis text for each language: explicit per-language file wins;
+    # fall back to the single `analysis` string (marker-split or shared).
+    _zh_body = analysis_zh or _analysis_for_lang(analysis, "zh")
+    _en_body = analysis_en or _analysis_for_lang(analysis, "en")
 
     zh = f"""{_title_line("复现报告", ingest.title, ingest.arxiv_id)}
 
@@ -483,7 +490,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## 结论
 {_conclusion(spec, grades, "zh")}
-{_analysis_section(analysis, "## 差距分析", "zh")}
+{_analysis_section(_zh_body, "## 差距分析", "zh")}
 {_optional_section(_resources(spec, runs, "| model | config | 时长 | 峰值显存 |"), "## 资源占用(每个 config)")}
 
 {_optional_section(_raw_scores(runs), "## 各任务原始分数")}
@@ -500,7 +507,7 @@ def render_reports(spec: Spec, ingest: IngestInfo, grades: list[ClaimGrade],
 
 ## Conclusion
 {_conclusion(spec, grades, "en")}
-{_analysis_section(analysis, "## Analysis", "en")}
+{_analysis_section(_en_body, "## Analysis", "en")}
 {_optional_section(_resources(spec, runs, "| model | config | time | peak VRAM |"), "## Resources (per config)")}
 
 {_optional_section(_raw_scores(runs), "## Per-task raw scores")}
