@@ -281,15 +281,18 @@ def report(run_dir: str) -> None:
             env = _json.loads(snap.read_text())
         except (OSError, ValueError):
             env = {}
-    # Load human-written gap analysis if present (analysis.md, never overwritten).
-    analysis_path = rd.root / "analysis.md"
-    analysis = ""
-    if analysis_path.exists():
+    # Load human-written gap analysis if present.
+    # analysis_en.md → English report; analysis_zh.md → Chinese report.
+    # Absent files silently produce no analysis section.
+    def _read_opt(p) -> str:
         try:
-            analysis = analysis_path.read_text()
+            return p.read_text() if p.exists() else ""
         except OSError:
-            analysis = ""
-    zh, en = render_reports(spec, ingest, grades, runs, env=env, patches=[], analysis=analysis)
+            return ""
+    analysis_en = _read_opt(rd.root / "analysis_en.md")
+    analysis_zh = _read_opt(rd.root / "analysis_zh.md")
+    zh, en = render_reports(spec, ingest, grades, runs, env=env, patches=[],
+                            analysis_en=analysis_en, analysis_zh=analysis_zh)
     (rd.root / "README_zh.md").write_text(zh)
     (rd.root / "README.md").write_text(en)
     click.echo(f"Re-rendered: {rd.root}/README.md")

@@ -407,6 +407,15 @@ def test_analysis_section_splits_by_language_markers(tmp_path):
     assert "English only." not in zh
 
 
+def test_analysis_separate_en_zh_files(tmp_path):
+    # analysis_en.md and analysis_zh.md: each language gets its own content.
+    spec, ingest, grades, runs, env = _ctx()
+    zh, en = render_reports(spec, ingest, grades, runs, env, patches=[],
+                            analysis_en="English analysis.", analysis_zh="中文分析。")
+    assert "English analysis." in en and "中文分析。" not in en
+    assert "中文分析。" in zh and "English analysis." not in zh
+
+
 def test_analysis_section_omitted_when_empty(tmp_path):
     spec, ingest, grades, runs, env = _ctx()
     zh, en = render_reports(spec, ingest, grades, runs, env, patches=[], analysis="")
