@@ -37,4 +37,8 @@ Quark's even scale eliminates overflow for amax ∈ [7, 8) within each block —
 | Quark (even) | 32 | E8M0 + even rounding | [3.5, 7) | 25% | even rounding eliminates [7,8) overflow |
 | **NVFP4** | **16** | **E4M3 FP8** | **≈[5.625, 6.375]** | **Negligible** | **E4M3 per block, uniform ±0.375** |
 
-OAS and Quark each reduce overflow from 50% to 25% via different paths. OAS+MBS improves the distribution within (3.5, 7] (macro-block max maps to ≈6) but does not narrow the per-block OAS interval. NVFP4's E4M3 scale provides uniform ±0.375 precision independently for every 16-element block — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
+- **OCP**: E8M0, maps to [4, 8); Fmax=6 falls mid-interval → 50% overflow.
+- **OAS**: changes reference from 8 to 7, narrowing to (3.5, 7]; overflow shrinks to (6, 7) → 25%.
+- **OAS+MBS**: per-16-element-block OAS interval unchanged at (3.5, 7]; MBS adds a 128-element macro-block factor that pushes the macro-block max to ≈6, improving distribution but **not** narrowing the block interval → still 25% overflow.
+- **Quark (even)**: even rounding of amax eliminates overflow for amax ∈ [7, 8), giving [3.5, 7) → 25%; same rate as OAS but different mechanism.
+- **NVFP4**: E4M3 FP8 (non-power-of-2) computes a precise scale for **every** 16-element block independently, with uniform ±0.375 precision — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
