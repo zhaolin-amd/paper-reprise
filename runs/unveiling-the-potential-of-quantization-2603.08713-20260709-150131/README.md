@@ -14,6 +14,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | process faithful but value off tolerance 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | process faithful but value off tolerance 1.145 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | acc_norm | 74.12 | 72.46(-1.66) | PARTIAL | process faithful but value off tolerance 1.664 (>0.5) |
+| Qwen/Qwen3-8B | FP4 | NVFP4 | acc_norm | 74.66 | — | — | paper reference, not reproduced |
 | Qwen/Qwen3-8B | BF16 | - | word_perplexity | 12.2 | 12.22(+0.0158) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | word_perplexity | 15.18 | 15.15(-0.0333) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | comparison only, no paper value |
@@ -23,10 +24,12 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
+| Qwen/Qwen3-8B | FP4 | NVFP4 | word_perplexity | 12.69 | — | — | paper reference, not reproduced |
 
 ## Conclusion
-- 18 claims: MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 0.
+- 20 claims: MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 2.
 - The FP baseline matches the paper, so the **eval protocol is validated**; the 8 quantized config(s) outside tolerance (worst -2.11) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
+- 2 BLOCKED produced no comparable value (see each reason) — not 'failed to reproduce'.
 
 ## Analysis
 **Root cause of acc_norm PARTIAL: inference engine mismatch**
@@ -168,4 +171,16 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-hellaswag
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-ppl
+```
+
+**Qwen/Qwen3-8B · FP4 · NVFP4**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-nvfp4-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-nvfp4-ppl
 ```

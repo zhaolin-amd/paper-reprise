@@ -14,6 +14,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | acc_norm | 74.12 | 72.46(-1.66) | PARTIAL | 过程忠实但数值超容差 1.664 (>0.5) |
+| Qwen/Qwen3-8B | FP4 | NVFP4 | acc_norm | 74.66 | — | — | 论文参考值，未复现 |
 | Qwen/Qwen3-8B | BF16 | - | word_perplexity | 12.2 | 12.22(+0.0158) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | word_perplexity | 15.18 | 15.15(-0.0333) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | 参考对比，无论文数值 |
@@ -23,10 +24,12 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
+| Qwen/Qwen3-8B | FP4 | NVFP4 | word_perplexity | 12.69 | — | — | 论文参考值，未复现 |
 
 ## 结论
-- 共 18 个 claim:MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 0。
+- 共 20 个 claim:MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 2。
 - FP 基线与论文吻合,说明**评测协议可信**;因此 8 个超容差的量化配置(最大偏差 -2.11)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
+- 2 个 BLOCKED 未产出可比数值(见各自 reason),非「未复现」。
 
 ## 差距分析
 **acc_norm PARTIAL 的根因：推理引擎差异**
@@ -168,4 +171,16 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-hellaswag
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-ppl
+```
+
+**Qwen/Qwen3-8B · FP4 · NVFP4**
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-hellaswag/stdout.log`
+`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-nvfp4-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-nvfp4-ppl
 ```

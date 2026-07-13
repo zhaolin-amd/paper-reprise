@@ -94,7 +94,8 @@ class Claim(BaseModel):
     tolerance: float
     source: str                      # e.g. "Table 3, row 2, col W4"
     hardware: Optional[str] = None   # null for accuracy claims; pinned for efficiency claims
-    no_paper_ref: bool = False       # True → paper column shows "-", no diff annotation
+    no_paper_ref: bool = False       # True → paper column shows "—", no diff annotation
+    paper_only: bool = False         # True → paper value shown, measured "—" (not reproduced)
 
 
 class RepoInfo(BaseModel):

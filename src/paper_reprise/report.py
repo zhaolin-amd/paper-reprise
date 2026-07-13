@@ -206,13 +206,20 @@ def _table(spec, grades, header, lang="en"):
     for c in spec.claims:
         g = runs_by.get(c.id)
         no_ref = getattr(c, "no_paper_ref", False)
+        paper_ref_only = getattr(c, "paper_only", False)
         paper_col = "—" if no_ref else f"{c.expected:g}"
-        measured = (_measured_cell(g, c.expected) if not no_ref
-                    else ("—" if not g or g.measured is None
-                          else _fmt_num(g.measured)))
-        if no_ref:
+        if paper_ref_only:
+            measured = "—"
+        elif not no_ref:
+            measured = _measured_cell(g, c.expected)
+        else:
+            measured = ("—" if not g or g.measured is None else _fmt_num(g.measured))
+        if no_ref or paper_ref_only:
             verdict = "—"
-            reason = "参考对比，无论文数值" if lang == "zh" else "comparison only, no paper value"
+            if no_ref:
+                reason = "参考对比，无论文数值" if lang == "zh" else "comparison only, no paper value"
+            else:
+                reason = "论文参考值，未复现" if lang == "zh" else "paper reference, not reproduced"
         elif not g:
             verdict = "BLOCKED"
             reason = "无评分" if lang == "zh" else "no grade"
