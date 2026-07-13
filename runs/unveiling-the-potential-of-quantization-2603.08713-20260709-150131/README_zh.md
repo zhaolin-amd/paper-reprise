@@ -7,18 +7,18 @@
 |---|---|---|---|---|---|---|---|
 | Qwen/Qwen3-8B | BF16 | - | acc_norm | 76.51 | 74.96(-1.55) | PARTIAL | 过程忠实但数值超容差 1.555 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | 过程忠实但数值超容差 2.109 (>0.5) |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | 70.98 | 70.95(-0.028) | MATCH | — |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | 73.14 | 71.06(-2.08) | PARTIAL | 过程忠实但数值超容差 2.079 (>1.0) |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | 74.12 | 72.22(-1.90) | PARTIAL | 过程忠实但数值超容差 1.903 (>1.0) |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | — | 70.95 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 72.22 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | 过程忠实但数值超容差 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | acc_norm | 74.12 | 72.46(-1.66) | PARTIAL | 过程忠实但数值超容差 1.664 (>0.5) |
 | Qwen/Qwen3-8B | BF16 | - | word_perplexity | 12.2 | 12.22(+0.0158) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | word_perplexity | 15.18 | 15.15(-0.0333) | MATCH | — |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | 15.18 | 13.89(-1.29) | PARTIAL | 过程忠实但数值超容差 1.29 (>1.0) |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | 13.65 | 13.92(+0.2711) | MATCH | — |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | 13.03 | 13.32(+0.2945) | MATCH | — |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.32 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |

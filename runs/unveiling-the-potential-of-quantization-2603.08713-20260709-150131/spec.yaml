@@ -112,6 +112,7 @@ claims:
   tolerance: 0.5
   source: Table 2 (tab:eval_qwen), row BF16, col Hellaswag
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-ocp-hellaswag
   artifact: qwen3-8b-mxfp4-ocp
   eval_protocol:
@@ -128,6 +129,7 @@ claims:
   tolerance: 0.5
   source: Table 2 (tab:eval_qwen), row MXFP4-OCP, col Hellaswag
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-quark-hellaswag
   artifact: qwen3-8b-mxfp4-quark
   eval_protocol:
@@ -145,6 +147,7 @@ claims:
   source: Baseline comparison — Quark MXFP4 (even rounding, block_size=32) vs paper
     MXFP4-OCP
   hardware: null
+  no_paper_ref: true
 - id: qwen3-8b-mxfp4-quark-oas-hellaswag
   artifact: qwen3-8b-mxfp4-quark-oas
   eval_protocol:
@@ -161,6 +164,7 @@ claims:
   tolerance: 1.0
   source: 'vs MXFP4-16-OAS: same OAS, block_size=32'
   hardware: null
+  no_paper_ref: true
 - id: qwen3-8b-mxfp4-quark-mbs-h-hellaswag
   artifact: qwen3-8b-mxfp4-quark-mbs-h
   eval_protocol:
@@ -177,6 +181,7 @@ claims:
   tolerance: 1.0
   source: 'vs MXFP4-MBS-H: same OAS+MBS, block_size=32'
   hardware: null
+  no_paper_ref: true
 - id: qwen3-8b-mxfp4-16-hellaswag
   artifact: qwen3-8b-mxfp4-16
   eval_protocol:
@@ -193,6 +198,7 @@ claims:
   tolerance: 0.5
   source: Table 2 (tab:eval_qwen), row MXFP4-16, col Hellaswag
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-16-oas-hellaswag
   artifact: qwen3-8b-mxfp4-16-oas
   eval_protocol:
@@ -209,6 +215,7 @@ claims:
   tolerance: 0.5
   source: Table 2 (tab:eval_qwen), row MXFP4-16-OAS, col Hellaswag
   hardware: B200
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-mbs-s-hellaswag
   artifact: qwen3-8b-mxfp4-mbs-s
   eval_protocol:
@@ -225,6 +232,7 @@ claims:
   tolerance: 0.5
   source: Table 2 (tab:eval_qwen), row MXFP4-MBS-S, col Hellaswag
   hardware: B200
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-mbs-h-hellaswag
   artifact: qwen3-8b-mxfp4-mbs-h
   eval_protocol:
@@ -241,6 +249,7 @@ claims:
   tolerance: 0.5
   source: Table 2 (tab:eval_qwen), row MXFP4-MBS-H, col Hellaswag
   hardware: B200
+  no_paper_ref: false
 - id: qwen3-8b-bf16-ppl
   artifact: qwen3-8b-bf16
   eval_protocol:
@@ -257,6 +266,7 @@ claims:
   tolerance: 0.3
   source: Appendix Table (tab:ppl_eval), row BF16, col Qwen3-8B
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-ocp-ppl
   artifact: qwen3-8b-mxfp4-ocp
   eval_protocol:
@@ -273,6 +283,7 @@ claims:
   tolerance: 0.5
   source: Appendix Table (tab:ppl_eval), row MXFP4-OCP, col Qwen3-8B
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-quark-ppl
   artifact: qwen3-8b-mxfp4-quark
   eval_protocol:
@@ -290,6 +301,7 @@ claims:
   source: Baseline comparison — Quark MXFP4 (even rounding) vs paper MXFP4-OCP PPL
     15.18
   hardware: null
+  no_paper_ref: true
 - id: qwen3-8b-mxfp4-quark-oas-ppl
   artifact: qwen3-8b-mxfp4-quark-oas
   eval_protocol:
@@ -306,6 +318,7 @@ claims:
   tolerance: 1.0
   source: vs MXFP4-16-OAS PPL=13.65
   hardware: null
+  no_paper_ref: true
 - id: qwen3-8b-mxfp4-quark-mbs-h-ppl
   artifact: qwen3-8b-mxfp4-quark-mbs-h
   eval_protocol:
@@ -322,6 +335,7 @@ claims:
   tolerance: 1.0
   source: vs MXFP4-MBS-H PPL=13.03
   hardware: null
+  no_paper_ref: true
 - id: qwen3-8b-mxfp4-16-ppl
   artifact: qwen3-8b-mxfp4-16
   eval_protocol:
@@ -338,6 +352,7 @@ claims:
   tolerance: 0.5
   source: Appendix Table (tab:ppl_eval), row MXFP4-16, col Qwen3-8B
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-16-oas-ppl
   artifact: qwen3-8b-mxfp4-16-oas
   eval_protocol:
@@ -354,6 +369,7 @@ claims:
   tolerance: 0.5
   source: Appendix Table (tab:ppl_eval), row MXFP4-16-OAS, col Qwen3-8B
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-mbs-s-ppl
   artifact: qwen3-8b-mxfp4-mbs-s
   eval_protocol:
@@ -370,6 +386,7 @@ claims:
   tolerance: 0.5
   source: Appendix Table (tab:ppl_eval), row MXFP4-MBS-S, col Qwen3-8B
   hardware: null
+  no_paper_ref: false
 - id: qwen3-8b-mxfp4-mbs-h-ppl
   artifact: qwen3-8b-mxfp4-mbs-h
   eval_protocol:
@@ -386,6 +403,7 @@ claims:
   tolerance: 0.5
   source: Appendix Table (tab:ppl_eval), row MXFP4-MBS-H, col Qwen3-8B
   hardware: null
+  no_paper_ref: false
 references:
 - method: CUTLASS
   repo_url: https://github.com/NVIDIA/cutlass
