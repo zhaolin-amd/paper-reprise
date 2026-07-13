@@ -56,24 +56,26 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 
 Quark 的 even scale 消除了每个 block 内 amax ∈ [7, 8) 的溢出截断，这正是 OCP baseline 精度损失的根源，因此相比纯 OCP 有显著提升（acc +2.08，PPL −1.26）。然而一旦叠加 OAS（OAS 本身已通过 (3.5,7] 的 scale 映射独立消除了溢出），更细粒度的 block=16 成为主导因素：block 越小，每个 block 的 scale 越精准 → block=16 在 acc 和 PPL 两个指标上都略优于 block=32。
 
-**E8M0 scale 的块最大值映射区间对比**：
+**各方法每块映射区间对比（以 16/32 元素块为粒度）**：
 
-| 方法 | Scale 格式 | 映射区间 | 溢出区间（Fmax=6） | 溢出比例 |
-|---|---|---|---|---|
-| OCP | E8M0（2 的幂次） | [4, 8) | (6, 8)，50% of [4,8) | 50% |
-| OAS | E8M0 | (3.5, 7] | (6, 7)，25% of [4,8) | 25% |
-| Quark（even） | E8M0（even 取整） | [3.5, 7) | (6, 7)，25% of [4,8) | 25% |
-| **NVFP4** | **E4M3 FP8** | **≈[5.625, 6.375]** | **≈(6, 6.375)** | **极少** |
+| 方法 | 量化粒度 | Scale 格式 | 每块映射区间 | 溢出比例 | 说明 |
+|---|---|---|---|---|---|
+| OCP | 32 元素 | E8M0 | [4, 8) | 50% | 参考值 8 > Fmax=6，宽区间 |
+| OAS | 16 元素 | E8M0 | (3.5, 7] | 25% | 参考值改为 7，缩小溢出区间 |
+| OAS+MBS | 16 元素（OAS）+ 128 元素（MBS） | E8M0 + 8 位 factor | (3.5, 7]（同 OAS） | 25%（但分布更优） | OAS 区间不变；MBS 额外让宏块 max ≈6，改善分布而非缩窄区间 |
+| Quark（even） | 32 元素 | E8M0（even 取整） | [3.5, 7) | 25% | even 取整消除 amax ∈ [7,8) 溢出 |
+| **NVFP4** | **16 元素** | **E4M3 FP8** | **≈[5.625, 6.375]** | **极少** | **每块独立 E4M3，均匀精度 ±0.375** |
 
-OCP/OAS/Quark 的 scale 都是 E8M0（只能取 2 的整数幂），因此映射区间宽。OAS 和 Quark 的核心优化是缩小溢出区间（50%→25%），原理相似但路径不同：OAS 通过把参考值从 8 改为 7 实现，Quark 通过将 amax 取整到更近的 2 的幂次实现。NVFP4 使用 E4M3 FP8 scale（3 位尾数），可以表示非 2 的幂次，理论上能把 amax 精确映射到 Fmax=6 附近（最大误差 ±6/16=0.375），从根本上消除了 E8M0 的粒度损失，这是 NVFP4 精度上界显著高于所有 E8M0 方案的根本原因。
+OCP/OAS/Quark/OAS+MBS 的块级 scale 均为 E8M0，只能取 2 的幂次，映射区间较宽。OAS 和 Quark 各自用不同路径把溢出比例从 50% 降到 25%：OAS 把参考值从 8 改为 7，Quark 对 amax 做 even 取整。OAS+MBS 在此基础上用 8 位 factor 把宏块最大值精确推向 Fmax，改善了区间内的分布，但 16 元素块的映射区间本身仍是 (3.5, 7]，与纯 OAS 相同。NVFP4 的 E4M3 scale 对**每个** 16 元素块独立计算，精度 ±0.375 均匀覆盖所有块，这是它精度上界高于所有 E8M0 方案（包括 OAS+MBS）的根本原因。
 
-**Scale mapping interval comparison (E8M0 vs E4M3)**:
+**Scale mapping interval comparison (per-block granularity)**:
 
-| Method | Scale format | Mapped interval | Overflow region (Fmax=6) | Overflow rate |
-|---|---|---|---|---|
-| OCP | E8M0 (power-of-2) | [4, 8) | (6, 8) | 50% |
-| OAS | E8M0 | (3.5, 7] | (6, 7) | 25% |
-| Quark (even) | E8M0 (even rounding) | [3.5, 7) | (6, 7) | 25% |
-| **NVFP4** | **E4M3 FP8** | **≈[5.625, 6.375]** | **≈(6, 6.375)** | **Negligible** |
+| Method | Block size | Scale format | Per-block mapped interval | Overflow | Notes |
+|---|---|---|---|---|---|
+| OCP | 32 | E8M0 | [4, 8) | 50% | ref=8 > Fmax=6 |
+| OAS | 16 | E8M0 | (3.5, 7] | 25% | ref=7 shrinks overflow |
+| OAS+MBS | 16 (OAS) + 128 (MBS) | E8M0 + 8-bit factor | (3.5, 7] (same as OAS) | 25% (better distribution) | MBS aligns macro-block max to ≈6, but interval unchanged |
+| Quark (even) | 32 | E8M0 + even rounding | [3.5, 7) | 25% | even rounding eliminates [7,8) overflow |
+| **NVFP4** | **16** | **E4M3 FP8** | **≈[5.625, 6.375]** | **Negligible** | **E4M3 per block, uniform ±0.375** |
 
-OAS and Quark both reduce overflow from 50% to 25% via different mechanisms: OAS uses reference 7 instead of 8; Quark rounds amax to the nearest power of 2. NVFP4's E4M3 block scale (3 mantissa bits, non-power-of-2 representable) maps amax to within ±6/16=0.375 of Fmax=6, eliminating the quantization granularity loss inherent to E8M0 — the fundamental reason NVFP4 sets a higher accuracy ceiling than any E8M0-based method.
+OAS and Quark each reduce overflow from 50% to 25% via different paths. OAS+MBS improves the distribution within (3.5, 7] (macro-block max maps to ≈6) but does not narrow the per-block OAS interval. NVFP4's E4M3 scale provides uniform ±0.375 precision independently for every 16-element block — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
