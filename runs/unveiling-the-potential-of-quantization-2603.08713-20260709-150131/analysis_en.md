@@ -13,6 +13,10 @@ When lm-eval receives an already-instantiated model it skips several initializat
 
 **MXFP4-16 scale mapping (fixed)**: plain MXFP4-16 must use the MX/OCP (4,8] overflow scale at block size 16 (paper §4.1), NOT the non-saturating (3,6] scale — the latter is an ingredient of OAS (§4.2). An earlier build used (3,6] for MXFP4-16, so it reproduced the paper's *OAS* numbers (ppl 13.65) instead of its own; after the fix, ppl = 15.15 (paper 15.15, MATCH). The remaining acc_norm gap (−1.83) is the same eval-engine offset as every other config.
 
+**How OAS+MBS reuses the MXFP4 kernel (all changes are pure software)**:
+
+![OAS+MBS kernel reuse flow](figures/oas_mbs_kernel_reuse.png)
+
 **Group-size effect on OAS/MBS (Quark block=32 vs paper block=16)**:
 
 | Method | acc_norm | PPL |
