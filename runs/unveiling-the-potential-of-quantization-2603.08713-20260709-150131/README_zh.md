@@ -47,6 +47,10 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 
 **MXFP4-16 标度映射（已修复）**：plain MXFP4-16 应使用 block size 16 上的 MX/OCP (4,8] 溢出标度（论文 §4.1），而非非饱和的 (3,6] 标度——后者是 OAS 的组件（§4.2）。此前实现误用 (3,6]，使 MXFP4-16 复现出论文的 *OAS* 数值（ppl 13.65）而非自身数值；修复后 ppl = 15.15（论文 15.15，MATCH）。剩余的 acc_norm 差距（−1.83）与其它 config 一样源自评测引擎偏移。
 
+**OAS+MBS 为什么能复用 MXFP4 kernel（所有改动均为纯软件）**：
+
+![OAS+MBS kernel 复用流程](figures/oas_mbs_kernel_reuse.png)
+
 **Group-size 对 OAS/MBS 的影响（Quark block=32 vs 论文 block=16）**：
 
 | 方法 | acc_norm | PPL |
