@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OAS + MBS: Why MXFP4 Kernel is Unchanged</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    background: #fafafa;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.1);
+    padding: 36px 40px;
+    max-width: 680px;
+    width: 100%;
+  }
+  h2 {
+    font-size: 17px;
+    color: #1a1a2e;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+
+  /* ── flow blocks ───────────────────────────────── */
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+  .block {
+    width: 100%;
+    border-radius: 10px;
+    padding: 18px 24px;
+    position: relative;
+  }
+  .block-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .block-body { font-size: 13.5px; line-height: 1.65; color: #333; }
+  .block-body code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12.5px;
+    background: rgba(0,0,0,.06);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  /* colours */
+  .pre  { background: #EBF5FB; border: 1.5px solid #AED6F1; }
+  .pre  .block-label { color: #1a6fa8; }
+
+  .kern { background: #EAFAF1; border: 2px solid #27AE60; }
+  .kern .block-label { color: #1e8449; }
+
+  .epi  { background: #FEF9E7; border: 1.5px solid #F0B429; }
+  .epi  .block-label { color: #9a6d00; }
+
+  /* arrow between blocks */
+  .arrow {
+    width: 2px;
+    height: 28px;
+    background: #bbb;
+    position: relative;
+  }
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: -5px;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #bbb;
+  }
+
+  /* badge */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 2px 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge-green  { background: #27AE60; color: white; }
+  .badge-blue   { background: #2980B9; color: white; }
+
+  /* key insight box */
+  .insight {
+    margin-top: 28px;
+    background: #f0f4ff;
+    border-left: 4px solid #3a6cf4;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #222;
+    line-height: 1.6;
+  }
+  .insight strong { color: #3a6cf4; }
+
+  /* row within a block */
+  .row { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
+  .step-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: #2980B9;
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-num-g { background: #27AE60; }
+  .step-num-y { background: #e0a800; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>OAS + MBS: Why the MXFP4 Kernel is Unchanged</h2>
+  <p class="subtitle">All OAS/MBS changes are pure software — the Tensor Core sees standard E2M1 + E8M0</p>
+
+  <div class="flow">
+
+    <!-- ── Stage 0 ── -->
+    <div class="block pre">
+      <div class="block-label">Stage 0 · Quantisation preprocessing
+        <span class="badge badge-blue">software</span>
+      </div>
+      <div class="block-body">
+        <div class="row">
+          <div class="step-num">1</div>
+          <div><strong>MBS</strong> — extract 8-bit mantissa of
+            <code>6 / α<sub>max</sub><sup>128</sup></code>,
+            get correction factor&nbsp;
+            <code>c = 1 + m<sub>MBS</sub><sup>8</sup></code>,
+            pre-scale: <code>X′ = X × c</code>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="step-num">2</div>
+          <div><strong>OAS</strong> — modified E8M0 scale selection
+            (reference 7 instead of 8) keeps <code>α<sub>max</sub></code>
+            in&nbsp;(3.5, 7], reducing overflow from 50 % → 25 %
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:8px 12px;background:rgba(39,174,96,.1);
+                    border-radius:6px;font-size:13px;">
+          ✦ Output is still <strong>E2M1 data + E8M0 scale</strong> —
+          the standard MXFP4 format the kernel already expects
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <!-- ── Stage 1 ── -->
+    <div class="block kern">
+      <div class="block-label">Stage 1 · MXFP4 GEMM  (Tensor Core)
+        <span class="badge badge-green">★ UNCHANGED ★</span>
+      </div>
+      <div class="block-body">
+        <code>mma.m16n8k64</code> &nbsp;·&nbsp;
+        FP4 × FP4 → FP32 accumulator<br>
+        <span style="color:#555;font-size:12.5px">
+          Sees the same E2M1 + E8M0 it always does — no modification needed
+        </span>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <!-- ── Stage 2 ── -->
+    <div class="block epi">
+      <div class="block-label">Stage 2 · Epilogue correction
+        <span class="badge" style="background:#e0a800;color:white">Vector Core</span>
+      </div>
+      <div class="block-body">
+        <div class="row">
+          <div class="step-num step-num-y">3</div>
+          <div>
+            Undo the MBS pre-scale in the accumulator:<br>
+            <code>C<sub>ij</sub> ← C<sub>ij</sub> × σ<sub>A,i</sub> × σ<sub>B,j</sub></code>
+            &nbsp;where&nbsp;
+            <code>σ = 1/c</code><br>
+            <span style="color:#555;font-size:12px">
+              Runs concurrently on Vector Cores; overhead &lt; 1.56 % of Tensor Core peak
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /flow -->
+
+  <div class="insight">
+    <strong>Core idea:</strong>
+    OAS and MBS operate entirely <em>before</em> and <em>after</em> the kernel.
+    The kernel input is always standard E2M1 + E8M0 — so no hardware modification
+    is needed. &ldquo;MBS is strictly a software optimization, requiring no hardware
+    changes.&rdquo; &mdash; <em>paper</em>
+  </div>
+
+</div>
+</body>
+</html>
