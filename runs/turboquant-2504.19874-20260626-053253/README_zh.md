@@ -1,5 +1,6 @@
 # 复现报告: TurboQuant-2504.19874
 
+- **论文:** [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874) (arXiv:2504.19874)
 - **仓库:** (no official repo)
 
 | model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |

@@ -1,5 +1,6 @@
 # 复现报告: AutoRound-2309.05516
 
+- **论文:** [Optimize Weight Rounding via Signed Gradient Descent for the Quantization of LLMs](https://arxiv.org/abs/2309.05516) (arXiv:2309.05516)
 - **仓库:** https://github.com/intel/auto-round@9468e52
 - **环境:** CUDA 13.0 / torch 2.12.1 / transformers 5.12.1 / lm_eval 0.4.12
 
