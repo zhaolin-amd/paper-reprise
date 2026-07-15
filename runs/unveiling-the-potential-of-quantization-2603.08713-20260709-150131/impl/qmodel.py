@@ -17,8 +17,9 @@ import os
 
 from mxquant import METHODS, fake_quant
 
-# Quark path (for MXFP4-Quark which delegates to Quark's own kernel).
-_QUARK_ROOT = "/home/zhaolin/code/Quark"
+# Quark path (for MXFP4-Quark[-Even] which delegate to Quark's own kernel).
+# Override with env QUARK_ROOT on nodes where the checkout lives elsewhere.
+_QUARK_ROOT = os.environ.get("QUARK_ROOT", "/home/zhaolin/code/Quark")
 if _QUARK_ROOT not in sys.path:
     sys.path.insert(0, _QUARK_ROOT)
 
@@ -76,7 +77,7 @@ class QuantLinear(nn.Module):
 
     def __init__(self, lin: nn.Linear, weight_mbs: str, act_mbs: str,
                  oas: bool, ocp: bool = False, ocp_block: int = 32,
-                 oas_block: int = 16):
+                 oas_block: int = 16, inner: str = "oas"):
         super().__init__()
         self.in_features = lin.in_features
         self.out_features = lin.out_features
@@ -85,11 +86,12 @@ class QuantLinear(nn.Module):
         self.ocp = ocp
         self.ocp_block = ocp_block
         self.oas_block = oas_block
+        self.inner = inner
         with torch.no_grad():
             wq = fake_quant(lin.weight.data.to(torch.float32),
                             mbs=weight_mbs, oas=oas, ocp=ocp,
                             ocp_block=ocp_block,
-                            oas_block=oas_block).to(lin.weight.dtype)
+                            oas_block=oas_block, inner=inner).to(lin.weight.dtype)
         self.weight = nn.Parameter(wq, requires_grad=False)
         if lin.bias is not None:
             self.bias = nn.Parameter(lin.bias.data.clone(), requires_grad=False)
@@ -98,7 +100,8 @@ class QuantLinear(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         xq = fake_quant(x, mbs=self.act_mbs, oas=self.oas, ocp=self.ocp,
-                        ocp_block=self.ocp_block, oas_block=self.oas_block)
+                        ocp_block=self.ocp_block, oas_block=self.oas_block,
+                        inner=self.inner)
         return F.linear(xq, self.weight, self.bias)
 
 
@@ -131,7 +134,8 @@ def quantize_model_(model: nn.Module, method: str) -> int:
                              act_mbs=cfg["act_mbs"], oas=cfg["oas"],
                              ocp=cfg.get("ocp", False),
                              ocp_block=cfg.get("ocp_block", 32),
-                             oas_block=cfg.get("oas_block", 16))
+                             oas_block=cfg.get("oas_block", 16),
+                             inner=cfg.get("inner", "oas"))
             ql = ql.to(next(lin.parameters()).device)
             setattr(parent, child, ql)
     return len(targets)

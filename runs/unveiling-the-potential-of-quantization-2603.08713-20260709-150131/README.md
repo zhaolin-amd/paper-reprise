@@ -10,7 +10,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | acc_norm | 70.98 | 68.87(-2.11) | PARTIAL | process faithful but value off tolerance 2.109 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | — | 70.95 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | comparison only, no paper value |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 72.22 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | process faithful but value off tolerance 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | process faithful but value off tolerance 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | process faithful but value off tolerance 1.145 (>0.5) |
@@ -20,7 +20,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-OCP | word_perplexity | 15.18 | 15.15(-0.0333) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | comparison only, no paper value |
-| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.32 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -28,10 +28,10 @@
 | Qwen/Qwen3-8B | FP4 | NVFP4 | word_perplexity | 12.69 | — | — | paper reference, not reproduced |
 | Qwen/Qwen3.5-35B-A3B | BF16 | - | acc_norm | — | 82.48 | — | comparison only, no paper value |
 | Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark | acc_norm | — | 80.50(-1.98) | — | comparison only, no paper value |
-| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 81.42(-1.07) | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 81.59(-0.90) | — | comparison only, no paper value |
 | Qwen/Qwen3.5-35B-A3B | BF16 | - | word_perplexity | — | 7.46 | — | comparison only, no paper value |
 | Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark | word_perplexity | — | 8.21(+0.75) | — | comparison only, no paper value |
-| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 8.01(+0.54) | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 8.00(+0.54) | — | comparison only, no paper value |
 
 ## Conclusion
 - 20 claims: MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 2.
@@ -54,57 +54,19 @@ When lm-eval receives an already-instantiated model it skips several initializat
 
 **MXFP4-16 scale mapping (fixed)**: plain MXFP4-16 must use the MX/OCP (4,8] overflow scale at block size 16 (paper §4.1), NOT the non-saturating (3,6] scale — the latter is an ingredient of OAS (§4.2). An earlier build used (3,6] for MXFP4-16, so it reproduced the paper's *OAS* numbers (ppl 13.65) instead of its own; after the fix, ppl = 15.15 (paper 15.15, MATCH). The remaining acc_norm gap (−1.83) is the same eval-engine offset as every other config.
 
-**How OAS+MBS reuses the MXFP4 kernel (all changes are pure software)**:
-
-![OAS+MBS kernel reuse flow](figures/oas_mbs_kernel_reuse.png)
-
-**Group-size effect on OAS/MBS (Quark block=32 vs paper block=16)**:
-
-| Method | acc_norm | PPL |
-|---|---|---|
-| MXFP4-OCP (block=32) | 68.87 | 15.15 |
-| MXFP4-Quark (block=32, even scale) | **70.95** | **13.89** |
-| MXFP4-16-OAS (block=16) | **71.83** | **13.59** |
-| MXFP4-Quark-OAS (block=32) | 71.06 | 13.92 |
-| MXFP4-MBS-H (block=16) | **72.46** | **13.05** |
-| MXFP4-Quark-MBS-H (block=32) | 72.22 | 13.32 |
-
-Quark's even scale eliminates overflow for amax ∈ [7, 8) within each block — the root cause of OCP baseline saturation. This accounts for its large gain over plain OCP (+2.08 acc, −1.26 PPL). However, once OAS is applied (which independently prevents overflow via the (3.5,7] scale mapping), the finer block granularity of block=16 becomes the dominant factor: smaller blocks give more precise per-block scale → block=16 slightly outperforms block=32 for both acc and PPL.
-
-
-**Scale mapping interval comparison (per-block granularity)**:
-
-| Method | Block size | Scale format | Per-block mapped interval | Overflow | Notes |
-|---|---|---|---|---|---|
-| OCP | 32 | E8M0 | [4, 8) | 50% | ref=8 > Fmax=6 |
-| OAS | 16 | E8M0 | (3.5, 7] | 25% | ref=7 shrinks overflow |
-| OAS+MBS | 16 (OAS) + 128 (MBS) | E8M0 + 8-bit factor | (3.5, 7] (same as OAS) | 25% (better distribution) | MBS aligns macro-block max to ≈6, but interval unchanged |
-| Quark (even) | 32 | E8M0 + even rounding | [3.5, 7) | 25% | even rounding eliminates [7,8) overflow |
-| **NVFP4** | **16** | **E4M3 FP8** | **≈[5.625, 6.375]** | **Negligible** | **E4M3 per block, uniform ±0.375** |
-
-- **OCP**: E8M0, maps to [4, 8); Fmax=6 falls mid-interval → 50% overflow.
-- **OAS**: changes reference from 8 to 7, narrowing to (3.5, 7]; overflow shrinks to (6, 7) → 25%.
-- **OAS+MBS**: per-16-element-block OAS interval unchanged at (3.5, 7]; MBS adds a 128-element macro-block factor that pushes the macro-block max to ≈6, improving distribution but **not** narrowing the block interval → still 25% overflow.
-- **Quark (even)**: even rounding of amax eliminates overflow for amax ∈ [7, 8), giving [3.5, 7) → 25%; same rate as OAS but different mechanism.
-- **NVFP4**: E4M3 FP8 (non-power-of-2) computes a precise scale for **every** 16-element block independently, with uniform ±0.375 precision — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
-
-
-
-
-
 ## Qwen3.5-35B-A3B extension
 
 Re-ran three setups (BF16, MXFP4-Quark, MXFP4-Quark-MBS-H) on **Qwen/Qwen3.5-35B-A3B** (MoE, `qwen3_5_moe`). The checkpoint arch is `Qwen3_5MoeForConditionalGeneration` (multimodal); loaded via `AutoModelForCausalLM` → the text-only `Qwen3_5MoeForCausalLM` (vision tower unused, weights load with no missing keys); 350 linear layers fake-quantized per MXFP4 config. Run on a **different node** than the 8B rows: ROCm 7.1 / torch 2.10.0+rocm7.1 / transformers 5.12.1 / lm_eval 0.4.11 (8× MI300X).
 
-**MBS-H recovers ~half the plain-Quark loss — same direction as 8B, and 35B is ~2× more MXFP4-robust.**
+**MBS-H (1×128 macro-block scaling over Quark's own even-rounded MXFP4 kernel, block 32) recovers part of the plain-Quark loss — ~¼ on 8B, ~½ on 35B; 35B is ~2× more MXFP4-robust.**
 
 | method | 8B acc_norm (Δ) | 35B acc_norm (Δ) | 8B ppl (Δ) | 35B ppl (Δ) |
 |---|---|---|---|---|
 | BF16 | 74.96 | 82.48 | 12.22 | 7.46 |
 | MXFP4-Quark | 70.95 (−4.01) | 80.50 (−1.98) | 13.89 (+1.67) | 8.21 (+0.75) |
-| MXFP4-Quark-MBS-H | 72.22 (−2.74) | 81.42 (−1.07) | 13.32 (+1.10) | 8.01 (+0.54) |
+| MXFP4-Quark-MBS-H | 71.99 (−2.97) | 81.59 (−0.89) | 13.26 (+1.04) | 8.00 (+0.54) |
 
-- MBS-H beats plain Quark on both sizes and both metrics — it cuts the acc_norm drop and the ppl rise by roughly half.
+- MBS-H beats plain Quark on both sizes and both metrics — it reduces the acc_norm drop and the ppl rise (~¼ on 8B, ~½ on 35B).
 - Every 35B degradation is ~2× smaller than at 8B → the larger model tolerates 4-bit better.
 
 **Caveats.** (1) `acc_norm` carries the same HF-direct-load eval-engine offset described in the Analysis above (~−1.5 vs the paper's vLLM path), so read the 35B `acc_norm` as an **internal** BF16-vs-Quark-vs-MBS-H comparison, not an absolute; `word_perplexity` is teacher-forced and engine-insensitive → trustworthy. (2) 35B rows used slightly older transformers/lm_eval on ROCm; within-run Δ and the 8B↔35B trend are comparable, tiny absolute offsets possible. (3) comparison-only — the paper reports no value for these methods on this model.
