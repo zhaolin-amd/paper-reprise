@@ -25,8 +25,8 @@
 
 ## 复算脚本(每个 config)
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT1 · TurboQuant_mse**
-`runs/turboquant-2504.19874-20260626-053253/claims/mse-distortion-b1/stdout.log`
-`runs/turboquant-2504.19874-20260626-053253/claims/mse-bias-b1/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/mse-distortion-b1/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/mse-bias-b1/stdout.log`
 
 ```bash
 bash impl/run_eval.sh mse-distortion-b1
@@ -37,36 +37,36 @@ bash impl/run_eval.sh mse-bias-b1
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT2 · TurboQuant_mse**
-`runs/turboquant-2504.19874-20260626-053253/claims/mse-distortion-b2/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/mse-distortion-b2/stdout.log`
 
 ```bash
 bash impl/run_eval.sh mse-distortion-b2
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT3 · TurboQuant_mse**
-`runs/turboquant-2504.19874-20260626-053253/claims/mse-distortion-b3/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/mse-distortion-b3/stdout.log`
 
 ```bash
 bash impl/run_eval.sh mse-distortion-b3
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT4 · TurboQuant_mse**
-`runs/turboquant-2504.19874-20260626-053253/claims/mse-distortion-b4/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/mse-distortion-b4/stdout.log`
 
 ```bash
 bash impl/run_eval.sh mse-distortion-b4
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT1 · TurboQuant_prod**
-`runs/turboquant-2504.19874-20260626-053253/claims/prod-distortion-b1/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/prod-distortion-b1/stdout.log`
 
 ```bash
 bash impl/run_eval.sh prod-distortion-b1
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT2 · TurboQuant_prod**
-`runs/turboquant-2504.19874-20260626-053253/claims/prod-distortion-b2/stdout.log`
-`runs/turboquant-2504.19874-20260626-053253/claims/prod-unbiased-b2/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/prod-distortion-b2/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/prod-unbiased-b2/stdout.log`
 
 ```bash
 bash impl/run_eval.sh prod-distortion-b2
@@ -77,14 +77,14 @@ bash impl/run_eval.sh prod-unbiased-b2
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT3 · TurboQuant_prod**
-`runs/turboquant-2504.19874-20260626-053253/claims/prod-distortion-b3/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/prod-distortion-b3/stdout.log`
 
 ```bash
 bash impl/run_eval.sh prod-distortion-b3
 ```
 
 **Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M · INT4 · TurboQuant_prod**
-`runs/turboquant-2504.19874-20260626-053253/claims/prod-distortion-b4/stdout.log`
+`runs/TurboQuant-2504.19874-20260626-053253/claims/prod-distortion-b4/stdout.log`
 
 ```bash
 bash impl/run_eval.sh prod-distortion-b4

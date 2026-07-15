@@ -2,13 +2,13 @@
 GSQ run
 Start time : Mon Jun 22 17:15:36 UTC 2026
 Host       : smch200x-ccs-aus-e02-40.prov.aus.ccs.cpe.ice.amd.com
-Config     : /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/configs/config_smoke.yaml
+Config     : /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/configs/config_smoke.yaml
 Resume     : <fresh>
 Smoke test : 0
 ==========================================
 Single-node mode: torchrun --standalone --nproc-per-node=1
 Run ID: 20260622-171602_8d769b
-Checkpoints: /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b
+Checkpoints: /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 number of samples: 32
 number of samples: 8
@@ -179,14 +179,14 @@ Total time: 52.09106659889221
   [Pipeline] Cleanup complete.
 ==========================================
 GSQ save_model
-Config : /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/configs/config_smoke.yaml
+Config : /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/configs/config_smoke.yaml
 Run ID : <latest>
 Out dir: <default>
 ==========================================
 Model:        /group/amdneuralopt/huggingface/pretrained_models/meta-llama/Llama-3.2-1B
 Run ID:       20260622-171602_8d769b
-Run dir:      /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b
-Output dir:   /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled
+Run dir:      /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b
+Output dir:   /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled
 
 Base model:   /group/amdneuralopt/huggingface/pretrained_models/meta-llama/Llama-3.2-1B
 Layers:       16
@@ -220,7 +220,7 @@ Shard sizes:
 
 Loading tensors...
 
-Writing 17 shards to /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled...
+Writing 17 shards to /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled...
   model-00001-of-00017.safetensors: 2 tensors
   model-00002-of-00017.safetensors: 15 tensors
   model-00003-of-00017.safetensors: 15 tensors
@@ -250,12 +250,12 @@ Injecting quantization_config into config.json (group_size=128)...
   Partial run detected: 2/16 layers quantized; adding 14 unquantized layers to ignore list
 
 Done. Total model size: ~2.16 GB
-Output: /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled
+Output: /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled
 Exception ignored in: <function ResourceTracker.__del__ at 0x7ffe4d0ac680>
 Traceback (most recent call last):
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
 AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
 [reprise] serving MODEL_PATH=runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled
 ==========================================
@@ -395,7 +395,7 @@ GSQ Benchmark Evaluation
   Output dir : runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled/evals
 ==================================================
 
-Running: /home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/bin/python -m lm_eval --model local-completions --tasks arc_easy --model_args model=runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled,base_url=http://127.0.0.1:8000/v1/completions,num_concurrent=4,tokenizer=runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled --gen_kwargs temperature=0,seed=42 --output_path runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled/evals --log_samples --trust_remote_code --limit 8
+Running: /home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/bin/python -m lm_eval --model local-completions --tasks arc_easy --model_args model=runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled,base_url=http://127.0.0.1:8000/v1/completions,num_concurrent=4,tokenizer=runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled --gen_kwargs temperature=0,seed=42 --output_path runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled/evals --log_samples --trust_remote_code --limit 8
 
 2026-06-22:17:18:57 WARNING  [config.evaluate_config:287] --limit SHOULD ONLY BE USED FOR TESTING. REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.
 (APIServer pid=2496171) INFO 06-22 17:19:04 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%
@@ -461,9 +461,9 @@ local-completions ({'model': 'runtime/checkpoints/smoke-joblocal/20260622-171602
 
 Exception ignored in: <function ResourceTracker.__del__ at 0x7fff456493a0>
 Traceback (most recent call last):
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
 AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
 
 Parsing results from: runtime/checkpoints/smoke-joblocal/20260622-171602_8d769b/assembled/evals/runtime__checkpoints__smoke-joblocal__20260622-171602_8d769b__assembled/results_2026-06-22T17-20-12.189057.json
@@ -474,35 +474,35 @@ Results:
 Logging to new WandB run (no training run ID found)
 (APIServer pid=2496171) INFO 06-22 17:20:14 [loggers.py:271] Engine 000: Avg prompt throughput: 60.2 tokens/s, Avg generation throughput: 2.4 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%
 Traceback (most recent call last):
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/eval_model.py", line 272, in <module>
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/eval_model.py", line 272, in <module>
     main()
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/eval_model.py", line 263, in main
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/eval_model.py", line 263, in main
     logged = log_to_wandb(parsed, wandb_run_id, args.config)
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/eval_model.py", line 126, in log_to_wandb
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/eval_model.py", line 126, in log_to_wandb
     wandb.init(**wandb_kwargs)
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 1603, in init
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 1603, in init
     get_sentry().reraise(e)
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/analytics/sentry.py", line 190, in reraise
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/analytics/sentry.py", line 190, in reraise
     raise exc.with_traceback(tb)
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 1524, in init
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 1524, in init
     wi.maybe_login(init_settings)
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 200, in maybe_login
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 200, in maybe_login
     wandb_login._login(
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_login.py", line 190, in _login
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_login.py", line 190, in _login
     auth = _find_or_prompt_for_key(
            ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_login.py", line 266, in _find_or_prompt_for_key
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/wandb_login.py", line 266, in _find_or_prompt_for_key
     auth = wbauth.authenticate_session(
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/lib/wbauth/authenticate.py", line 139, in authenticate_session
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/wandb/sdk/lib/wbauth/authenticate.py", line 139, in authenticate_session
     raise UsageError(
 wandb.errors.errors.UsageError: No API key configured. Use `wandb login` to log in.
 Exception ignored in: <function ResourceTracker.__del__ at 0x7ffe8eab3380>
 Traceback (most recent call last):
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
-  File "/home/zhaolin/code/paper-reprise/runs/gsq-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/zhaolin/code/paper-reprise/runs/GSQ-2604.18556-20260621-091834/repo/.venv/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
 AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
 Stopping vLLM (pid 2496165)...
 [reprise] VLLM_SKIPPED: serve/eval failed or timed out (deep_gemm FP8 kernel gap); see serve_vllm.log

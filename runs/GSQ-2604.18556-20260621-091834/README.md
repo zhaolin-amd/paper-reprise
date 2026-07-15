@@ -1,22 +1,22 @@
-# 复现报告: GSQ-2604.18556
+# Reproduction Report: GSQ-2604.18556
 
-- **论文:** [GSQ: Highly-Accurate Low-Precision Scalar Quantization for LLMs via Gumbel-Softmax Sampling](https://arxiv.org/abs/2604.18556) (arXiv:2604.18556)
-- **仓库:** https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
-- **环境:** CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.8.1
+- **Paper:** [GSQ: Highly-Accurate Low-Precision Scalar Quantization for LLMs via Gumbel-Softmax Sampling](https://arxiv.org/abs/2604.18556) (arXiv:2604.18556)
+- **Repo:** https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
+- **Environment:** CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.8.1
 
-| model | config | algorithm | metric | paper | 实测 | 判定 | 原因 |
+| model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
 | meta-llama/Llama-3.1-8B-Instruct | BF16 | - | acc_norm_avg | 73.71 | 73.79(+0.08) | MATCH | — |
-| meta-llama/Llama-3.1-8B-Instruct | INT2 G128 | GSQ | acc_norm_avg | 68.55 | 66.51(-2.04) | PARTIAL | 过程忠实但数值超容差 2.04 (>0.5) |
+| meta-llama/Llama-3.1-8B-Instruct | INT2 G128 | GSQ | acc_norm_avg | 68.55 | 66.51(-2.04) | PARTIAL | process faithful but value off tolerance 2.04 (>0.5) |
 
-## 结论
-- 共 2 个 claim:MATCH 1 · PARTIAL 1 · FAIL 0 · BLOCKED 0。
-- FP 基线与论文吻合,说明**评测协议可信**;因此 1 个超容差的量化配置(最大偏差 -2.04)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
-
-
+## Conclusion
+- 2 claims: MATCH 1 · PARTIAL 1 · FAIL 0 · BLOCKED 0.
+- The FP baseline matches the paper, so the **eval protocol is validated**; the 1 quantized config(s) outside tolerance (worst -2.04) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
 
 
-## 各任务原始分数
+
+
+## Per-task raw scores
 **llama3-8b-baseline**
 
 |    Tasks    |Version|Filter|n-shot| Metric |   |Value |   |Stderr|
@@ -46,9 +46,9 @@
 |winogrande   |      1|none  |     0|acc     |↑  |0.6922|±  |0.0130|
 
 
-## 复算脚本(每个 config)
+## Replay script (per config)
 **meta-llama/Llama-3.1-8B-Instruct · BF16**
-`runs/gsq-2604.18556-20260621-091834/claims/llama3-8b-baseline/stdout.log`
+`runs/GSQ-2604.18556-20260621-091834/claims/llama3-8b-baseline/stdout.log`
 
 ```bash
 export SLURM_JOB_ID=local
@@ -60,7 +60,7 @@ VLLM_USE_DEEP_GEMM=0 VLLM_MOE_USE_DEEP_GEMM=0 EVAL=1 KEEP_SERVING=0 \
 ```
 
 **meta-llama/Llama-3.1-8B-Instruct · INT2 G128 · GSQ**
-`runs/gsq-2604.18556-20260621-091834/claims/llama3-8b-2bit-avg-acc/stdout.log`
+`runs/GSQ-2604.18556-20260621-091834/claims/llama3-8b-2bit-avg-acc/stdout.log`
 
 ```bash
 bash scripts/serve_model.sh && python eval_model.py --config configs/local/config.yaml

@@ -66,7 +66,9 @@ paper's algorithm name(s) instead** — e.g. a paper whose contribution is the O
 techniques → `OAS-MBS`, giving `runs/OAS-MBS-2603.08713-<timestamp>/` and title
 `OAS-MBS-2603.08713`. Prefer a method's industry-recognized name (e.g. `AutoRound`, not the
 paper's internal "SignRound"). Avoid forcing an initialism out of a generic title (e.g. don't
-turn "Unveiling the Potential of Quantization" into `UPQ`).
+turn "Unveiling the Potential of Quantization" into `UPQ`). Use the abbreviation's **canonical
+casing** — `GSQ`, `TurboQuant`, `AutoRound`, `OAS-MBS` (not lowercased) — identical in the
+directory name and the H1 title.
 
 ```
 runs/<paper-name>-<arxiv_id>-<timestamp>/
