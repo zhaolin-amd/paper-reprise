@@ -809,7 +809,7 @@ bootstrapping for stddev: perplexity
 evaluation running time=263s
 Exception ignored in: <function ResourceTracker.__del__ at 0x7ffea4222840>
 Traceback (most recent call last):
-  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
-  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
-  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+  File "/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
 AttributeError: '_thread.RLock' object has no attribute '_recursion_count'

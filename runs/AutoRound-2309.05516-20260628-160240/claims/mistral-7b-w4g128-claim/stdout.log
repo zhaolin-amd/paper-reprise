@@ -7,7 +7,7 @@
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 [38;20m2026-06-29 04:36:21 INFO data_driven.py L795: caching done[0m
-  0%|          | 0/32 [00:00<?, ?it/s]Quantizing model.layers.0:   0%|          | 0/32 [00:01<?, ?it/s]/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/torch/autograd/graph.py:882: UserWarning: cuDNN Attention defaults to a non-deterministic algorithm. To explicitly enable determinism call torch.use_deterministic_algorithms(True, warn_only=False). (Triggered internally at /pytorch/aten/src/ATen/native/transformers/cuda/attention_backward.cu:212.)
+  0%|          | 0/32 [00:00<?, ?it/s]Quantizing model.layers.0:   0%|          | 0/32 [00:01<?, ?it/s]/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/torch/autograd/graph.py:882: UserWarning: cuDNN Attention defaults to a non-deterministic algorithm. To explicitly enable determinism call torch.use_deterministic_algorithms(True, warn_only=False). (Triggered internally at /pytorch/aten/src/ATen/native/transformers/cuda/attention_backward.cu:212.)
   return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
 [38;20mquantized 7/7 layers in the block, loss iter 0: 0.000000 -> iter 193: 0.000000[0m
 [38;20m2026-06-29 04:36:37 INFO device.py L1450: 'peak_ram': 9.22GB, 'peak_vram': 30.45GB[0m
@@ -81,7 +81,7 @@ Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF
 [38;20m2026-06-29 04:43:41 INFO utils.py L262: Immediate saving mode: weights already saved by ShardWriter, saving configs only.[0m
 [38;20m2026-06-29 04:43:41 INFO device.py L1450: 'peak_ram': 16.31GB, 'peak_vram': 32.44GB[0m
 [38;20m2026-06-29 04:43:41 INFO evaluation.py L477: Using lm-eval version 0.4.12[0m
-/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/transformers/quantizers/auto.py:271: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
+/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/transformers/quantizers/auto.py:271: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
   warnings.warn(warning_msg)
 [33;1m2026-06-29 04:43:42 WARNING backend.py L1176: Better backend is found, please install all the following requirements to enable it.[0m
 [33;1m2026-06-29 04:43:42 WARNING backend.py L1176: `pip install -v "gptqmodel>=2.0" --no-build-isolation`[0m
@@ -247,7 +247,7 @@ bootstrapping for stddev: perplexity
 evaluation running time=557s
 Exception ignored in: <function ResourceTracker.__del__ at 0x7ffea4226840>
 Traceback (most recent call last):
-  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
-  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
-  File "/home/zhaolin/code/paper-reprise/runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+  File "/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/zhaolin/code/paper-reprise/runs/AutoRound-2309.05516-20260628-160240/env/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
 AttributeError: '_thread.RLock' object has no attribute '_recursion_count'

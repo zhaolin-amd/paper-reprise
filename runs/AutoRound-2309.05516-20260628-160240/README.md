@@ -166,42 +166,42 @@
 
 ## Replay script (per config)
 **mistralai/Mistral-7B-v0.1 · BF16**
-`runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/claims/mistral-7b-fp16-baseline/stdout.log`
+`runs/AutoRound-2309.05516-20260628-160240/claims/mistral-7b-fp16-baseline/stdout.log`
 
 ```bash
 auto-round --model $PAPER_REPRISE_MODEL --eval --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
 ```
 
 **mistralai/Mistral-7B-v0.1 · INT4 G128 · signround**
-`runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/claims/mistral-7b-w4g128-claim/stdout.log`
+`runs/AutoRound-2309.05516-20260628-160240/claims/mistral-7b-w4g128-claim/stdout.log`
 
 ```bash
 auto-round --model $PAPER_REPRISE_MODEL --bits 4 --group_size 128 --iters 200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
 ```
 
 **mistralai/Mistral-7B-v0.1 · INT2 G128 · signround**
-`runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/claims/mistral-7b-w2g128-claim/stdout.log`
+`runs/AutoRound-2309.05516-20260628-160240/claims/mistral-7b-w2g128-claim/stdout.log`
 
 ```bash
 auto-round --model $PAPER_REPRISE_MODEL --bits 2 --group_size 128 --iters 200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
 ```
 
 **meta-llama/Llama-2-7b-hf · BF16**
-`runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/claims/llama2-7b-fp16-baseline/stdout.log`
+`runs/AutoRound-2309.05516-20260628-160240/claims/llama2-7b-fp16-baseline/stdout.log`
 
 ```bash
 auto-round --model $PAPER_REPRISE_MODEL --eval --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
 ```
 
 **meta-llama/Llama-2-7b-hf · INT4 G128 · signround**
-`runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/claims/llama2-7b-w4g128-claim/stdout.log`
+`runs/AutoRound-2309.05516-20260628-160240/claims/llama2-7b-w4g128-claim/stdout.log`
 
 ```bash
 auto-round --model $PAPER_REPRISE_MODEL --bits 4 --group_size 128 --iters 200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
 ```
 
 **meta-llama/Llama-2-7b-hf · INT2 G128 · signround**
-`runs/optimize-weight-rounding-via-signed-grad-2309.05516-20260628-160240/claims/llama2-7b-w2g128-claim/stdout.log`
+`runs/AutoRound-2309.05516-20260628-160240/claims/llama2-7b-w2g128-claim/stdout.log`
 
 ```bash
 auto-round --model $PAPER_REPRISE_MODEL --bits 2 --group_size 128 --iters 200 --nsamples 512 --seqlen 2048 --dataset NeelNanda/pile-10k --format auto_round --output_dir ./tmp_model --tasks ${PAPER_REPRISE_TASKS:-mmlu,lambada_openai,hellaswag,winogrande,piqa,truthfulqa_mc2,openbookqa,boolq,rte,arc_easy,arc_challenge}
