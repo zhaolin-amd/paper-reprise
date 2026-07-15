@@ -10,6 +10,8 @@ Design doc: [docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md](do
 
 A deterministic pipeline, one run directory per paper:
 
+![paper-reprise pipeline](figures/paper-reprise-intro.png)
+
 ```
 ingest → specextract → plan → setup → run → grade → report
 ```
