@@ -85,8 +85,8 @@ done
 
 ## 复算脚本(每个 config)
 **Qwen/Qwen3-8B · BF16**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-bf16-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-bf16-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-bf16-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-bf16-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-bf16-hellaswag
@@ -97,8 +97,8 @@ bash impl/run_eval.sh qwen3-8b-bf16-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-OCP**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-ocp-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-ocp-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-ocp-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-ocp-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-ocp-hellaswag
@@ -109,8 +109,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-ocp-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-quark-hellaswag
@@ -121,8 +121,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-quark-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark-OAS**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-oas-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-oas-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-oas-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-oas-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-quark-oas-hellaswag
@@ -133,8 +133,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-quark-oas-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark-MBS-H**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-hellaswag
@@ -145,8 +145,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-16**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-16-hellaswag
@@ -157,8 +157,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-16-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-16-OAS**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-oas-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-oas-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-oas-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-16-oas-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-16-oas-hellaswag
@@ -169,8 +169,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-16-oas-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-MBS-S**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-s-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-s-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-s-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-s-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-s-hellaswag
@@ -181,8 +181,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-s-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-MBS-H**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-h-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-h-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-h-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-mbs-h-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-hellaswag
@@ -193,8 +193,8 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-mbs-h-ppl
 ```
 
 **Qwen/Qwen3-8B · FP4 · NVFP4**
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-hellaswag/stdout.log`
-`runs/unveiling-the-potential-of-quantization-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-ppl/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-nvfp4-ppl/stdout.log`
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-nvfp4-hellaswag

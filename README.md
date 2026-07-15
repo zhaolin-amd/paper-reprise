@@ -57,17 +57,16 @@ that run touched. The entire `runs/` tree is gitignored.
 
 ## Run directory layout
 
-One run = one directory `runs/<paper-name>-<arxiv_id>-<timestamp>/` (the `<paper-name>`
-slug is best-effort from the arxiv title — the authors' short name before a colon when the
-title has one, e.g. `turboquant` from "TurboQuant: …"; omitted when the title can't be
-fetched):
+One run = one directory `runs/<paper-abbrev>-<arxiv_id>-<timestamp>/`, and the report's H1 uses
+the same handle: `# Reproduction Report: <paper-abbrev>-<arxiv_id>`.
 
-The report's H1 uses the same short handle: `# Reproduction Report: <paper-abbrev>-<arxiv_id>`.
 Pick `<paper-abbrev>` as a sensible abbreviation of the title — the authors' short name before a
 colon (e.g. `TurboQuant`, `GSQ`). **If the title yields no reasonable abbreviation, use the
 paper's algorithm name(s) instead** — e.g. a paper whose contribution is the OAS and MBS
-techniques → `OAS-MBS`, giving `OAS-MBS-2603.08713`. Avoid forcing an initialism out of a
-generic title (e.g. don't turn "Unveiling the Potential of Quantization" into `UPQ`).
+techniques → `OAS-MBS`, giving `runs/OAS-MBS-2603.08713-<timestamp>/` and title
+`OAS-MBS-2603.08713`. Prefer a method's industry-recognized name (e.g. `AutoRound`, not the
+paper's internal "SignRound"). Avoid forcing an initialism out of a generic title (e.g. don't
+turn "Unveiling the Potential of Quantization" into `UPQ`).
 
 ```
 runs/<paper-name>-<arxiv_id>-<timestamp>/
