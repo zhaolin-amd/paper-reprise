@@ -12,10 +12,6 @@ A deterministic pipeline, one run directory per paper:
 
 ![paper-reprise pipeline](figures/paper-reprise-intro.png)
 
-```
-ingest → specextract → plan → setup → run → grade → report
-```
-
 - **ingest** — fetch the arxiv LaTeX source, locate and clone the official repo.
 - **specextract** — read the paper + repo (headless Claude) into a machine-checkable spec
   of claims (model × config × eval protocol × expected number) — including each model's
