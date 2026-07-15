@@ -1,7 +1,8 @@
 # Reproduction Report: 2603.08713
 
 - **Repo:** (no official repo)
-- **Environment:** CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.13.0 / lm_eval 0.4.12
+- **Environment:** Qwen3-8B rows — CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.13.0 / lm_eval 0.4.12.
+  Qwen3.5-35B-A3B rows — ROCm 7.1 / torch 2.10.0+rocm7.1 / transformers 5.12.1 / lm_eval 0.4.11, 8× MI300X (see the 35B extension section).
 
 | model | config | algorithm | metric | paper | measured | verdict | reason |
 |---|---|---|---|---|---|---|---|
@@ -25,6 +26,12 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-H | word_perplexity | 13.03 | 13.05(+0.0235) | MATCH | — |
 | Qwen/Qwen3-8B | FP4 | NVFP4 | word_perplexity | 12.69 | — | — | paper reference, not reproduced |
+| Qwen/Qwen3.5-35B-A3B | BF16 | - | acc_norm | — | 82.48 | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark | acc_norm | — | 80.50(-1.98) | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 81.42(-1.07) | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | BF16 | - | word_perplexity | — | 7.46 | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark | word_perplexity | — | 8.21(+0.75) | — | comparison only, no paper value |
+| Qwen/Qwen3.5-35B-A3B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 8.01(+0.54) | — | comparison only, no paper value |
 
 ## Conclusion
 - 20 claims: MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 2.
@@ -84,6 +91,34 @@ Quark's even scale eliminates overflow for amax ∈ [7, 8) within each block —
 
 
 
+
+## Qwen3.5-35B-A3B extension
+
+Re-ran three setups (BF16, MXFP4-Quark, MXFP4-Quark-MBS-H) on **Qwen/Qwen3.5-35B-A3B** (MoE, `qwen3_5_moe`). The checkpoint arch is `Qwen3_5MoeForConditionalGeneration` (multimodal); loaded via `AutoModelForCausalLM` → the text-only `Qwen3_5MoeForCausalLM` (vision tower unused, weights load with no missing keys); 350 linear layers fake-quantized per MXFP4 config. Run on a **different node** than the 8B rows: ROCm 7.1 / torch 2.10.0+rocm7.1 / transformers 5.12.1 / lm_eval 0.4.11 (8× MI300X).
+
+**MBS-H recovers ~half the plain-Quark loss — same direction as 8B, and 35B is ~2× more MXFP4-robust.**
+
+| method | 8B acc_norm (Δ) | 35B acc_norm (Δ) | 8B ppl (Δ) | 35B ppl (Δ) |
+|---|---|---|---|---|
+| BF16 | 74.96 | 82.48 | 12.22 | 7.46 |
+| MXFP4-Quark | 70.95 (−4.01) | 80.50 (−1.98) | 13.89 (+1.67) | 8.21 (+0.75) |
+| MXFP4-Quark-MBS-H | 72.22 (−2.74) | 81.42 (−1.07) | 13.32 (+1.10) | 8.01 (+0.54) |
+
+- MBS-H beats plain Quark on both sizes and both metrics — it cuts the acc_norm drop and the ppl rise by roughly half.
+- Every 35B degradation is ~2× smaller than at 8B → the larger model tolerates 4-bit better.
+
+**Caveats.** (1) `acc_norm` carries the same HF-direct-load eval-engine offset described in the Analysis above (~−1.5 vs the paper's vLLM path), so read the 35B `acc_norm` as an **internal** BF16-vs-Quark-vs-MBS-H comparison, not an absolute; `word_perplexity` is teacher-forced and engine-insensitive → trustworthy. (2) 35B rows used slightly older transformers/lm_eval on ROCm; within-run Δ and the 8B↔35B trend are comparable, tiny absolute offsets possible. (3) comparison-only — the paper reports no value for these methods on this model.
+
+### Replay (Qwen3.5-35B-A3B)
+On a node without `/home/zhaolin/code/Quark`, point `_QUARK_ROOT` in `impl/qmodel.py` at a local Quark checkout (MXFP4-Quark only).
+
+```bash
+export PAPER_REPRISE_MODEL=/group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3.5-35B-A3B
+for c in bf16 mxfp4-quark mxfp4-quark-mbs-h; do
+  bash impl/run_eval.sh qwen3.5-35b-a3b-$c-hellaswag
+  bash impl/run_eval.sh qwen3.5-35b-a3b-$c-ppl
+done
+```
 
 ## Replay script (per config)
 **Qwen/Qwen3-8B · BF16**

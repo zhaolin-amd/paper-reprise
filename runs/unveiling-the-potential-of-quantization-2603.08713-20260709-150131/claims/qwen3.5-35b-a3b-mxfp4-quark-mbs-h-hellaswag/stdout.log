@@ -1,0 +1,5 @@
+Torch : 2.10.0+rocm7.1
+Transformers : 5.12.1
+lm_eval==0.4.11
+acc_norm: 81.4180
+acc: 61.9100
