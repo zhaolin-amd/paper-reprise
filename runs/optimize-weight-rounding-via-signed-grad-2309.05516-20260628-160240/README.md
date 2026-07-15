@@ -1,4 +1,4 @@
-# Reproduction Report: SignRound-2309.05516
+# Reproduction Report: AutoRound-2309.05516
 
 - **Repo:** https://github.com/intel/auto-round@9468e52
 - **Environment:** CUDA 13.0 / torch 2.12.1 / transformers 5.12.1 / lm_eval 0.4.12
