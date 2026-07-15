@@ -1,4 +1,4 @@
-# Reproduction Report: 2504.19874
+# Reproduction Report: TurboQuant-2504.19874
 
 - **Repo:** (no official repo)
 

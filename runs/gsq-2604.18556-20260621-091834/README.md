@@ -1,4 +1,4 @@
-# Reproduction Report: 2604.18556
+# Reproduction Report: GSQ-2604.18556
 
 - **Repo:** https://github.com/IST-DASLab/GSQ@194281e25c93c6eb916784db049c536c6996451f
 - **Environment:** CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.8.1

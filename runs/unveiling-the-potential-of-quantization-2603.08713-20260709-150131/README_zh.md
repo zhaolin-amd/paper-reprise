@@ -1,5 +1,6 @@
-# 复现报告: 2603.08713
+# 复现报告: OAS-MBS-2603.08713
 
+- **论文:** [Unveiling the Potential of Quantization with MXFP4: Strategies for Quantization Error Reduction](https://arxiv.org/abs/2603.08713) (arXiv:2603.08713)
 - **仓库:** (no official repo)
 - **环境:** Qwen3-8B 行 —— CUDA 13.0 / torch 2.11.0+cu130 / transformers 5.13.0 / lm_eval 0.4.12。
   Qwen3.5-35B-A3B 行 —— ROCm 7.1 / torch 2.10.0+rocm7.1 / transformers 5.12.1 / lm_eval 0.4.11，8× MI300X（见 35B 扩展一节）。

@@ -62,6 +62,13 @@ slug is best-effort from the arxiv title — the authors' short name before a co
 title has one, e.g. `turboquant` from "TurboQuant: …"; omitted when the title can't be
 fetched):
 
+The report's H1 uses the same short handle: `# Reproduction Report: <paper-abbrev>-<arxiv_id>`.
+Pick `<paper-abbrev>` as a sensible abbreviation of the title — the authors' short name before a
+colon (e.g. `TurboQuant`, `GSQ`). **If the title yields no reasonable abbreviation, use the
+paper's algorithm name(s) instead** — e.g. a paper whose contribution is the OAS and MBS
+techniques → `OAS-MBS`, giving `OAS-MBS-2603.08713`. Avoid forcing an initialism out of a
+generic title (e.g. don't turn "Unveiling the Potential of Quantization" into `UPQ`).
+
 ```
 runs/<paper-name>-<arxiv_id>-<timestamp>/
 ├── ingest.json          # resolved arxiv id + source url (the located repo url/commit are
