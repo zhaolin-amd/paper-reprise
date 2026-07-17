@@ -50,8 +50,4 @@ Halving the MBS macro-block from 128 to 64 improves both metrics. The 8-bit MBS 
 | Quark (even) | 32 | E8M0 + even rounding | [3.5, 7) | 25% | even rounding eliminates [7,8) overflow |
 | **NVFP4** | **16** | **E4M3 FP8** | **≈[5.625, 6.375]** | **Negligible** | **E4M3 per block, uniform ±0.375** |
 
-- **OCP**: E8M0, maps to [4, 8); Fmax=6 falls mid-interval → 50% overflow.
-- **OAS**: changes reference from 8 to 7, narrowing to (3.5, 7]; overflow shrinks to (6, 7) → 25%.
-- **OAS+MBS**: per-16-element-block OAS interval unchanged at (3.5, 7]; MBS adds a 128-element macro-block factor that pushes the macro-block max to ≈6, improving distribution but **not** narrowing the block interval → still 25% overflow.
-- **Quark (even)**: even rounding of amax eliminates overflow for amax ∈ [7, 8), giving [3.5, 7) → 25%; same rate as OAS but different mechanism.
-- **NVFP4**: E4M3 FP8 (non-power-of-2) computes a precise scale for **every** 16-element block independently, with uniform ±0.375 precision — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
+OAS (ref 7) and Quark (even rounding) each cut overflow from 50% to 25% by different mechanisms; OAS+MBS keeps the same (3.5, 7] block interval but its 8-bit macro factor tightens the distribution. NVFP4's non-power-of-2 E4M3 scale gives uniform ±0.375 precision on **every** block — the fundamental reason it tops all E8M0 methods including OAS+MBS.

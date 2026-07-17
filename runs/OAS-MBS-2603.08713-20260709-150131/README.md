@@ -80,15 +80,7 @@ Halving the MBS macro-block from 128 to 64 improves both metrics. The 8-bit MBS 
 | Quark (even) | 32 | E8M0 + even rounding | [3.5, 7) | 25% | even rounding eliminates [7,8) overflow |
 | **NVFP4** | **16** | **E4M3 FP8** | **≈[5.625, 6.375]** | **Negligible** | **E4M3 per block, uniform ±0.375** |
 
-- **OCP**: E8M0, maps to [4, 8); Fmax=6 falls mid-interval → 50% overflow.
-- **OAS**: changes reference from 8 to 7, narrowing to (3.5, 7]; overflow shrinks to (6, 7) → 25%.
-- **OAS+MBS**: per-16-element-block OAS interval unchanged at (3.5, 7]; MBS adds a 128-element macro-block factor that pushes the macro-block max to ≈6, improving distribution but **not** narrowing the block interval → still 25% overflow.
-- **Quark (even)**: even rounding of amax eliminates overflow for amax ∈ [7, 8), giving [3.5, 7) → 25%; same rate as OAS but different mechanism.
-- **NVFP4**: E4M3 FP8 (non-power-of-2) computes a precise scale for **every** 16-element block independently, with uniform ±0.375 precision — the fundamental reason it outperforms all E8M0-based methods including OAS+MBS.
-
-
-
-
+OAS (ref 7) and Quark (even rounding) each cut overflow from 50% to 25% by different mechanisms; OAS+MBS keeps the same (3.5, 7] block interval but its 8-bit macro factor tightens the distribution. NVFP4's non-power-of-2 E4M3 scale gives uniform ±0.375 precision on **every** block — the fundamental reason it tops all E8M0 methods including OAS+MBS.
 
 ## Qwen3.5-35B-A3B extension
 
@@ -101,9 +93,6 @@ Re-ran three setups (BF16, MXFP4-Quark, MXFP4-Quark-MBS-H) on **Qwen/Qwen3.5-35B
 | BF16 | 74.96 | 82.48 | 12.22 | 7.46 |
 | MXFP4-Quark | 70.95 (−4.01) | 80.50 (−1.98) | 13.89 (+1.67) | 8.21 (+0.75) |
 | MXFP4-Quark-MBS-H | 71.99 (−2.97) | 81.59 (−0.89) | 13.26 (+1.04) | 8.00 (+0.54) |
-
-- MBS-H beats plain Quark on both sizes and both metrics — it reduces the acc_norm drop and the ppl rise (~¼ on 8B, ~½ on 35B).
-- Every 35B degradation is ~2× smaller than at 8B → the larger model tolerates 4-bit better.
 
 **Caveats.** (1) `acc_norm` carries the same HF-direct-load eval-engine offset described in the Analysis above (~−1.5 vs the paper's vLLM path), so read the 35B `acc_norm` as an **internal** BF16-vs-Quark-vs-MBS-H comparison, not an absolute; `word_perplexity` is teacher-forced and engine-insensitive → trustworthy. (2) 35B rows used slightly older transformers/lm_eval on ROCm; within-run Δ and the 8B↔35B trend are comparable, tiny absolute offsets possible. (3) comparison-only — the paper reports no value for these methods on this model.
 
