@@ -23,6 +23,8 @@ def method_for(claim_id: str):
     c = claim_id.lower()
     if "bf16" in c:
         return None  # baseline, no quantization
+    if "mxfp4-quark-mbs-h-64" in c:
+        return "MXFP4-Quark-MBS-H-64"
     if "mxfp4-quark-mbs-h" in c:
         return "MXFP4-Quark-MBS-H"
     if "mxfp4-quark-oas" in c:

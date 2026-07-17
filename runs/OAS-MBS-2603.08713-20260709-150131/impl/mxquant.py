@@ -187,15 +187,16 @@ def _mbs_factor_dynamic(xr: torch.Tensor, oas: bool, n_slots: int = 16,
     inner: "oas" (default, OAS scale) or "quark_even" (Quark's even-rounded scale).
     """
     lead = xr.shape[:-1]
+    mb = xr.shape[-1]  # macro-block size (128 by default, configurable e.g. 64)
     best_sse = xr.new_full((*lead, 1), float("inf"))
     best_factor = xr.new_ones((*lead, 1))
     for j in range(n_slots):
         c = 1.0 + j / n_slots
         xs = (xr * c).reshape(*xr.shape[:-2], -1)
         if inner == "quark_even":
-            q = _quant_blocks_quark_even(xs).reshape(*lead, 128)
+            q = _quant_blocks_quark_even(xs).reshape(*lead, mb)
         else:
-            q = _quant_blocks16(xs, oas, oas_block).reshape(*lead, 128)
+            q = _quant_blocks16(xs, oas, oas_block).reshape(*lead, mb)
         deq = q / c
         sse = ((deq - xr) ** 2).sum(dim=-1, keepdim=True)
         better = sse < best_sse
@@ -206,7 +207,8 @@ def _mbs_factor_dynamic(xr: torch.Tensor, oas: bool, n_slots: int = 16,
 
 def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
                ocp: bool = False, ocp_block: int = 32,
-               oas_block: int = 16, inner: str = "oas") -> torch.Tensor:
+               oas_block: int = 16, inner: str = "oas",
+               macro_block: int = 128) -> torch.Tensor:
     """Direct-cast MXFP4 fake-quant of `x` along its last dim.
 
     ocp=True -> MX/OCP (4,8] overflow scale at `ocp_block`; mbs/oas/inner ignored.
@@ -214,7 +216,9 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
         inner="oas"        -> paper OAS scale (maps amax to (3.5, 7]), block=`oas_block`
         inner="quark_even" -> Quark's `qdq_mxfp4` even-rounded E8M0 scale (block=32)
       oas_block=16 -> MXFP4-16 family (paper default); oas_block=32 -> Quark group-size.
-      mbs: "none"|"static"|"dynamic" — a 1x128 macro-block factor applied on top.
+      mbs: "none"|"static"|"dynamic" — a 1x`macro_block` macro-block factor on top.
+      macro_block: MBS macro-block size (paper default 128; e.g. 64 for finer grouping).
+        Must be a multiple of the inner block size (oas_block / 32).
     Returns a tensor of the same shape/dtype as x.
     """
     orig_dtype = x.dtype
@@ -232,8 +236,9 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
         return _inner(xf).to(orig_dtype)
 
     *lead, k = xf.shape
-    assert k % 128 == 0, f"last dim {k} not divisible by 128 (MBS macro block)"
-    xr = xf.reshape(*lead, k // 128, 128)
+    assert k % macro_block == 0, \
+        f"last dim {k} not divisible by {macro_block} (MBS macro block)"
+    xr = xf.reshape(*lead, k // macro_block, macro_block)
     if mbs == "static":
         factor = _mbs_factor_static(xr)
     elif mbs == "dynamic":
@@ -242,7 +247,7 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
         raise ValueError(f"unknown mbs mode: {mbs!r}")
 
     xs = (xr * factor).reshape(*lead, k)
-    q = _inner(xs).reshape(*lead, k // 128, 128)
+    q = _inner(xs).reshape(*lead, k // macro_block, macro_block)
     deq = q / factor
     return deq.reshape(*lead, k).to(orig_dtype)
 
@@ -264,6 +269,8 @@ METHODS = {
     # MBS-H (dynamic weight / static activation, 1x128 macro block) on top of Quark's own
     # MXFP4 kernel: the inner per-32 scale is Quark's even-rounded E8M0 (qdq_mxfp4 "even").
     "MXFP4-Quark-MBS-H": {"weight_mbs": "dynamic", "act_mbs": "static", "oas": False, "ocp": False, "oas_block": 32, "inner": "quark_even"},
+    # Same as Quark-MBS-H but with a finer 1x64 MBS macro block (default is 1x128).
+    "MXFP4-Quark-MBS-H-64": {"weight_mbs": "dynamic", "act_mbs": "static", "oas": False, "ocp": False, "oas_block": 32, "inner": "quark_even", "macro_block": 64},
 }
 
 

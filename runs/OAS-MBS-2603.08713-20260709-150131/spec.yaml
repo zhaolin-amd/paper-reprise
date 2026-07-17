@@ -49,6 +49,18 @@ artifacts:
     weight_mbs: dynamic
     activation_mbs: static
   calib_status: known
+- id: qwen3-8b-mxfp4-quark-mbs-h-64
+  base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+  method: MXFP4-Quark-MBS-H-64
+  quant_config:
+    wbits: 4
+    abits: 4
+    block_size: 32
+    oas: true
+    weight_mbs: dynamic
+    activation_mbs: static
+    macro_block: 64
+  calib_status: known
 - id: qwen3-8b-mxfp4-16
   base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
   method: MXFP4-16
@@ -192,6 +204,24 @@ claims:
   expected: 74.12
   tolerance: 1.0
   source: 'vs MXFP4-MBS-H: same OAS+MBS, block_size=32'
+  hardware: null
+  no_paper_ref: true
+  paper_only: false
+- id: qwen3-8b-mxfp4-quark-mbs-h-64-hellaswag
+  artifact: qwen3-8b-mxfp4-quark-mbs-h-64
+  eval_protocol:
+    runner: cited-standard
+    command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-64-hellaswag
+    metric: acc_norm
+    dataset: hellaswag
+    split: validation
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 72.22
+  tolerance: 1.0
+  source: 'MBS macro-block ablation: 64 vs 128 (Quark-MBS-H). No paper value.'
   hardware: null
   no_paper_ref: true
   paper_only: false
@@ -373,6 +403,24 @@ claims:
   expected: 13.03
   tolerance: 1.0
   source: vs MXFP4-MBS-H PPL=13.03
+  hardware: null
+  no_paper_ref: true
+  paper_only: false
+- id: qwen3-8b-mxfp4-quark-mbs-h-64-ppl
+  artifact: qwen3-8b-mxfp4-quark-mbs-h-64
+  eval_protocol:
+    runner: cited-standard
+    command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-64-ppl
+    metric: word_perplexity
+    dataset: wikitext
+    split: test
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 13.32
+  tolerance: 1.0
+  source: 'MBS macro-block ablation: 64 vs 128 (Quark-MBS-H). No paper value.'
   hardware: null
   no_paper_ref: true
   paper_only: false
