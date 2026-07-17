@@ -30,6 +30,15 @@ When lm-eval receives an already-instantiated model it skips several initializat
 
 Quark's even scale eliminates overflow for amax ∈ [7, 8) within each block — the root cause of OCP baseline saturation. This accounts for its large gain over plain OCP (+2.08 acc, −1.26 PPL). However, once OAS is applied (which independently prevents overflow via the (3.5,7] scale mapping), the finer block granularity of block=16 becomes the dominant factor: smaller blocks give more precise per-block scale → block=16 slightly outperforms block=32 for both acc and PPL.
 
+**MBS macro-block ablation (Quark-MBS-H: 128 vs 64)**:
+
+| MBS macro-block | acc_norm | PPL |
+|---|---|---|
+| 128 (default) | 71.99 | 13.26 |
+| **64** | **72.68** (+0.69) | **12.85** (−0.41) |
+
+Halving the MBS macro-block from 128 to 64 improves both metrics. The 8-bit MBS factor is shared across the whole macro-block, so a smaller macro-block lets the factor track local outliers more tightly (one factor per 64 elements instead of 128), reducing quantization error — at the cost of ~2× the MBS-factor storage. This matches the smoke-test MSE (0.0078 at 64 vs 0.0090 at 128).
+
 
 **Scale mapping interval comparison (per-block granularity)**:
 

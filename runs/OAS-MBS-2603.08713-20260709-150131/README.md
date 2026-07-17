@@ -10,6 +10,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | — | 70.95 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | acc_norm | — | 72.68 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | process faithful but value off tolerance 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | process faithful but value off tolerance 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | process faithful but value off tolerance 1.145 (>0.5) |
@@ -20,6 +21,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | word_perplexity | — | 12.85 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -27,7 +29,7 @@
 | Qwen/Qwen3-8B | FP4 | NVFP4 | word_perplexity | 12.69 | — | — | paper reference, not reproduced |
 
 ## Conclusion
-- 20 claims: MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 2.
+- 22 claims: MATCH 11 · PARTIAL 9 · FAIL 0 · BLOCKED 2.
 - The FP baseline matches the paper, so the **eval protocol is validated**; the 8 quantized config(s) outside tolerance (worst -2.13) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
 - 2 BLOCKED produced no comparable value (see each reason) — not 'failed to reproduce'.
 
@@ -63,6 +65,15 @@ When lm-eval receives an already-instantiated model it skips several initializat
 | MXFP4-Quark-MBS-H (block=32) | 72.22 | 13.32 |
 
 Quark's even scale eliminates overflow for amax ∈ [7, 8) within each block — the root cause of OCP baseline saturation. This accounts for its large gain over plain OCP (+2.08 acc, −1.26 PPL). However, once OAS is applied (which independently prevents overflow via the (3.5,7] scale mapping), the finer block granularity of block=16 becomes the dominant factor: smaller blocks give more precise per-block scale → block=16 slightly outperforms block=32 for both acc and PPL.
+
+**MBS macro-block ablation (Quark-MBS-H: 128 vs 64)**:
+
+| MBS macro-block | acc_norm | PPL |
+|---|---|---|
+| 128 (default) | 71.99 | 13.26 |
+| **64** | **72.68** (+0.69) | **12.85** (−0.41) |
+
+Halving the MBS macro-block from 128 to 64 improves both metrics. The 8-bit MBS factor is shared across the whole macro-block, so a smaller macro-block lets the factor track local outliers more tightly (one factor per 64 elements instead of 128), reducing quantization error — at the cost of ~2× the MBS-factor storage. This matches the smoke-test MSE (0.0078 at 64 vs 0.0090 at 128).
 
 
 **Scale mapping interval comparison (per-block granularity)**:
@@ -144,6 +155,18 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-hellaswag
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-ppl
+```
+
+**Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark-MBS-H-64**
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-64-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-64-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-64-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-64-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-16**

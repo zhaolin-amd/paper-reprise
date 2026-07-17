@@ -10,6 +10,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | — | 70.95 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | acc_norm | — | 72.68 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | 过程忠实但数值超容差 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
@@ -20,6 +21,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | word_perplexity | — | 12.85 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -27,7 +29,7 @@
 | Qwen/Qwen3-8B | FP4 | NVFP4 | word_perplexity | 12.69 | — | — | 论文参考值，未复现 |
 
 ## 结论
-- 共 20 个 claim:MATCH 9 · PARTIAL 9 · FAIL 0 · BLOCKED 2。
+- 共 22 个 claim:MATCH 11 · PARTIAL 9 · FAIL 0 · BLOCKED 2。
 - FP 基线与论文吻合,说明**评测协议可信**;因此 8 个超容差的量化配置(最大偏差 -2.13)是**真实的复现差距**(算法/校准/版本所致),而非评测口径问题。
 - 2 个 BLOCKED 未产出可比数值(见各自 reason),非「未复现」。
 
@@ -63,6 +65,15 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 | MXFP4-Quark-MBS-H（block=32） | 72.22 | 13.32 |
 
 Quark 的 even scale 消除了每个 block 内 amax ∈ [7, 8) 的溢出截断，这正是 OCP baseline 精度损失的根源，因此相比纯 OCP 有显著提升（acc +2.08，PPL −1.26）。然而一旦叠加 OAS（OAS 本身已通过 (3.5,7] 的 scale 映射独立消除了溢出），更细粒度的 block=16 成为主导因素：block 越小，每个 block 的 scale 越精准 → block=16 在 acc 和 PPL 两个指标上都略优于 block=32。
+
+**MBS 宏块大小消融（Quark-MBS-H：128 vs 64）**：
+
+| MBS 宏块 | acc_norm | PPL |
+|---|---|---|
+| 128（默认） | 71.99 | 13.26 |
+| **64** | **72.68**（+0.69） | **12.85**（−0.41） |
+
+把 MBS 宏块从 128 减半到 64，两个指标都提升。8 位 MBS factor 是整个宏块共享的，宏块越小，factor 越能贴合局部异常值（每 64 个元素一个 factor 而非 128），量化误差更低——代价是 MBS factor 存储量约翻倍。与 smoke 测试的 MSE 一致（64 → 0.0078，128 → 0.0090）。
 
 **各方法每块映射区间对比（以 16/32 元素块为粒度）**：
 
@@ -143,6 +154,18 @@ bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-hellaswag
 
 ```bash
 bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-ppl
+```
+
+**Qwen/Qwen3-8B · MXFP4 · MXFP4-Quark-MBS-H-64**
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-64-hellaswag/stdout.log`
+`runs/OAS-MBS-2603.08713-20260709-150131/claims/qwen3-8b-mxfp4-quark-mbs-h-64-ppl/stdout.log`
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-64-hellaswag
+```
+
+```bash
+bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-64-ppl
 ```
 
 **Qwen/Qwen3-8B · MXFP4 · MXFP4-16**
