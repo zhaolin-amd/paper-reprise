@@ -12,6 +12,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | — | 70.95 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | acc_norm | — | 72.68 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | 过程忠实但数值超容差 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
@@ -22,6 +23,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | word_perplexity | — | 12.85 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -54,6 +56,15 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 **修复方向**：`lm_eval --model vllm --model_args pretrained=<path>`
 
 **MXFP4-16 标度映射（已修复）**：plain MXFP4-16 应使用 block size 16 上的 MX/OCP (4,8] 溢出标度（论文 §4.1），而非非饱和的 (3,6] 标度——后者是 OAS 的组件（§4.2）。此前实现误用 (3,6]，使 MXFP4-16 复现出论文的 *OAS* 数值（ppl 13.65）而非自身数值；修复后 ppl = 15.15（论文 15.15，MATCH）。剩余的 acc_norm 差距（−1.83）与其它 config 一样源自评测引擎偏移。
+
+**MBS 宏块大小消融（Quark-MBS-H：128 vs 64）**：
+
+| MBS 宏块 | acc_norm | PPL |
+|---|---|---|
+| 128（默认） | 71.99 | 13.26 |
+| **64** | **72.68**（+0.69） | **12.85**（−0.41） |
+
+把 MBS 宏块从 128 减半到 64，两个指标都提升。8 位 MBS factor 是整个宏块共享的，宏块越小，factor 越能贴合局部异常值（每 64 个元素一个 factor 而非 128），量化误差更低——代价是 MBS factor 存储量约翻倍。与 smoke 测试的 MSE 一致（64 → 0.0078，128 → 0.0090）。
 
 **OAS+MBS 为什么能复用 MXFP4 kernel（所有改动均为纯软件）**：
 

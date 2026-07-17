@@ -12,6 +12,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | acc_norm | — | 70.95 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | acc_norm | — | 72.68 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | process faithful but value off tolerance 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | process faithful but value off tolerance 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | process faithful but value off tolerance 1.145 (>0.5) |
@@ -22,6 +23,7 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark | word_perplexity | — | 13.89 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | word_perplexity | — | 12.85 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -54,6 +56,15 @@ When lm-eval receives an already-instantiated model it skips several initializat
 **Fix**: `lm_eval --model vllm --model_args pretrained=<path>`
 
 **MXFP4-16 scale mapping (fixed)**: plain MXFP4-16 must use the MX/OCP (4,8] overflow scale at block size 16 (paper §4.1), NOT the non-saturating (3,6] scale — the latter is an ingredient of OAS (§4.2). An earlier build used (3,6] for MXFP4-16, so it reproduced the paper's *OAS* numbers (ppl 13.65) instead of its own; after the fix, ppl = 15.15 (paper 15.15, MATCH). The remaining acc_norm gap (−1.83) is the same eval-engine offset as every other config.
+
+**MBS macro-block ablation (Quark-MBS-H: 128 vs 64)**:
+
+| MBS macro-block | acc_norm | PPL |
+|---|---|---|
+| 128 (default) | 71.99 | 13.26 |
+| **64** | **72.68** (+0.69) | **12.85** (−0.41) |
+
+Halving the MBS macro-block from 128 to 64 improves both metrics. The 8-bit MBS factor is shared across the whole macro-block, so a smaller macro-block lets the factor track local outliers more tightly (one factor per 64 elements instead of 128), reducing quantization error — at the cost of ~2× the MBS-factor storage. This matches the smoke-test MSE (0.0078 at 64 vs 0.0090 at 128).
 
 **How OAS+MBS reuses the MXFP4 kernel (all changes are pure software)**:
 
