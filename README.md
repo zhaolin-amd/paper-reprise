@@ -6,7 +6,9 @@ honestly reports the gap.
 
 Design doc: [docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md](docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md)
 
-Contributor guide: [docs/algorithm-diagram-guide.md](docs/algorithm-diagram-guide.md) — how to draw the algorithm-overview diagram for a run report.
+Contributor guides:
+- [docs/reproduction-principles.md](docs/reproduction-principles.md) — judgment principles for reproducing a paper (paper > upstream repo, closed-form cross-checks, surface scale, diagnose eval infra, gap analysis).
+- [docs/algorithm-diagram-guide.md](docs/algorithm-diagram-guide.md) — how to draw the algorithm-overview diagram for a run report.
 
 ## How it works
 
