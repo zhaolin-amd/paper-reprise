@@ -6,6 +6,8 @@ honestly reports the gap.
 
 Design doc: [docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md](docs/superpowers/specs/2026-06-19-paper-reprise-agent-design.md)
 
+Contributor guide: [docs/algorithm-diagram-guide.md](docs/algorithm-diagram-guide.md) — how to draw the algorithm-overview diagram for a run report.
+
 ## How it works
 
 A deterministic pipeline, one run directory per paper:
