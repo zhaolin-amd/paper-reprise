@@ -89,10 +89,10 @@ t(CX, 3.15,
   fontsize=9.3, color="#1a3a55")
 
 # ── final hard quantization (teal, the anneal exit) ──────────────────────────
-rbox(CX, 1.55, 6.4, 1.0, "#E8F6F3", "#16A085", lw=2.0)   # y 1.05-2.05
-t(CX, 1.82, "τ → 0 :  soft assignment collapses to argmax over levels",
+rbox(CX, 1.8, 6.4, 0.95, "#E8F6F3", "#16A085", lw=2.0)   # y 1.325-2.275
+t(CX, 2.05, "τ → 0 :  soft assignment collapses to argmax over levels",
   fontsize=10.5, weight="bold", color="#0e6655")
-t(CX, 1.35,
+t(CX, 1.58,
   r"$\hat{\mathbf{w}} = s\cdot\mathbf{q}_{\rm hard}$"
   r"$\quad$ (discrete, deploy-ready — GGUF K-Quant)",
   fontsize=10, color="#0b5345")
@@ -101,8 +101,8 @@ t(CX, 1.35,
 arr(CX, 8.83, CX, 8.30)     # params -> gumbel
 arr(CX, 6.25, CX, 5.69)     # gumbel -> loss
 arr(CX, 4.63, CX, 3.89)     # loss -> update
-arr(CX, 2.83, CX, 2.09)     # update -> final (the tau->0 exit)
-t(CX + 0.55, 2.46, r"$\tau\!\to\!0$", fontsize=9.5, color="#0e6655",
+arr(CX, 2.83, CX, 2.31)     # update -> final (the tau->0 exit)
+t(CX + 0.55, 2.60, r"$\tau\!\to\!0$", fontsize=9.5, color="#0e6655",
   style="italic")
 
 # loop-back: optimizer -> params, orthogonal route in the right lane
