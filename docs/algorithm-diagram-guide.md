@@ -51,6 +51,10 @@ bigger gaps) and make it look clean. The hard rules:
 
 - Leave a clear gap between every pair of boxes. Nothing cramped, touching, or
   overlapping — horizontally or vertically.
+- Keep the gaps **roughly uniform** across the whole figure. One pair noticeably tighter
+  than the rest reads as a mistake — this most often bites the **last box** (e.g. a bottom
+  "core insight" banner), which tends to get squeezed against the box above it. Check it
+  explicitly.
 - **Arrow endpoints sit outside the box edges.** Start the tail just below/beside the
   source box and end the head just before the target box, with a small gap at both ends.
   An arrow's head or tail must never land inside a box. Use `shrinkA=0, shrinkB=0` and
@@ -63,7 +67,8 @@ bigger gaps) and make it look clean. The hard rules:
 
 After rendering, **Read the PNG back and inspect it**. Verify it is:
 
-- beautiful and uncluttered, with comfortable spacing;
+- beautiful and uncluttered, with comfortable spacing — scan **every adjacent box pair**
+  (top to bottom, including the last/insight box) and confirm the gaps are consistent;
 - free of garbled glyphs, box overlaps, and arrows poking into or through boxes;
 - accurate — formulas correct, and it captures the algorithm's *core idea* (not every
   detail).
