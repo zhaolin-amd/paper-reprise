@@ -17,6 +17,11 @@
 - 共 6 个 claim:MATCH 0 · PARTIAL 6 · FAIL 0 · BLOCKED 0。
 - 实测相对论文**一致偏高**(Δ +1.15~+2.39),更像系统性的评测/环境偏移(如 lm-eval/算法库版本差异),而非逐配置噪声。
 
+## 算法概览
+
+![SignRound / AutoRound 算法概览](figures/signround_overview.png)
+
+SignRound（AutoRound）通过**学习舍入**而非直接四舍五入（RTN）来改进 weight-only 量化。它逐 transformer block 引入三个小而有界的可训练参数——舍入扰动 `V ∈ [-0.5, 0.5]`（初值 0）和权重截断缩放 `α, β ∈ [0, 1]`（初值 1）——用**符号梯度下降（SignSGD）**优化约 200 步，最小化逐 block 的输出重建误差 `‖WX − W̃X‖²_F`。由于解空间有界，SignSGD（只用 `sign(g)`）能在很少步数内收敛、几乎无需调参。学到的 `V/α/β` 被烘焙进量化权重，因此**推理零额外开销**（PTQ 的成本、接近 QAT 的精度）。
 
 ## 资源占用(每个 config)
 | model | config | 时长 | 峰值显存 |

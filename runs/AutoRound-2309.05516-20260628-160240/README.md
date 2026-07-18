@@ -17,6 +17,11 @@
 - 6 claims: MATCH 0 · PARTIAL 6 · FAIL 0 · BLOCKED 0.
 - Measured is **consistently above** the paper (Δ +1.15…+2.39) — a systematic eval/setup offset (e.g. lm-eval/library version drift), not per-config noise.
 
+## Algorithm overview
+
+![SignRound / AutoRound algorithm overview](figures/signround_overview.png)
+
+SignRound (AutoRound) improves weight-only quantization by **learning the rounding** instead of round-to-nearest (RTN). Per transformer block, it introduces three tiny, bounded trainable parameters — a rounding perturbation `V ∈ [-0.5, 0.5]` (init 0) and weight-clip scales `α, β ∈ [0, 1]` (init 1) — and optimizes them with **signed gradient descent (SignSGD)** over ~200 steps to minimize the block-wise output reconstruction error `‖WX − W̃X‖²_F`. Because the search space is bounded, SignSGD (using only `sign(g)`) converges in few steps with minimal tuning. The learned `V/α/β` are folded into the quantized weights, so there is **zero inference overhead** (PTQ cost, QAT-like accuracy).
 
 ## Resources (per config)
 | model | config | time | peak VRAM |
