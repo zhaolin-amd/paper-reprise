@@ -13,6 +13,8 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | acc_norm | — | 72.68 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-8bit | acc_norm | — | 72.30 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-16bit | acc_norm | — | 72.20 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | 过程忠实但数值超容差 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | 过程忠实但数值超容差 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | 过程忠实但数值超容差 1.145 (>0.5) |
@@ -24,6 +26,8 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | word_perplexity | — | 12.85 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-8bit | word_perplexity | — | 13.22 | — | 参考对比，无论文数值 |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-16bit | word_perplexity | — | 13.26 | — | 参考对比，无论文数值 |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -65,6 +69,15 @@ lm-eval 接收已实例化 model 时跳过部分初始化（日志警告：`Many
 | **64** | **72.68**（+0.69） | **12.85**（−0.41） |
 
 把 MBS 宏块从 128 减半到 64，两个指标都提升。8 位 MBS factor 是整个宏块共享的，宏块越小，factor 越能贴合局部异常值（每 64 个元素一个 factor 而非 128），量化误差更低——代价是 MBS factor 存储量约翻倍。与 smoke 测试的 MSE 一致（64 → 0.0078，128 → 0.0090）。
+
+**MBS factor 精度消融（Quark-MBS-H，宏块 128：8-bit vs 16-bit 尾数）**：
+
+| MBS factor 精度 | acc_norm | PPL |
+|---|---|---|
+| 8-bit（256 档 dynamic / 8-bit static） | 72.30 | 13.22 |
+| 16-bit（coarse-to-fine dynamic / 16-bit static） | 72.20 | 13.26 |
+
+把 MBS factor 尾数从 8 位加倍到 16 位几乎没有变化（Δ 在运行噪声内，甚至略降）。factor 只在 [1, 2) 区间，8 位已给出 1/256 ≈ 0.4% 的分辨率——远细于它下游喂给的 FP4 量化网格，而后者才是真正的误差下限。论文选 8-bit 得到验证：再加精度已无空间。（注：论文的 *dynamic* 搜索是 16-slot LUT ≈ 4-bit；这里把它加宽到 256 档 / 8-bit 搜索有小幅提升——acc 71.99→72.30、ppl 13.26→13.22——但超过 8-bit 就不再有收益。）
 
 **OAS+MBS 为什么能复用 MXFP4 kernel（所有改动均为纯软件）**：
 

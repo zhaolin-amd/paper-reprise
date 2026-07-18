@@ -61,6 +61,32 @@ artifacts:
     activation_mbs: static
     macro_block: 64
   calib_status: known
+- id: qwen3-8b-mxfp4-quark-mbs-h-8bit
+  base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+  method: MXFP4-Quark-MBS-H-8bit
+  quant_config:
+    wbits: 4
+    abits: 4
+    block_size: 32
+    oas: true
+    weight_mbs: dynamic
+    activation_mbs: static
+    macro_block: 128
+    mbs_bits: 8
+  calib_status: known
+- id: qwen3-8b-mxfp4-quark-mbs-h-16bit
+  base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
+  method: MXFP4-Quark-MBS-H-16bit
+  quant_config:
+    wbits: 4
+    abits: 4
+    block_size: 32
+    oas: true
+    weight_mbs: dynamic
+    activation_mbs: static
+    macro_block: 128
+    mbs_bits: 16
+  calib_status: known
 - id: qwen3-8b-mxfp4-16
   base_model: /group/amdneuralopt/huggingface/pretrained_models/Qwen/Qwen3-8B
   method: MXFP4-16
@@ -222,6 +248,42 @@ claims:
   expected: 72.22
   tolerance: 1.0
   source: 'MBS macro-block ablation: 64 vs 128 (Quark-MBS-H). No paper value.'
+  hardware: null
+  no_paper_ref: true
+  paper_only: false
+- id: qwen3-8b-mxfp4-quark-mbs-h-8bit-hellaswag
+  artifact: qwen3-8b-mxfp4-quark-mbs-h-8bit
+  eval_protocol:
+    runner: cited-standard
+    command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-8bit-hellaswag
+    metric: acc_norm
+    dataset: hellaswag
+    split: validation
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 71.99
+  tolerance: 1.0
+  source: 'MBS mantissa-precision ablation: 8-bit factor. No paper value.'
+  hardware: null
+  no_paper_ref: true
+  paper_only: false
+- id: qwen3-8b-mxfp4-quark-mbs-h-16bit-hellaswag
+  artifact: qwen3-8b-mxfp4-quark-mbs-h-16bit
+  eval_protocol:
+    runner: cited-standard
+    command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-16bit-hellaswag
+    metric: acc_norm
+    dataset: hellaswag
+    split: validation
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 71.99
+  tolerance: 1.0
+  source: 'MBS mantissa-precision ablation: 16-bit factor. No paper value.'
   hardware: null
   no_paper_ref: true
   paper_only: false
@@ -421,6 +483,42 @@ claims:
   expected: 13.32
   tolerance: 1.0
   source: 'MBS macro-block ablation: 64 vs 128 (Quark-MBS-H). No paper value.'
+  hardware: null
+  no_paper_ref: true
+  paper_only: false
+- id: qwen3-8b-mxfp4-quark-mbs-h-8bit-ppl
+  artifact: qwen3-8b-mxfp4-quark-mbs-h-8bit
+  eval_protocol:
+    runner: cited-standard
+    command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-8bit-ppl
+    metric: word_perplexity
+    dataset: wikitext
+    split: test
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 13.26
+  tolerance: 1.0
+  source: 'MBS mantissa-precision ablation: 8-bit factor. No paper value.'
+  hardware: null
+  no_paper_ref: true
+  paper_only: false
+- id: qwen3-8b-mxfp4-quark-mbs-h-16bit-ppl
+  artifact: qwen3-8b-mxfp4-quark-mbs-h-16bit
+  eval_protocol:
+    runner: cited-standard
+    command: bash impl/run_eval.sh qwen3-8b-mxfp4-quark-mbs-h-16bit-ppl
+    metric: word_perplexity
+    dataset: wikitext
+    split: test
+    seqlen: null
+    stride: null
+    few_shot: 0
+    extra_args: null
+  expected: 13.26
+  tolerance: 1.0
+  source: 'MBS mantissa-precision ablation: 16-bit factor. No paper value.'
   hardware: null
   no_paper_ref: true
   paper_only: false

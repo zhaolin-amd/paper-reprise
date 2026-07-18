@@ -143,18 +143,22 @@ def _float32_bits(x: torch.Tensor) -> torch.Tensor:
     return x.to(torch.float32).contiguous().view(torch.int32)
 
 
-def _mbs_factor_static(xr: torch.Tensor) -> torch.Tensor:
-    """MBS-Static factor (1 + m8/256) per 1x128 macro block (paper eq. 1).
+def _mbs_factor_static(xr: torch.Tensor, mbs_bits: int = 8) -> torch.Tensor:
+    """MBS-Static factor (1 + m/2^mbs_bits) per 1x128 macro block (paper eq. 1).
 
     xr: (..., n_macro, 128). Returns (..., n_macro, 1) in [1, 2).
-    m8 = (bits(6/amax128) & 0x007F8000) >> 15  -- the top 8 mantissa bits of the
-    full-precision scale, i.e. the fractional part of the ideal scale's significand.
+    Extracts the top `mbs_bits` mantissa bits of the ideal scale 6/amax128 (float32
+    mantissa is 23 bits, so mbs_bits<=23). mbs_bits=8 -> paper default (m8/256);
+    mbs_bits=16 -> finer factor storage (m16/65536).
     """
+    assert 1 <= mbs_bits <= 23, f"mbs_bits must be in [1, 23], got {mbs_bits}"
     amax = xr.abs().amax(dim=-1, keepdim=True)  # (..., n_macro, 1)
     sf_full = FP4_MAX / amax.clamp_min(_TINY)
     bits = _float32_bits(sf_full)
-    m8 = (bits & 0x007F8000) >> 15  # 0..255
-    factor = 1.0 + m8.to(torch.float32) / 256.0
+    shift = 23 - mbs_bits                       # mantissa top-bit alignment
+    mask = ((1 << mbs_bits) - 1) << shift       # top mbs_bits of the 23-bit mantissa
+    m = (bits & mask) >> shift                  # 0 .. 2^mbs_bits - 1
+    factor = 1.0 + m.to(torch.float32) / float(1 << mbs_bits)
     return torch.where(amax > 0, factor, torch.ones_like(factor))
 
 
@@ -177,38 +181,74 @@ def _quant_blocks_quark_even(x: torch.Tensor, block_size: int = 32) -> torch.Ten
 
 
 def _mbs_factor_dynamic(xr: torch.Tensor, oas: bool, n_slots: int = 16,
-                        oas_block: int = 16, inner: str = "oas") -> torch.Tensor:
+                        oas_block: int = 16, inner: str = "oas",
+                        mbs_bits: int | None = None) -> torch.Tensor:
     """MBS-Dynamic factor per 1x128 macro block: pick the mantissa slot minimizing
     the macro-block sum of squared quantization error (paper 4.3.3).
 
-    xr: (..., n_macro, 128). Candidate factors (1 + j/n_slots), j in [0, n_slots).
-    j=0 -> factor 1.0 (== no MBS), so the result never increases error vs the inner-only.
+    xr: (..., n_macro, 128). Returns (..., n_macro, 1) in [1, 2).
     oas_block: the inner OAS block size (16 for MXFP4-16 family, 32 for Quark family).
     inner: "oas" (default, OAS scale) or "quark_even" (Quark's even-rounded scale).
+
+    Search resolution:
+      - mbs_bits is None (default): single pass over `n_slots` candidates
+        (1 + j/n_slots), j in [0, n_slots). This is the paper's 16-slot LUT search.
+      - mbs_bits set: coarse-to-fine search reaching 2^mbs_bits factor resolution
+        (1 + m/2^mbs_bits) in ceil(mbs_bits/8) passes of <=256 candidates each,
+        so 16-bit is 2 passes (512 evals) instead of an infeasible 65536.
+    j/m=0 -> factor 1.0 (== no MBS), so the result never increases error vs inner-only.
     """
     lead = xr.shape[:-1]
     mb = xr.shape[-1]  # macro-block size (128 by default, configurable e.g. 64)
-    best_sse = xr.new_full((*lead, 1), float("inf"))
-    best_factor = xr.new_ones((*lead, 1))
-    for j in range(n_slots):
-        c = 1.0 + j / n_slots
+
+    def _sse(c):
+        # c: scalar or (*lead, 1) tensor of per-macro-block factors
         xs = (xr * c).reshape(*xr.shape[:-2], -1)
         if inner == "quark_even":
             q = _quant_blocks_quark_even(xs).reshape(*lead, mb)
         else:
             q = _quant_blocks16(xs, oas, oas_block).reshape(*lead, mb)
         deq = q / c
-        sse = ((deq - xr) ** 2).sum(dim=-1, keepdim=True)
-        better = sse < best_sse
-        best_sse = torch.where(better, sse, best_sse)
-        best_factor = torch.where(better, xr.new_full((*lead, 1), c), best_factor)
-    return best_factor
+        return ((deq - xr) ** 2).sum(dim=-1, keepdim=True)
+
+    if mbs_bits is None:
+        best_sse = xr.new_full((*lead, 1), float("inf"))
+        best_factor = xr.new_ones((*lead, 1))
+        for j in range(n_slots):
+            c = 1.0 + j / n_slots
+            sse = _sse(c)
+            better = sse < best_sse
+            best_sse = torch.where(better, sse, best_sse)
+            best_factor = torch.where(better, xr.new_full((*lead, 1), c), best_factor)
+        return best_factor
+
+    # coarse-to-fine: accumulate the mantissa integer `best_m` bit-group by bit-group,
+    # each pass fixing the next (up to) 8 mantissa bits by minimizing per-block SSE.
+    assert 1 <= mbs_bits <= 23, f"mbs_bits must be in [1, 23], got {mbs_bits}"
+    best_m = xr.new_zeros((*lead, 1))   # integer mantissa fixed so far
+    bits_done = 0
+    while bits_done < mbs_bits:
+        step = min(8, mbs_bits - bits_done)
+        n = 1 << step
+        denom = float(1 << (bits_done + step))
+        best_sse = xr.new_full((*lead, 1), float("inf"))
+        best_k = xr.new_zeros((*lead, 1))
+        for k in range(n):
+            m_try = best_m * n + k                     # (*lead,1) tensor
+            c = 1.0 + m_try / denom
+            sse = _sse(c)
+            better = sse < best_sse
+            best_sse = torch.where(better, sse, best_sse)
+            best_k = torch.where(better, m_try, best_k)
+        best_m = best_k
+        bits_done += step
+    return 1.0 + best_m / float(1 << mbs_bits)
 
 
 def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
                ocp: bool = False, ocp_block: int = 32,
                oas_block: int = 16, inner: str = "oas",
-               macro_block: int = 128) -> torch.Tensor:
+               macro_block: int = 128, mbs_bits: int | None = None) -> torch.Tensor:
     """Direct-cast MXFP4 fake-quant of `x` along its last dim.
 
     ocp=True -> MX/OCP (4,8] overflow scale at `ocp_block`; mbs/oas/inner ignored.
@@ -219,6 +259,9 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
       mbs: "none"|"static"|"dynamic" — a 1x`macro_block` macro-block factor on top.
       macro_block: MBS macro-block size (paper default 128; e.g. 64 for finer grouping).
         Must be a multiple of the inner block size (oas_block / 32).
+      mbs_bits: MBS factor mantissa precision. None -> paper defaults (static m8/8-bit,
+        dynamic 16-slot LUT). Set (e.g. 8 or 16) -> both static/dynamic use that many
+        mantissa bits (dynamic via coarse-to-fine search).
     Returns a tensor of the same shape/dtype as x.
     """
     orig_dtype = x.dtype
@@ -240,9 +283,10 @@ def fake_quant(x: torch.Tensor, mbs: str = "none", oas: bool = True,
         f"last dim {k} not divisible by {macro_block} (MBS macro block)"
     xr = xf.reshape(*lead, k // macro_block, macro_block)
     if mbs == "static":
-        factor = _mbs_factor_static(xr)
+        factor = _mbs_factor_static(xr, mbs_bits=mbs_bits if mbs_bits else 8)
     elif mbs == "dynamic":
-        factor = _mbs_factor_dynamic(xr, oas, oas_block=oas_block, inner=inner)
+        factor = _mbs_factor_dynamic(xr, oas, oas_block=oas_block, inner=inner,
+                                     mbs_bits=mbs_bits)
     else:
         raise ValueError(f"unknown mbs mode: {mbs!r}")
 
@@ -271,6 +315,10 @@ METHODS = {
     "MXFP4-Quark-MBS-H": {"weight_mbs": "dynamic", "act_mbs": "static", "oas": False, "ocp": False, "oas_block": 32, "inner": "quark_even"},
     # Same as Quark-MBS-H but with a finer 1x64 MBS macro block (default is 1x128).
     "MXFP4-Quark-MBS-H-64": {"weight_mbs": "dynamic", "act_mbs": "static", "oas": False, "ocp": False, "oas_block": 32, "inner": "quark_even", "macro_block": 64},
+    # MBS factor mantissa-precision ablation (macro-block 128). Both weight (dynamic,
+    # coarse-to-fine) and activation (static) MBS factors use `mbs_bits` mantissa bits.
+    "MXFP4-Quark-MBS-H-8bit":  {"weight_mbs": "dynamic", "act_mbs": "static", "oas": False, "ocp": False, "oas_block": 32, "inner": "quark_even", "macro_block": 128, "mbs_bits": 8},
+    "MXFP4-Quark-MBS-H-16bit": {"weight_mbs": "dynamic", "act_mbs": "static", "oas": False, "ocp": False, "oas_block": 32, "inner": "quark_even", "macro_block": 128, "mbs_bits": 16},
 }
 
 
