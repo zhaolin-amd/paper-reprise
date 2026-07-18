@@ -54,7 +54,14 @@ HF model object to lm-eval instead of a string path (HFLM vs the paper's vLLM en
 Teacher-forcing PPL is insensitive to the engine; log-likelihood ranking (`acc_norm`) is
 sensitive.
 
-## 6. Write the gap analysis into `analysis_en.md` / `analysis_zh.md`
+## 6. Every report must include an algorithm-overview diagram
+
+Generating a reproduction report always includes drawing an algorithm-overview figure —
+it is **mandatory**, not optional, for both the from-scratch and official-repo paths. See
+the [algorithm-overview diagram guide](algorithm-diagram-guide.md) for how (committed
+`figures/` generator script, matplotlib + mathtext, spacing/arrow rules, self-check).
+
+## 7. Write the gap analysis into `analysis_en.md` / `analysis_zh.md`
 
 Put the English gap analysis in `analysis_en.md` and the Chinese in `analysis_zh.md` in the
 run dir — one language per file, **not** a single bilingual `analysis.md`. `paper-reprise
