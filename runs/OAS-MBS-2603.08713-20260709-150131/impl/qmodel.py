@@ -77,7 +77,8 @@ class QuantLinear(nn.Module):
 
     def __init__(self, lin: nn.Linear, weight_mbs: str, act_mbs: str,
                  oas: bool, ocp: bool = False, ocp_block: int = 32,
-                 oas_block: int = 16, inner: str = "oas", macro_block: int = 128):
+                 oas_block: int = 16, inner: str = "oas", macro_block: int = 128,
+                 mbs_bits: int | None = None):
         super().__init__()
         self.in_features = lin.in_features
         self.out_features = lin.out_features
@@ -88,12 +89,13 @@ class QuantLinear(nn.Module):
         self.oas_block = oas_block
         self.inner = inner
         self.macro_block = macro_block
+        self.mbs_bits = mbs_bits
         with torch.no_grad():
             wq = fake_quant(lin.weight.data.to(torch.float32),
                             mbs=weight_mbs, oas=oas, ocp=ocp,
                             ocp_block=ocp_block,
                             oas_block=oas_block, inner=inner,
-                            macro_block=macro_block).to(lin.weight.dtype)
+                            macro_block=macro_block, mbs_bits=mbs_bits).to(lin.weight.dtype)
         self.weight = nn.Parameter(wq, requires_grad=False)
         if lin.bias is not None:
             self.bias = nn.Parameter(lin.bias.data.clone(), requires_grad=False)
@@ -103,7 +105,8 @@ class QuantLinear(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         xq = fake_quant(x, mbs=self.act_mbs, oas=self.oas, ocp=self.ocp,
                         ocp_block=self.ocp_block, oas_block=self.oas_block,
-                        inner=self.inner, macro_block=self.macro_block)
+                        inner=self.inner, macro_block=self.macro_block,
+                        mbs_bits=self.mbs_bits)
         return F.linear(xq, self.weight, self.bias)
 
 
@@ -138,7 +141,8 @@ def quantize_model_(model: nn.Module, method: str) -> int:
                              ocp_block=cfg.get("ocp_block", 32),
                              oas_block=cfg.get("oas_block", 16),
                              inner=cfg.get("inner", "oas"),
-                             macro_block=cfg.get("macro_block", 128))
+                             macro_block=cfg.get("macro_block", 128),
+                             mbs_bits=cfg.get("mbs_bits", None))
             ql = ql.to(next(lin.parameters()).device)
             setattr(parent, child, ql)
     return len(targets)

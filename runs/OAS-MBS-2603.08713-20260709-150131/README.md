@@ -13,6 +13,8 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | acc_norm | — | 71.06 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | acc_norm | — | 71.99 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | acc_norm | — | 72.68 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-8bit | acc_norm | — | 72.30 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-16bit | acc_norm | — | 72.20 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | acc_norm | 71.17 | 69.34(-1.83) | PARTIAL | process faithful but value off tolerance 1.831 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | acc_norm | 73.14 | 71.83(-1.31) | PARTIAL | process faithful but value off tolerance 1.312 (>0.5) |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | acc_norm | 73.66 | 72.52(-1.14) | PARTIAL | process faithful but value off tolerance 1.145 (>0.5) |
@@ -24,6 +26,8 @@
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-OAS | word_perplexity | — | 13.92 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H | word_perplexity | — | 13.26 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-64 | word_perplexity | — | 12.85 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-8bit | word_perplexity | — | 13.22 | — | comparison only, no paper value |
+| Qwen/Qwen3-8B | MXFP4 | MXFP4-Quark-MBS-H-16bit | word_perplexity | — | 13.26 | — | comparison only, no paper value |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16 | word_perplexity | 15.15 | 15.15(+0.0049) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-16-OAS | word_perplexity | 13.65 | 13.59(-0.0635) | MATCH | — |
 | Qwen/Qwen3-8B | MXFP4 | MXFP4-MBS-S | word_perplexity | 13.09 | 13.08(-0.0113) | MATCH | — |
@@ -65,6 +69,15 @@ When lm-eval receives an already-instantiated model it skips several initializat
 | **64** | **72.68** (+0.69) | **12.85** (−0.41) |
 
 Halving the MBS macro-block from 128 to 64 improves both metrics. The 8-bit MBS factor is shared across the whole macro-block, so a smaller macro-block lets the factor track local outliers more tightly (one factor per 64 elements instead of 128), reducing quantization error — at the cost of ~2× the MBS-factor storage. This matches the smoke-test MSE (0.0078 at 64 vs 0.0090 at 128).
+
+**MBS factor precision ablation (Quark-MBS-H, macro-block 128: 8-bit vs 16-bit mantissa)**:
+
+| MBS factor precision | acc_norm | PPL |
+|---|---|---|
+| 8-bit (256-slot dynamic / 8-bit static) | 72.30 | 13.22 |
+| 16-bit (coarse-to-fine dynamic / 16-bit static) | 72.20 | 13.26 |
+
+Doubling the MBS factor mantissa from 8 to 16 bits changes nothing (Δ within run-to-run noise, even slightly worse). The factor lives in [1, 2), so 8 bits already gives 1/256 ≈ 0.4% resolution — far finer than the FP4 quantization grid it feeds, which is the real error floor. The paper's 8-bit choice is validated: extra factor precision has no headroom. (Note: the paper's *dynamic* search is a 16-slot LUT ≈ 4-bit; widening it to a 256-slot / 8-bit search here gives a small gain — 71.99→72.30 acc, 13.26→13.22 ppl — but going beyond 8-bit does not.)
 
 **How OAS+MBS reuses the MXFP4 kernel (all changes are pure software)**:
 
