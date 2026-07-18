@@ -13,8 +13,11 @@
 - 2 claims: MATCH 1 · PARTIAL 1 · FAIL 0 · BLOCKED 0.
 - The FP baseline matches the paper, so the **eval protocol is validated**; the 1 quantized config(s) outside tolerance (worst -2.04) are therefore a **genuine reproduction gap** (algorithm/calibration/version), not an eval-protocol artifact.
 
+## Algorithm overview
 
+![GSQ algorithm overview](figures/gsq_overview.png)
 
+GSQ is a post-training scalar-quantization method that makes the **discrete** grid-level assignment differentiable. For each coordinate it learns assignment logits `ℓ` (and per-group scales `s`), and instead of hard-selecting a grid level it takes a **Gumbel-Softmax** soft weighted sum over the K candidate levels: `p_i = softmax((κℓ_i + g_i)/τ)`, `w̃ = s·Σ p_i d_i`. These parameters are optimized block-wise (Lion optimizer, calibration data) to minimize the output reconstruction error `‖f(X;w) − f(X;w̃)‖²_F`. Annealing the temperature `τ → 0` collapses the soft assignment onto a single hard grid level, giving `ŵ = s·q_hard` — a fully discrete, deploy-ready layer (GGUF K-Quant compatible). Keeping the relaxation cardinality small (K = 3–8 for ternary / low bpp) is what makes the discrete optimization tractable.
 
 ## Per-task raw scores
 **llama3-8b-baseline**

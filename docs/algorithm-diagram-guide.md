@@ -1,10 +1,10 @@
 # Algorithm-Overview Diagram Guide
 
-When reproducing a paper, add an **algorithm-overview diagram** to the run report so a
-reader grasps *how* the method works — and *why* the implementation is structured the way
-it is — without reading the code. The results table shows *what* the numbers are; the
-diagram shows the mechanism. It is the fastest way for a reviewer to understand a
-reproduction.
+Every reproduction report **must** include an **algorithm-overview diagram** (both the
+from-scratch and official-repo paths — it is required, not optional). It lets a reader
+grasp *how* the method works — and *why* the implementation is structured the way it is —
+without reading the code. The results table shows *what* the numbers are; the diagram shows
+the mechanism. It is the fastest way for a reviewer to understand a reproduction.
 
 Two reference examples already in the repo (each has a committed generator script and a
 self-checked PNG):
