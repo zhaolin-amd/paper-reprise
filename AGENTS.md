@@ -40,3 +40,18 @@ name the kernel explicitly.
 
 This is a standing instruction, not a one-off: it applies to every run in this repo,
 not just the one it was first written for.
+
+## Pull before you push
+
+**Always `git pull` (fast-forward, or `--rebase` if you have local commits) before
+`git push`** — never push straight from a local checkout that hasn't just synced with
+`origin/main`. Multiple sessions/agents work in this repo; pushing on a stale base risks a
+rejected push at best, or a diverged/overwritten remote history at worst.
+
+- **Why:** caught in practice — local was 24 commits behind `origin/main` at the start of a
+  session that then went on to commit and almost pushed on that stale base.
+- **How to apply:** before any `git push`, run `git fetch` + check `git status` /
+  `git log HEAD..origin/main`; if behind, pull first (fast-forward when there are no local
+  commits yet, `--rebase` when there are). This applies to every push, not just the first
+  one in a session — a session can fall behind mid-way if another agent/human pushes while
+  you're working.
