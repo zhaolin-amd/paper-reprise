@@ -23,7 +23,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 OUT = os.path.join(os.path.dirname(__file__), "signround_overview.png")
 
 fig, ax = plt.subplots(figsize=(9, 9))
-ax.set_xlim(0, 8.8)
+ax.set_xlim(-0.35, 8.8)
 ax.set_ylim(0, 9)
 ax.axis("off")
 fig.patch.set_facecolor("white")
@@ -128,5 +128,5 @@ t(3.9, 0.43,
   fontsize=9.3, color="#333")
 
 plt.tight_layout(pad=0.3)
-plt.savefig(OUT, dpi=160, bbox_inches="tight", facecolor="white")
+plt.savefig(OUT, dpi=160, bbox_inches="tight", pad_inches=0.2, facecolor="white")
 print(f"saved {OUT}")
