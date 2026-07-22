@@ -118,7 +118,7 @@ arr(8.0, 7.9, 7.4, 7.9, color=LOOP)                              # left into par
 t(8.22, 4.9, "× T ≈ 200", fontsize=9.5, weight="bold", color=LOOP, rotation=90)
 
 # ── key insight (bottom) ─────────────────────────────────────────────────────
-rbox(3.9, 0.6, 7.6, 0.9, "#f0f4ff", "#3a6cf4", lw=1.5)
+rbox(3.9, 0.6, 7.0, 0.9, "#f0f4ff", "#3a6cf4", lw=1.5)
 t(3.9, 0.81,
   "Core insight:  only V, α, β are learned (bounded & tiny) — the rest is stock quant.",
   fontsize=9.8, weight="bold", color="#1a2a7a")
