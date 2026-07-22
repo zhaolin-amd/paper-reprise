@@ -23,7 +23,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 OUT = os.path.join(os.path.dirname(__file__), "signround_overview.png")
 
 fig, ax = plt.subplots(figsize=(9, 9))
-ax.set_xlim(-0.35, 8.8)
+ax.set_xlim(0, 8.8)
 ax.set_ylim(0, 9)
 ax.axis("off")
 fig.patch.set_facecolor("white")
@@ -118,7 +118,7 @@ arr(8.0, 7.9, 7.4, 7.9, color=LOOP)                              # left into par
 t(8.22, 4.9, "× T ≈ 200", fontsize=9.5, weight="bold", color=LOOP, rotation=90)
 
 # ── key insight (bottom) ─────────────────────────────────────────────────────
-rbox(3.9, 0.6, 7.0, 0.9, "#f0f4ff", "#3a6cf4", lw=1.5)
+rbox(3.9, 0.6, 6.9, 0.9, "#f0f4ff", "#3a6cf4", lw=1.5)
 t(3.9, 0.81,
   "Core insight:  only V, α, β are learned (bounded & tiny) — the rest is stock quant.",
   fontsize=9.8, weight="bold", color="#1a2a7a")
@@ -128,5 +128,5 @@ t(3.9, 0.43,
   fontsize=9.3, color="#333")
 
 plt.tight_layout(pad=0.3)
-plt.savefig(OUT, dpi=160, bbox_inches="tight", pad_inches=0.2, facecolor="white")
+plt.savefig(OUT, dpi=160, bbox_inches="tight", facecolor="white")
 print(f"saved {OUT}")
